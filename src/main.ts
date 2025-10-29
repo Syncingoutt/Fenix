@@ -210,18 +210,25 @@ function watchLogFile() {
             }
           }
 
-          if (currentPriceCheckBaseId && prices.length === 100) {
-            const avgPrice = processPriceCheckData({ baseId: currentPriceCheckBaseId, prices, timestamp: 'now' });
+          if (currentPriceCheckBaseId && prices.length >= 50) {
+            // Skip first 20 and last 20 listings
+            const pricesForAverage = prices.length >= 40 
+              ? prices.slice(20, -20)  // Skip first 20 and last 20
+              : prices.slice(Math.floor(prices.length / 4), -Math.floor(prices.length / 4)); // Skip first/last 25% if less than 40
+            
+            const sum = pricesForAverage.reduce((acc, price) => acc + price, 0);
+            const avgPrice = sum / pricesForAverage.length;
+            
             inventoryManager.updatePrice(currentPriceCheckBaseId, avgPrice);
             
             savePriceCache(inventoryManager.getPriceCacheAsObject());
             
             const itemName = inventoryManager.getInventoryMap().get(currentPriceCheckBaseId)?.itemName || currentPriceCheckBaseId;
-            console.log(`💰 Price updated: ${itemName} = ${avgPrice.toFixed(2)}`);
+            console.log(`💰 Price updated: ${itemName} = ${avgPrice.toFixed(2)} (from ${prices.length} listings)`);
             
             priceUpdated = true;
           } else {
-            console.log(`⚠️  Parse issue - BaseID: ${currentPriceCheckBaseId}, Prices: ${prices.length}`);
+            console.log(`⚠️  Parse issue - BaseID: ${currentPriceCheckBaseId}, Prices: ${prices.length} (need at least 50)`);
           }
 
           inPriceCheck = false;
