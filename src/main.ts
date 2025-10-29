@@ -23,9 +23,12 @@ function createWindow() {
     }
   });
 
+  // Clear cache before loading
+  mainWindow.webContents.session.clearCache();
+
   mainWindow.loadFile(path.join(__dirname, 'ui/index.html'));
   // mainWindow.webContents.openDevTools(); // Uncomment for debugging
-
+  
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -96,7 +99,7 @@ autoUpdater.on('update-downloaded', (info) => {
 });
 
 // Check for updates on startup (only in production, not dev)
-if (process.env.NODE_ENV !== 'development') {
+if (app.isPackaged) {
   autoUpdater.checkForUpdatesAndNotify();
 }
 
@@ -130,7 +133,7 @@ app.whenReady().then(() => {
   }, WATCH_INTERVAL);
 
   // Check for updates periodically (every 30 minutes, only in production)
-  if (process.env.NODE_ENV !== 'development') {
+  if (app.isPackaged) {
     setInterval(() => {
       autoUpdater.checkForUpdatesAndNotify();
     }, 30 * 60 * 1000);
