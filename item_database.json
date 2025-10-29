@@ -78,7 +78,12 @@
   "6003": { "name": "Crow's Fall", "baseID": "6003" },
   "6004": { "name": "Maud's Trick", "baseID": "6004" },
   "6205": { "name": "Uncertain Voyage", "baseID": "6205" },
-  "6002": { "name": "Secret of the Glacial Abyss", "baseID": "6002" }
+  "6002": { "name": "Secret of the Glacial Abyss", "baseID": "6002" },
+  "140006": { "name": "Shallow Dream Talking - Trinket ", "baseID": "140006" },
+  "12050": { "name":"Beacon Profound Probe","baseID":"12050" },
+  "3000004":{ "name":"Proof of the Brave IV","baseID":"3000004" },
+  "6125":{ "name":"Hundredfold Windfall","baseID":"6125" },
+  "10033":{ "name":"Unrivaled Veteran Compass","baseID":"10033" }
 }
 
 
