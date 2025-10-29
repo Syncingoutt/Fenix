@@ -1,6 +1,6 @@
 {
   "name": "torchlight-tracker",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Torchlight Infinite Inventory Tracker",
   "main": "dist/main.js",
   "scripts": {
@@ -36,8 +36,7 @@
     "publish": {
       "provider": "github",
       "owner": "Syncingoutt",
-      "repo": "Torchlight-Exchange-2",
-      "private": true
+      "repo": "Torchlight-Exchange-2"
     },
     "extraResources": [
       "item_database.json"
