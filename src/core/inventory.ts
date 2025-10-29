@@ -8,6 +8,8 @@ export interface InventoryItem {
   price: number | null;
   instances: number;
   lastUpdated: string;
+  pageId: number | null;
+  slotId: number | null;
 }
 
 export class InventoryManager {
@@ -18,11 +20,6 @@ export class InventoryManager {
     // Load initial price cache
     for (const [baseId, price] of Object.entries(initialPriceCache)) {
       this.priceCache.set(baseId, price);
-    }
-
-    // Ensure default price for Flame Elementium (baseId 100300) is 1 if not present
-    if (!this.priceCache.has('100300')) {
-      this.priceCache.set('100300', 1);
     }
   }
 
@@ -55,7 +52,9 @@ export class InventoryManager {
           baseId: entry.baseId,
           price: cachedPrice,
           instances: 1,
-          lastUpdated: entry.timestamp
+          lastUpdated: entry.timestamp,
+          pageId: entry.pageId,
+          slotId: entry.slotId
         });
       }
     }

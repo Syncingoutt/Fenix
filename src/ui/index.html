@@ -1,144 +1,196 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <title>Torchlight Tracker</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <title>Torchlight Tracker</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #1a1a1a;
-      color: #ffffff;
-      padding: 20px;
-    }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #1a1a1a;
+        color: #ffffff;
+        padding: 20px;
+      }
 
-    .header {
-      text-align: center;
-      padding: 20px;
-      background: blue;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      color: white;
-    }
+      .header {
+        text-align: left;
+        padding: 20px;
+        background: 2a2a2a;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
 
-    h1 {
-      font-size: 28px;
-      margin-bottom: 5px;
-    }
+      h1 {
+        font-size: 28px;
+        margin-bottom: 5px;
+      }
 
-    .subtitle {
-      font-size: 14px;
-      opacity: 0.9;
-    }
+      .subtitle {
+        font-size: 14px;
+        opacity: 0.9;
+      }
 
-    .inventory-container {
-      display: grid;
-      gap: 10px;
-    }
+      select,
+      input {
+        padding: 8px 12px;
+        background: #1a1a1a;
+        border: 1px solid #444;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 14px;
+      }
 
-    .item-row {
-      background: #2a2a2a;
-      padding: 15px 20px;
-      border-radius: 8px;
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
-      gap: 20px;
-      align-items: center;
-      transition: background 0.2s;
-    }
+      select:focus,
+      input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
 
-    .item-row:hover {
-      background: #333333;
-    }
+      .inventory-container {
+        display: grid;
+        gap: 10px;
+      }
 
-    .item-name {
-      font-weight: 600;
-      font-size: 16px;
-    }
+      .item-row {
+        background: #2a2a2a;
+        padding: 15px 20px;
+        border-radius: 8px;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 20px;
+        align-items: center;
+        transition: background 0.2s;
+      }
 
-    .item-quantity {
-      text-align: center;
-      font-size: 18px;
-      color: #4ade80;
-      font-weight: bold;
-    }
+      .item-row:hover {
+        background: #333333;
+      }
 
-    .item-price {
-      text-align: right;
-      font-size: 18px;
-      color: #fbbf24;
-      font-weight: bold;
-    }
+      .item-name {
+        font-weight: 600;
+        font-size: 16px;
+      }
 
-    .no-price {
-      color: #6b7280;
-      font-style: italic;
-    }
+      .item-quantity {
+        text-align: center;
+        font-size: 18px;
+        color: #4ade80;
+        font-weight: bold;
+      }
 
-    .loading {
-      text-align: center;
-      padding: 40px;
-      font-size: 18px;
-      color: #6b7280;
-    }
+      .item-price {
+        text-align: center;
+        font-size: 16px;
+      }
 
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
-      margin-bottom: 20px;
-    }
+      .price-single {
+        color: #fbbf24;
+        font-weight: bold;
+      }
 
-    .stat-box {
-      background: #2a2a2a;
-      padding: 15px;
-      border-radius: 8px;
-      text-align: center;
-    }
+      .price-total {
+        color: #10b981;
+        margin-top: 4px;
+        font-weight: bold;
+      }
 
-    .stat-label {
-      font-size: 12px;
-      color: #9ca3af;
-      margin-bottom: 5px;
-    }
+      .no-price {
+        color: #6b7280;
+        font-style: italic;
+      }
 
-    .stat-value {
-      font-size: 24px;
-      font-weight: bold;
-      color: #667eea;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>🔥 Torchlight Infinite Tracker</h1>
-    <div class="subtitle">Real-time Inventory & Price Tracking v.1.0.16</div>
-  </div>
+      .loading {
+        text-align: center;
+        padding: 40px;
+        font-size: 18px;
+        color: #6b7280;
+      }
 
-  <div class="stats" id="stats">
-    <div class="stat-box">
-      <div class="stat-label">Total Items</div>
-      <div class="stat-value" id="totalItems">0</div>
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .stat-box {
+        background: #2a2a2a;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-bottom: 5px;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #667eea;
+      }
+      .container {
+        max-width: 1440px;
+        margin: 0 auto;
+      }
+      .item-price {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        width: 140px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🔥 Torchlight Infinite Tracker</h1>
+        <div class="subtitle">Real-time Inventory & Price Tracking</div>
+      </div>
+
+      <div class="stats" id="stats">
+        <div class="stat-box">
+          <div class="stat-label">Items Priced</div>
+          <div class="stat-value" id="itemsPriced">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Total Value</div>
+          <div class="stat-value" id="totalValue">-</div>
+        </div>
+      </div>
+
+      <div class="inventory-container" style="margin-bottom: 1rem; margin-top: 1rem">
+        <div class="item-row header-row">
+          <div class="item-name">Name</div>
+          <div class="item-quantity">Quantity</div>
+          <div class="item-price">
+            <div
+              class="item-single"
+              data-sort="priceUnit"
+              style="cursor: pointer"
+            >
+              Price
+            </div>
+            <div
+              class="item-total"
+              data-sort="priceTotal"
+              style="cursor: pointer"
+            >
+              Total
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="inventory" class="inventory-container"></div>
     </div>
-    <div class="stat-box">
-      <div class="stat-label">Items Priced</div>
-      <div class="stat-value" id="itemsPriced">0</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-label">Total Value</div>
-      <div class="stat-value" id="totalValue">-</div>
-    </div>
-  </div>
 
-  <div class="inventory-container" id="inventory">
-    <div class="loading">Loading inventory...</div>
-  </div>
-
-  <script src="../renderer.js"></script>
-</body>
+    <script src="../renderer.js"></script>
+  </body>
 </html>

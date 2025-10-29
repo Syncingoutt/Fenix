@@ -83,7 +83,10 @@
   "12050": { "name":"Beacon Profound Probe","baseID":"12050" },
   "3000004":{ "name":"Proof of the Brave IV","baseID":"3000004" },
   "6125":{ "name":"Hundredfold Windfall","baseID":"6125" },
-  "10033":{ "name":"Unrivaled Veteran Compass","baseID":"10033" }
+  "10033":{ "name":"Unrivaled Veteran Compass","baseID":"10033" },
+  "10122":{ "name":"Valiant War Compass","baseID":"10122" },
+  "10051":{ "name":"Progressing beacon Compass","baseID":"10051" },
+  "10142 ":{ "name":"General Hunting Compass","baseID":"10142" }
 }
 
 

@@ -213,21 +213,14 @@ function watchLogFile() {
             }
           }
 
-          if (currentPriceCheckBaseId && prices.length >= 50) {
-            // Skip first 20 and last 20 listings
-            const pricesForAverage = prices.length >= 40 
-              ? prices.slice(20, -20)  // Skip first 20 and last 20
-              : prices.slice(Math.floor(prices.length / 4), -Math.floor(prices.length / 4)); // Skip first/last 25% if less than 40
-            
-            const sum = pricesForAverage.reduce((acc, price) => acc + price, 0);
-            const avgPrice = sum / pricesForAverage.length;
-            
-            inventoryManager.updatePrice(currentPriceCheckBaseId, avgPrice);
-            
+          const priceResult = processPriceCheckData(currentPriceCheckBaseId!, prices);
+          
+          if (priceResult) {
+            inventoryManager.updatePrice(priceResult.baseId, priceResult.avgPrice);
             savePriceCache(inventoryManager.getPriceCacheAsObject());
             
-            const itemName = inventoryManager.getInventoryMap().get(currentPriceCheckBaseId)?.itemName || currentPriceCheckBaseId;
-            console.log(`💰 Price updated: ${itemName} = ${avgPrice.toFixed(2)} (from ${prices.length} listings)`);
+            const itemName = inventoryManager.getInventoryMap().get(priceResult.baseId)?.itemName || priceResult.baseId;
+            console.log(`💰 Price updated: ${itemName} = ${priceResult.avgPrice.toFixed(2)} (from ${prices.length} listings)`);
             
             priceUpdated = true;
           } else {
