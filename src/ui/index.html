@@ -20,8 +20,6 @@
       .header {
         text-align: left;
         padding: 20px;
-        background: 2a2a2a;
-        border-radius: 10px;
         margin-bottom: 20px;
       }
 
@@ -86,6 +84,10 @@
       .item-price {
         text-align: center;
         font-size: 16px;
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        width: 140px;
       }
 
       .price-single {
@@ -123,6 +125,120 @@
         padding: 15px;
         border-radius: 8px;
         text-align: center;
+        position: relative;
+      }
+
+      .stat-box.wealth-box {
+        grid-column: span 2;
+      }
+
+      .wealth-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+      }
+
+      .wealth-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #fff;
+      }
+
+      .wealth-value-container {
+        text-align: right;
+      }
+
+      .wealth-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #667eea;
+      }
+
+      .wealth-rate {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 2px;
+      }
+
+      .wealth-rate.positive {
+        color: #10b981;
+      }
+
+      .wealth-rate.negative {
+        color: #ef4444;
+      }
+
+      .wealth-controls {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 15px;
+      }
+
+      .mode-btn {
+        padding: 6px 12px;
+        background: #1a1a1a;
+        border: 1px solid #444;
+        border-radius: 6px;
+        color: #9ca3af;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+      }
+
+      .mode-btn.active {
+        background: #667eea;
+        border-color: #667eea;
+        color: white;
+      }
+
+      .wealth-graph {
+        width: 100%;
+        height: 120px;
+        margin-top: 10px;
+      }
+
+      .hourly-controls {
+        display: none;
+        margin-top: 10px;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .hourly-controls.active {
+        display: flex;
+      }
+
+      .hourly-timer {
+        font-size: 14px;
+        color: #9ca3af;
+        font-family: monospace;
+      }
+
+      .timer-btn {
+        padding: 6px 14px;
+        background: #667eea;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+
+      .timer-btn:hover {
+        background: #5568d3;
+      }
+
+      .timer-btn.stop {
+        background: #ef4444;
+      }
+
+      .timer-btn.stop:hover {
+        background: #dc2626;
       }
 
       .stat-label {
@@ -136,15 +252,78 @@
         font-weight: bold;
         color: #667eea;
       }
+
+      .timer-controls {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 10px;
+      }
+
+      .timer-btn {
+        padding: 8px 16px;
+        background: #667eea;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+
+      .timer-btn:hover {
+        background: #5568d3;
+      }
+
+      .timer-btn.stop {
+        background: #ef4444;
+      }
+
+      .timer-btn.stop:hover {
+        background: #dc2626;
+      }
+
+      .timer-starting-value {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 5px;
+      }
+
+      .earnings-animation {
+        position: absolute;
+        top: 30%;
+        left: 93%;
+        transform: translate(-50%, -50%);
+        font-size: 28px;
+        font-weight: bold;
+        color: #10b981;
+        animation: earningsPop 3s ease-out forwards;
+        pointer-events: none;
+      }
+
+      @keyframes earningsPop {
+        0% {
+          transform: translate(-50%, -50%) scale(0.5);
+          opacity: 0;
+        }
+        20% {
+          transform: translate(-50%, -50%) scale(1.2);
+          opacity: 1;
+        }
+        50% {
+          transform: translate(-50%, -80%) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(-50%, -120%) scale(0.8);
+          opacity: 0;
+        }
+      }
+
       .container {
         max-width: 1440px;
         margin: 0 auto;
-      }
-      .item-price {
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        width: 140px;
       }
     </style>
   </head>
@@ -160,9 +339,29 @@
           <div class="stat-label">Items Priced</div>
           <div class="stat-value" id="itemsPriced">0</div>
         </div>
-        <div class="stat-box">
-          <div class="stat-label">Total Value</div>
-          <div class="stat-value" id="totalValue">-</div>
+        
+        <div class="stat-box wealth-box">
+          <div class="wealth-header">
+            <div class="wealth-title">Wealth</div>
+            <div class="wealth-value-container">
+              <div class="wealth-value" id="wealthValue">0 FE</div>
+              <div class="wealth-rate" id="wealthRate"></div>
+              <span class="timer" id="timer">00:00:00</span>
+            </div>
+          </div>
+          
+          <div class="wealth-controls">
+            <button class="mode-btn active" id="realtimeBtn">Real-time</button>
+            <button class="mode-btn" id="hourlyBtn">Per Hour</button>
+          </div>
+
+          <canvas class="wealth-graph" id="wealthGraph"></canvas>
+
+          <div class="hourly-controls" id="hourlyControls">
+            <button class="timer-btn" id="startHourly">Start Hour</button>
+            <span class="hourly-timer" id="hourlyTimer">00:00:00</span>
+            <button class="timer-btn stop" id="stopHourly">Stop</button>
+          </div>
         </div>
       </div>
 
