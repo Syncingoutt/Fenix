@@ -68,7 +68,20 @@ export function readLogFile(): ParsedLogEntry[] {
     return [];
   }
 
-  const logContent = fs.readFileSync(LOG_PATH, 'utf-8');
+  const stats = fs.statSync(LOG_PATH);
+  const fileSize = stats.size;
+
+  // If file is larger than ~100 MB, only read the last portion
+  // (You can tweak this to fit your needs)
+  const MAX_READ_BYTES = 100 * 1024 * 1024; // 100 MB
+  const startPosition = fileSize > MAX_READ_BYTES ? fileSize - MAX_READ_BYTES : 0;
+
+  const fd = fs.openSync(LOG_PATH, 'r');
+  const buffer = Buffer.alloc(fileSize - startPosition);
+  fs.readSync(fd, buffer, 0, fileSize - startPosition, startPosition);
+  fs.closeSync(fd);
+
+  const logContent = buffer.toString('utf-8');
   const lines = logContent.split('\n');
 
   // Find the LAST "Reset" for EACH PageId (102 and 103)
@@ -83,31 +96,28 @@ export function readLogFile(): ParsedLogEntry[] {
     if (line.includes('ItemChange@ Reset PageId=103') && lastReset103 === -1) {
       lastReset103 = i;
     }
-    // Stop searching once we found both
     if (lastReset102 !== -1 && lastReset103 !== -1) break;
   }
 
-  // Use the earliest reset between the two pages (or 0 if none found)
   const startIndex = Math.min(
     lastReset102 === -1 ? Infinity : lastReset102,
     lastReset103 === -1 ? Infinity : lastReset103
   );
-  
+
   const relevantLines = startIndex === Infinity ? lines : lines.slice(startIndex);
 
   const entries: ParsedLogEntry[] = [];
-  
+
   for (const line of relevantLines) {
     if (line.includes('ItemChange@') && line.includes('Id=')) {
       const parsed = parseLogLine(line);
-      if (parsed) {
-        entries.push(parsed);
-      }
+      if (parsed) entries.push(parsed);
     }
   }
 
   return entries;
 }
+
 
 export function parsePriceCheck(lines: string[]): PriceCheckData | null {
   let baseId: string | null = null;
@@ -173,4 +183,31 @@ export function readLogFromPosition(start: number, end: number): string {
   fs.readSync(fd, buffer, 0, end - start, start);
   fs.closeSync(fd);
   return buffer.toString('utf-8');
+}
+
+/**
+ * Truncate the Torchlight log if it exceeds a safe limit.
+ * Keeps the last few MB so the game logging format stays valid.
+ */
+export function ensureLogSizeLimit(maxSizeMB = 500): void {
+  if (!fs.existsSync(LOG_PATH)) return;
+
+  const stats = fs.statSync(LOG_PATH);
+  const maxBytes = maxSizeMB * 1024 * 1024;
+
+  if (stats.size <= maxBytes) return; // Nothing to do
+
+  const KEEP_BYTES = 5 * 1024 * 1024; // Keep last 5MB
+  const start = Math.max(0, stats.size - KEEP_BYTES);
+
+  console.warn(`⚠️  Log file is ${Math.round(stats.size / 1024 / 1024)}MB — truncating...`);
+
+  const fd = fs.openSync(LOG_PATH, 'r+');
+  const buffer = Buffer.alloc(stats.size - start);
+  fs.readSync(fd, buffer, 0, stats.size - start, start);
+  fs.ftruncateSync(fd, 0); // Clear file
+  fs.writeSync(fd, buffer, 0, buffer.length, 0); // Write back last few MB
+  fs.closeSync(fd);
+
+  console.log(`✅ Log file truncated to last ${Math.round(KEEP_BYTES / 1024 / 1024)}MB`);
 }

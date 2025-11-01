@@ -1,6 +1,6 @@
 {
   "name": "torchlight-tracker",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "description": "Torchlight Infinite Inventory Tracker",
   "main": "dist/main.js",
   "scripts": {

@@ -94,7 +94,28 @@
   "3000005":{ "name":"Proof of the Brave V","baseID":"3000005" },
   "10221":{ "name":"Collection Doll Compass","baseID":"10221" },
   "10120":{ "name":"War Compass","baseID":"10120" },
-  "10050":{ "name":"Beacon Compass","baseID":"10050" }
+  "10050":{ "name":"Beacon Compass","baseID":"10050" },
+  "990007": { "name": "Resident's eye", "baseID": "990007" },
+  "10142": { "name": "General Hunting Compass", "baseID": "10142" },
+  "10043": { "name": "Generous Elite Compass", "baseID": "10043" },
+  "10211": { "name": "Uncanny Folklore Compass", "baseID": "10211" },
+  "10011": { "name": "Lavish Novel Compass", "baseID": "10011" },
+  "210002": { "name": "Corrupted Axis", "baseID": "210002" },
+  "360102": { "name": "Silver mound Lv.2", "baseID": "360102" },
+  "360101": { "name": "Sage Lv.1", "baseID": "360101" },
+  "10052": { "name": "Ecliptic Compass", "baseID": "10052" },
+  "10081": { "name": "Ember Compass", "baseID": "10081" },
+  "101200": { "name": "Flame Sand - Bound", "baseID": "101200" },
+  "101300": { "name": "Flame Elementium - Bound", "baseID": "101300" },
+  "10171": { "name": "Returning Blacksail Compass", "baseID": "10171" },
+  "10200": { "name": "Nightmare Compass", "baseID": "10200" },
+  "10250": { "name": "Sandlord Compass", "baseID": "10250" },
+  "201003": { "name": "Fine Ember - Bound", "baseID": "201003" },
+  "10260": { "name": "Outlaw Compass", "baseID": "10260" },
+  "6055": { "name": "Antonius' Research", "baseID": "6055" },
+  "5039": { "name": "Winding Key - Bound", "baseID": "5039" },
+  "5012": { "name": "Elexir of Oblivion - Bound", "baseID": "5012" },
+  "10270": { "name": "Cage Compass", "baseID": "10270" }
 }
 
 

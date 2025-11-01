@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, crashReporter } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
@@ -6,6 +6,12 @@ import { loadItemDatabase, loadPriceCache, savePriceCache } from './core/databas
 import { readLogFile, parseLogLine, parsePriceCheck, getLogSize, readLogFromPosition } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
+import { ensureLogSizeLimit } from './core/logParser';
+
+app.whenReady().then(() => {
+  ensureLogSizeLimit(500); // run once at startup
+  setInterval(() => ensureLogSizeLimit(500), 60 * 60 * 1000); // every 1 hour
+});
 
 let mainWindow: BrowserWindow | null = null;
 let inventoryManager: InventoryManager;
