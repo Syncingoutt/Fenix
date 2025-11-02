@@ -32,6 +32,8 @@ const MAX_POINTS = 120; // ~10 min realtime, 1h hourly
 let hourlyStartTime = 0;
 let hourlyStartValue = 0;
 let hourlyInterval: number | null = null;
+let hourlyPausedTime = 0; // Total time spent paused (in seconds)
+let hourlyPausedAt = 0; // When pause was initiated
 
 // === DOM ELEMENTS ===
 const wealthValueEl = document.getElementById('wealthValue')!;
@@ -41,6 +43,8 @@ const hourlyBtn = document.getElementById('hourlyBtn') as HTMLButtonElement;
 const hourlyControls = document.getElementById('hourlyControls')!;
 const startHourlyBtn = document.getElementById('startHourly') as HTMLButtonElement;
 const stopHourlyBtn = document.getElementById('stopHourly') as HTMLButtonElement;
+const pauseHourlyBtn = document.getElementById('pauseHourly') as HTMLButtonElement;
+const resumeHourlyBtn = document.getElementById('resumeHourly') as HTMLButtonElement;
 const hourlyTimerEl = document.getElementById('hourlyTimer')!;
 const timerEl = document.getElementById('timer')!;
 
@@ -51,6 +55,8 @@ const ctx = canvas.getContext('2d')!;
 // ---- INITIAL UI STATE ----
 startHourlyBtn.style.display = 'inline-block';
 stopHourlyBtn.style.display = 'none';
+pauseHourlyBtn.style.display = 'none';
+resumeHourlyBtn.style.display = 'none';
 hourlyControls.classList.remove('active');
 realtimeBtn.classList.add('active');
 hourlyBtn.classList.remove('active');
@@ -285,12 +291,15 @@ function startHourlyTracking() {
 
   hourlyStartValue = getCurrentTotalValue();
   hourlyStartTime = Date.now();
+  hourlyPausedTime = 0;
 
   initGraph();
   pushPoint(hourlyStartValue);
 
   startHourlyBtn.style.display = 'none';
   stopHourlyBtn.style.display = 'inline-block';
+  pauseHourlyBtn.style.display = 'inline-block';
+  resumeHourlyBtn.style.display = 'none';
   wealthValueEl.textContent = `${hourlyStartValue.toFixed(2)} FE`;
 
   let elapsedSec = 0;
@@ -305,6 +314,44 @@ function startHourlyTracking() {
 
     if (elapsedSec >= 3600) stopHourlyTracking(true);
   }, 1000);
+}
+
+// === HOURLY: Pause ===
+function pauseHourlyTracking() {
+  if (!hourlyInterval) return;
+  
+  clearInterval(hourlyInterval);
+  hourlyInterval = null;
+  hourlyPausedAt = Date.now();
+
+  pauseHourlyBtn.style.display = 'none';
+  resumeHourlyBtn.style.display = 'inline-block';
+}
+
+// === HOURLY: Resume ===
+function resumeHourlyTracking() {
+  if (hourlyInterval) return;
+
+  // Add the pause duration to the total paused time
+  hourlyPausedTime += (Date.now() - hourlyPausedAt) / 1000;
+  
+  // Restart the interval
+  let elapsedSec = parseInt(hourlyTimerEl.textContent.split(':')[0]) * 3600 +
+                   parseInt(hourlyTimerEl.textContent.split(':')[1]) * 60 +
+                   parseInt(hourlyTimerEl.textContent.split(':')[2]);
+
+  hourlyInterval = window.setInterval(() => {
+    elapsedSec++;
+    hourlyTimerEl.textContent = formatTime(elapsedSec);
+    const nowValue = getCurrentTotalValue();
+    pushPoint(nowValue);
+    wealthValueEl.textContent = `${nowValue.toFixed(2)} FE`;
+
+    if (elapsedSec >= 3600) stopHourlyTracking(true);
+  }, 1000);
+
+  pauseHourlyBtn.style.display = 'inline-block';
+  resumeHourlyBtn.style.display = 'none';
 }
 
 // === HOURLY: Stop ===
@@ -328,9 +375,9 @@ function stopHourlyTracking(auto = false) {
   // UI reset
   startHourlyBtn.style.display = 'inline-block';
   stopHourlyBtn.style.display = 'none';
+  pauseHourlyBtn.style.display = 'none';
+  resumeHourlyBtn.style.display = 'none';
   hourlyTimerEl.textContent = '00:00:00';
-
-  // **no confirm / alert**
 }
 
 // === REALTIME: Start
@@ -355,34 +402,33 @@ function startRealtimeTimer() {
     elapsedSec++;
     timerEl.textContent = formatTime(elapsedSec);
   }, 1000);
+
   // === REALTIME: Timer hiding based on mode
-// Switch to Realtime mode
-realtimeBtn.addEventListener('click', () => {
-  realtimeBtn.classList.add('active');
-  hourlyBtn.classList.remove('active');
+  // Switch to Realtime mode
+  realtimeBtn.addEventListener('click', () => {
+    realtimeBtn.classList.add('active');
+    hourlyBtn.classList.remove('active');
 
-  timerEl.style.display = 'inline';
-  hourlyControls.classList.remove('active');
+    timerEl.style.display = 'inline';
+    hourlyControls.classList.remove('active');
 
-  // Reset timer counter
-  elapsedSec = 0;
-  timerEl.textContent = formatTime(elapsedSec);
-});
+    // Reset timer counter
+    elapsedSec = 0;
+    timerEl.textContent = formatTime(elapsedSec);
+  });
 
-hourlyBtn.addEventListener('click', () => {
-  hourlyBtn.classList.add('active');
-  realtimeBtn.classList.remove('active');
+  hourlyBtn.addEventListener('click', () => {
+    hourlyBtn.classList.add('active');
+    realtimeBtn.classList.remove('active');
 
-  timerEl.style.display = 'none';
-  hourlyControls.classList.add('active');
+    timerEl.style.display = 'none';
+    hourlyControls.classList.add('active');
 
-  // Reset timer counter
-  elapsedSec = 0;
-  timerEl.textContent = formatTime(elapsedSec);
-});
-
+    // Reset timer counter
+    elapsedSec = 0;
+    timerEl.textContent = formatTime(elapsedSec);
+  });
 }
-
 
 // === MODE SWITCHING ===
 realtimeBtn.addEventListener('click', () => {
@@ -415,6 +461,8 @@ hourlyBtn.addEventListener('click', () => {
 
 startHourlyBtn.addEventListener('click', startHourlyTracking);
 stopHourlyBtn.addEventListener('click', () => stopHourlyTracking(false));
+pauseHourlyBtn.addEventListener('click', pauseHourlyTracking);
+resumeHourlyBtn.addEventListener('click', resumeHourlyTracking);
 
 // === EVENT LISTENERS ===
 electronAPI.onInventoryUpdate(loadInventory);
