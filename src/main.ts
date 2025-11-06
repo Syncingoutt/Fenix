@@ -183,13 +183,15 @@ function watchLogFile() {
 
     for (const line of newLines) {
       // Step 1: Capture the baseId from XchgSyncSearchPrice SendMessage
-      if (line.includes('+itemBaseId') && line.includes('[')) {
-        const match = line.match(/\[(\d+)\]/);
-        if (match) {
-          currentPriceCheckBaseId = match[1];
-          console.log(`🔍 Price check initiated for baseId: ${currentPriceCheckBaseId}`);
-        }
-      }
+// Match both old and new formats for baseId
+if ((line.includes('+itemBaseId') || line.includes('+refer')) && line.includes('[')) {
+  const match = line.match(/\[(\d+)\]/);
+  if (match) {
+    currentPriceCheckBaseId = match[1];
+    console.log(`🔍 Price check initiated for baseId: ${currentPriceCheckBaseId}`);
+  }
+}
+
 
       // Step 2: Start buffering when we see XchgSearchPrice RecvMessage
       if (line.includes('----Socket RecvMessage STT----XchgSearchPrice----')) {
@@ -224,7 +226,6 @@ function watchLogFile() {
           if (priceResult) {
             inventoryManager.updatePrice(priceResult.baseId, priceResult.avgPrice);
             savePriceCache(inventoryManager.getPriceCacheAsObject());
-            
             const itemName = inventoryManager.getInventoryMap().get(priceResult.baseId)?.itemName || priceResult.baseId;
             console.log(`💰 Price updated: ${itemName} = ${priceResult.avgPrice.toFixed(2)} (from ${prices.length} listings)`);
             

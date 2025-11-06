@@ -132,13 +132,15 @@ export function parsePriceCheck(lines: string[]): PriceCheckData | null {
       if (timestampMatch) timestamp = timestampMatch[1];
     }
 
-    if (line.includes('+itemBaseId') && line.includes('[')) {
+    // New format: +refer [360403]
+    if (line.includes('+refer') && line.includes('[')) {
       const match = line.match(/\[(\d+)\]/);
       if (match) {
         baseId = match[1];
       }
     }
 
+    // Price parsing (same as before)
     if ((line.includes('+unitPrices+') || line.includes('|          +')) && line.includes('[')) {
       const match = line.match(/\[([0-9.]+)\]/);
       if (match) {
@@ -150,18 +152,8 @@ export function parsePriceCheck(lines: string[]): PriceCheckData | null {
     }
   }
 
-  console.log(`🔍 Parse attempt - BaseID: ${baseId}, Prices found: ${prices.length}`);
-
   if (baseId && prices.length === 100) {
     return { baseId, prices, timestamp };
-  }
-
-  // Debug: show what we got if it failed
-  if (baseId) {
-    console.log(`⚠️  Expected 100 prices but got ${prices.length}`);
-    if (lines.length < 50) {
-      console.log(`⚠️  Buffer only has ${lines.length} lines - may need to wait longer`);
-    }
   }
 
   return null;
