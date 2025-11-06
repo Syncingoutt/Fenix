@@ -116,7 +116,14 @@
   "5039": { "name": "Winding Key - Bound", "baseID": "5039" },
   "5012": { "name": "Elexir of Oblivion - Bound", "baseID": "5012" },
   "10270": { "name": "Cage Compass", "baseID": "10270" },
-  "10001 ": { "name": "Sinful Plunder Compass", "baseID": "10001 " }
+  "10001 ": { "name": "Sinful Plunder Compass", "baseID": "10001 " },
+  "10072": { "name": "Priceless Militant Compass", "baseID": "10072 " },
+  "10181": { "name": "Cube Compass: Two Extremes", "baseID": "10181 " },
+  "430000": { "name": "The Beginning", "baseID": "430000 " },
+  "440004": { "name": "Divinity Emblem - Hunting", "baseID": "440004 " },
+  "10231": { "name": "Frozen Canvas Compass: Abundance", "baseID": "10231 " },
+  "430001": { "name": "The End", "baseID": "430001 " },
+  "10242": { "name": "The Fated Arcana Compass", "baseID": "10242"}
 }
 
 
