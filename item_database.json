@@ -123,7 +123,12 @@
   "440004": { "name": "Divinity Emblem - Hunting", "baseID": "440004 " },
   "10231": { "name": "Frozen Canvas Compass: Abundance", "baseID": "10231 " },
   "430001": { "name": "The End", "baseID": "430001 " },
-  "10242": { "name": "The Fated Arcana Compass", "baseID": "10242"}
+  "10242": { "name": "The Fated Arcana Compass", "baseID": "10242"},
+  "410501": { "name": "Queen's Grace - Slaughter", "baseID": "410501"},
+  "410500": { "name": "Shallow Dream Talking - Armor ", "baseID": "410500"},
+  "140004": { "name": "Shallow Dream Talking - Charm ", "baseID": "140004"},
+  "10182": { "name": "Desire Incarnation Cube Compass ", "baseID": "10182"},
+  "410301": { "name": "Desire Core - Record", "baseID": "410301"}
 }
 
 

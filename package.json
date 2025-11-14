@@ -1,6 +1,6 @@
 {
-  "name": "torchlight-tracker",
-  "version": "1.0.25",
+  "name": "fenix",
+  "version": "1.0.26",
   "description": "Torchlight Infinite Inventory Tracker",
   "main": "dist/main.js",
   "scripts": {
@@ -11,9 +11,9 @@
     "prod": "node scripts/release.js"
   },
   "build": {
-    "appId": "com.torchlight.tracker",
-    "productName": "Torchlight Tracker",
-    "artifactName": "Torchlight Tracker Setup.${ext}",
+    "appId": "com.fenix.tracker",
+    "productName": "Fenix",
+    "artifactName": "Fenix Setup.${ext}",
     "directories": {
       "output": "release"
     },
@@ -23,14 +23,15 @@
       "!src/**/*"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "assets/AppIcon.ico"
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Torchlight Tracker",
+      "shortcutName": "Fenix",
       "runAfterFinish": true
     },
     "publish": {
