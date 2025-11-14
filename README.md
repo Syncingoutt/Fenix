@@ -1,4 +1,4 @@
-# Torchlight Tracker
+<h1>Fenix </h1>
 
 Electron app for tracking Torchlight Infinite inventory and prices.
 
