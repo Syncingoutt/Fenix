@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, crashReporter } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, crashReporter, globalShortcut, Menu, screen, Tray } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
@@ -9,20 +9,36 @@ import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
 
 app.whenReady().then(() => {
-  ensureLogSizeLimit(500); // run once at startup
-  setInterval(() => ensureLogSizeLimit(500), 60 * 60 * 1000); // every 1 hour
+  ensureLogSizeLimit(500);
+  setInterval(() => ensureLogSizeLimit(500), 60 * 60 * 1000);
 });
 
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null; // Add tray variable
 let inventoryManager: InventoryManager;
 let lastLogPosition = 0;
 const WATCH_INTERVAL = 500;
 
 function createWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { x, y, width, height } = primaryDisplay.bounds;
+  
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    x: x,
+    y: y,
+    width: width,
+    height: height,
     icon: path.join(__dirname, '../assets/AppIcon.ico'),
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    focusable: true,
+    fullscreenable: false,
+    transparent: false,
+    hasShadow: false,
+    type: 'toolbar',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -30,14 +46,79 @@ function createWindow() {
     }
   });
 
-  // Clear cache before loading
+  mainWindow.setMenu(null);
+  mainWindow.hide();
+  mainWindow.setBounds({ x: x, y: y, width: width, height: height });
+  mainWindow.setSkipTaskbar(true);
   mainWindow.webContents.session.clearCache();
-
   mainWindow.loadFile(path.join(__dirname, 'ui/index.html'));
-  // mainWindow.webContents.openDevTools(); // Uncomment for debugging
   
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+  
+  mainWindow.on('show', () => {
+    if (mainWindow) {
+      mainWindow.setSkipTaskbar(true);
+    }
+  });
+}
+
+function createTray() {
+  // Create tray icon
+  const iconPath = path.join(__dirname, '../assets/AppIcon.ico');
+  tray = new Tray(iconPath);
+  
+  // Create context menu
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show Overlay (Ctrl+`)',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    },
+    {
+      label: 'Hide Overlay',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.hide();
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Check for Updates',
+      click: () => {
+        if (app.isPackaged) {
+          autoUpdater.checkForUpdatesAndNotify();
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+  
+  tray.setToolTip('Torchlight Tracker');
+  tray.setContextMenu(contextMenu);
+  
+  // Double-click tray icon to toggle overlay
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
   });
 }
 
@@ -111,6 +192,9 @@ if (app.isPackaged) {
 }
 
 app.whenReady().then(() => {
+  // Remove menu globally
+  Menu.setApplicationMenu(null);
+
   // Initialize
   console.log('🔥 Torchlight Tracker - Starting...');
   
@@ -133,6 +217,19 @@ app.whenReady().then(() => {
   lastLogPosition = getLogSize();
   
   createWindow();
+  createTray();
+
+  // Register global hotkey Ctrl+` to toggle overlay
+  const ret = globalShortcut.register('CommandOrControl+`', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
   
   // Start watching log file
   setInterval(() => {
@@ -162,9 +259,38 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Unregister hotkeys when app quits
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+});
+
 // IPC Handlers
 ipcMain.handle('get-inventory', () => {
   return inventoryManager.getInventory();
+});
+
+// IPC handler to minimize/close window from renderer
+ipcMain.on('minimize-window', () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
+});
+
+ipcMain.on('close-window', () => {
+  if (mainWindow) {
+    mainWindow.hide();
+  }
+});
+
+ipcMain.on('toggle-window', () => {
+  if (mainWindow) {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  }
 });
 
 // Log file watcher
@@ -184,15 +310,14 @@ function watchLogFile() {
 
     for (const line of newLines) {
       // Step 1: Capture the baseId from XchgSyncSearchPrice SendMessage
-// Match both old and new formats for baseId
-if ((line.includes('+itemBaseId') || line.includes('+refer')) && line.includes('[')) {
-  const match = line.match(/\[(\d+)\]/);
-  if (match) {
-    currentPriceCheckBaseId = match[1];
-    console.log(`🔍 Price check initiated for baseId: ${currentPriceCheckBaseId}`);
-  }
-}
-
+      // Match both old and new formats for baseId
+      if ((line.includes('+itemBaseId') || line.includes('+refer')) && line.includes('[')) {
+        const match = line.match(/\[(\d+)\]/);
+        if (match) {
+          currentPriceCheckBaseId = match[1];
+          console.log(`🔍 Price check initiated for baseId: ${currentPriceCheckBaseId}`);
+        }
+      }
 
       // Step 2: Start buffering when we see XchgSearchPrice RecvMessage
       if (line.includes('----Socket RecvMessage STT----XchgSearchPrice----')) {
