@@ -56,13 +56,13 @@ jobs:
           if ([string]::IsNullOrEmpty($LATEST_TAG)) {
             Write-Host "No existing tags found, starting from v2.0.0"
             $CURRENT_VERSION = "2.0.0"
-            Write-Host "version=$CURRENT_VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            Write-Host "tag=" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "version=$CURRENT_VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            "tag=" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           } else {
             # Extract version from tag (remove 'v' prefix)
             $CURRENT_VERSION = $LATEST_TAG -replace '^v', ''
-            Write-Host "version=$CURRENT_VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            Write-Host "tag=$LATEST_TAG" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "version=$CURRENT_VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            "tag=$LATEST_TAG" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           }
           
           Write-Host "Current version: $CURRENT_VERSION"
@@ -98,10 +98,12 @@ jobs:
           $NEW_VERSION = "$MAJOR.$MINOR.$PATCH"
           $NEW_TAG = "v$NEW_VERSION"
           
-          Write-Host "version=$NEW_VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          Write-Host "tag=$NEW_TAG" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "New version: $NEW_VERSION"
           Write-Host "New tag: $NEW_TAG"
+          
+          # Set GitHub Actions outputs (write directly without Write-Host)
+          "version=$NEW_VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "tag=$NEW_TAG" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Update package.json version (temporary)
         shell: pwsh
@@ -127,6 +129,14 @@ jobs:
         shell: pwsh
         run: |
           $NEW_TAG = "${{ steps.calc_version.outputs.tag }}"
+          Write-Host "Creating tag: $NEW_TAG"
+          if ([string]::IsNullOrWhiteSpace($NEW_TAG)) {
+            Write-Host "❌ Error: NEW_TAG is empty!"
+            Write-Host "calc_version outputs:"
+            Write-Host "  version: ${{ steps.calc_version.outputs.version }}"
+            Write-Host "  tag: ${{ steps.calc_version.outputs.tag }}"
+            exit 1
+          }
           git tag $NEW_TAG
           git push origin $NEW_TAG
 
