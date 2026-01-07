@@ -13,7 +13,7 @@
   "build": {
     "appId": "com.fenix.tracker",
     "productName": "Fenix",
-    "artifactName": "Fenix Setup.${ext}",
+    "artifactName": "Fenix.Setup.${ext}",
     "directories": {
       "output": "release"
     },
