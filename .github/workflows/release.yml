@@ -111,7 +111,7 @@ jobs:
           Write-Host "✅ Updated package.json to version $NEW_VERSION"
 
       - name: Build Electron app
-        run: npm run package
+        run: npm run build && npx electron-builder --publish never
 
       - name: Commit version bump
         shell: pwsh
