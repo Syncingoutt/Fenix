@@ -48,6 +48,30 @@ try {
   process.exit(1);
 }
 
+// Always pull latest changes FIRST (before checking for uncommitted changes)
+console.log('⬇️  Pulling latest changes from remote...');
+try {
+  execSync('git pull origin main --rebase', {
+    stdio: 'inherit',
+    cwd: path.join(__dirname, '..'),
+  });
+  console.log('✅ Pulled latest changes');
+  console.log('');
+} catch (pullError) {
+  // If rebase fails, try without rebase (might be conflicts or no remote changes)
+  try {
+    execSync('git pull origin main', {
+      stdio: 'inherit',
+      cwd: path.join(__dirname, '..'),
+    });
+    console.log('✅ Pulled latest changes');
+    console.log('');
+  } catch (pullError2) {
+    console.log('⚠️  Could not pull (this is okay if no remote changes)');
+    console.log('');
+  }
+}
+
 // Check for uncommitted changes and commit them
 try {
   const status = execSync('git status --porcelain', {
@@ -66,25 +90,6 @@ try {
       cwd: path.join(__dirname, '..'),
     });
     console.log('');
-    
-    // Pull latest changes first (with rebase to avoid merge commits)
-    console.log('⬇️  Pulling latest changes from remote...');
-    try {
-      execSync('git pull origin main --rebase', {
-        stdio: 'inherit',
-        cwd: path.join(__dirname, '..'),
-      });
-    } catch (pullError) {
-      // If pull fails, try without rebase (might be first commit or no remote changes)
-      try {
-        execSync('git pull origin main', {
-          stdio: 'inherit',
-          cwd: path.join(__dirname, '..'),
-        });
-      } catch (pullError2) {
-        console.log('⚠️  Could not pull (this is okay if no remote changes)');
-      }
-    }
     
     // Stage all changes
     execSync('git add .', {
