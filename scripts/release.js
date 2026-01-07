@@ -45,6 +45,75 @@ try {
   process.exit(1);
 }
 
+// Check for uncommitted changes and commit them
+try {
+  const status = execSync('git status --porcelain', {
+    encoding: 'utf8',
+    cwd: path.join(__dirname, '..'),
+  }).trim();
+
+  if (status) {
+    console.log('📝 Found uncommitted changes, committing them...');
+    console.log('');
+    
+    // Show what will be committed
+    console.log('Changes to be committed:');
+    execSync('git status --short', {
+      stdio: 'inherit',
+      cwd: path.join(__dirname, '..'),
+    });
+    console.log('');
+    
+    // Pull latest changes first (with rebase to avoid merge commits)
+    console.log('⬇️  Pulling latest changes from remote...');
+    try {
+      execSync('git pull origin main --rebase', {
+        stdio: 'inherit',
+        cwd: path.join(__dirname, '..'),
+      });
+    } catch (pullError) {
+      // If pull fails, try without rebase (might be first commit or no remote changes)
+      try {
+        execSync('git pull origin main', {
+          stdio: 'inherit',
+          cwd: path.join(__dirname, '..'),
+        });
+      } catch (pullError2) {
+        console.log('⚠️  Could not pull (this is okay if no remote changes)');
+      }
+    }
+    
+    // Stage all changes
+    execSync('git add .', {
+      cwd: path.join(__dirname, '..'),
+    });
+    
+    // Commit with a generic message
+    execSync('git commit -m "chore: update before release"', {
+      stdio: 'inherit',
+      cwd: path.join(__dirname, '..'),
+    });
+    
+    // Push to main
+    console.log('⬆️  Pushing changes to main...');
+    execSync('git push origin main', {
+      stdio: 'inherit',
+      cwd: path.join(__dirname, '..'),
+    });
+    
+    console.log('✅ Changes committed and pushed');
+    console.log('');
+  } else {
+    console.log('✅ No uncommitted changes');
+    console.log('');
+  }
+} catch (error) {
+  console.error('❌ Error: Failed to commit/push changes');
+  console.error(`   ${error.message}`);
+  console.error('   Please commit your changes manually and try again');
+  process.exit(1);
+}
+
 // Trigger GitHub Actions workflow
 try {
   console.log(`🚀 Triggering release workflow with ${versionType} version bump...`);

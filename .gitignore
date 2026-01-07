@@ -9,3 +9,8 @@ Thumbs.db
 *.tgz
 .env
 .env.*
+*.exe
+*.msi
+*.dmg
+*.zip
+*.tar.gz

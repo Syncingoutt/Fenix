@@ -8,6 +8,25 @@ import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
 
+// Single instance lock - prevent multiple instances (CRITICAL for packaged apps)
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Another instance is already running, quit this one
+  app.quit();
+  process.exit(0);
+} else {
+  // Handle when a second instance tries to start
+  app.on('second-instance', () => {
+    // Someone tried to run a second instance, focus our window instead
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 app.whenReady().then(() => {
   ensureLogSizeLimit(500);
   setInterval(() => ensureLogSizeLimit(500), 60 * 60 * 1000);
@@ -38,6 +57,30 @@ const timerState: TimerState = {
   hourlyPaused: false
 };
 
+function getIconPath(): string {
+  if (app.isPackaged) {
+    // In packaged app, icon should be in resources (electron-builder puts it there)
+    // Try multiple possible locations
+    const possiblePaths = [
+      path.join(process.resourcesPath, 'assets', 'AppIcon.ico'),
+      path.join(process.resourcesPath, 'app.asar', 'assets', 'AppIcon.ico'),
+      path.join(__dirname, 'assets', 'AppIcon.ico'),
+      path.join(__dirname, '../assets', 'AppIcon.ico')
+    ];
+    
+    for (const iconPath of possiblePaths) {
+      if (fs.existsSync(iconPath)) {
+        return iconPath;
+      }
+    }
+    // Fallback - return first path anyway
+    return possiblePaths[0];
+  } else {
+    // In development
+    return path.join(__dirname, '../assets/AppIcon.ico');
+  }
+}
+
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { x, y, width, height } = primaryDisplay.bounds;
@@ -47,7 +90,7 @@ function createWindow() {
     y: y,
     width: width,
     height: height,
-    icon: path.join(__dirname, '../assets/AppIcon.ico'),
+    icon: getIconPath(),
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
@@ -85,8 +128,22 @@ function createWindow() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, '../assets/AppIcon.ico');
-  tray = new Tray(iconPath);
+  const iconPath = getIconPath();
+  
+  // Verify icon exists, log error if not (but don't crash)
+  if (!fs.existsSync(iconPath)) {
+    console.error(`❌ Tray icon not found at: ${iconPath}`);
+    console.error(`   Trying to continue without tray icon...`);
+    // Try to create tray anyway with empty string - might use default
+    try {
+      tray = new Tray(iconPath);
+    } catch (error) {
+      console.error(`❌ Failed to create tray: ${error}`);
+      return; // Exit early if we can't create tray
+    }
+  } else {
+    tray = new Tray(iconPath);
+  }
   
   const contextMenu = Menu.buildFromTemplate([
     {
