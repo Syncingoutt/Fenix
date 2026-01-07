@@ -127,7 +127,10 @@ jobs:
           git push origin "$NEW_TAG"
 
       - name: Build Electron app
-        run: npm run package
+        run: |
+          npx tsc
+          cp -r src/ui dist/ui
+          npm run package -- --publish never
 
       - name: Create GitHub Release
         env:
