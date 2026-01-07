@@ -3,16 +3,19 @@ const path = require('path');
 
 // Get version type from command line arguments
 const versionType = process.argv[2];
+const commitMessage = process.argv[3] || 'chore: update before release';
 
 // Validate version type
 if (!versionType || !['major', 'minor', 'fix'].includes(versionType)) {
   console.error('❌ Error: Invalid version type');
-  console.error('Usage: npm run prod [major|minor|fix]');
+  console.error('Usage: npm run prod [major|minor|fix] [commit message]');
   console.error('');
   console.error('Examples:');
-  console.error('  npm run prod major  → 2.0.0 → 3.0.0');
-  console.error('  npm run prod minor  → 2.0.0 → 2.1.0');
-  console.error('  npm run prod fix    → 2.0.0 → 2.0.1');
+  console.error('  npm run prod major');
+  console.error('  npm run prod minor');
+  console.error('  npm run prod fix');
+  console.error('  npm run prod fix "feat: added X thing"');
+  console.error('  npm run prod minor "fix: resolved Y issue"');
   process.exit(1);
 }
 
@@ -88,10 +91,11 @@ try {
       cwd: path.join(__dirname, '..'),
     });
     
-    // Commit with a generic message
-    execSync('git commit -m "chore: update before release"', {
+    // Commit with provided message or default
+    execSync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
       stdio: 'inherit',
       cwd: path.join(__dirname, '..'),
+      shell: true
     });
     
     // Push to main

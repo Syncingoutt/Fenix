@@ -20,6 +20,7 @@
     "files": [
       "dist/**/*",
       "package.json",
+      "assets/**/*",
       "!src/**/*"
     ],
     "win": {
@@ -40,7 +41,8 @@
       "repo": "Fenix"
     },
     "extraResources": [
-      "item_database.json"
+      "item_database.json",
+      "assets/**/*"
     ]
   },
   "keywords": [],

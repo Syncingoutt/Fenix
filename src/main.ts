@@ -59,20 +59,25 @@ const timerState: TimerState = {
 
 function getIconPath(): string {
   if (app.isPackaged) {
-    // In packaged app, icon should be in resources (electron-builder puts it there)
+    // In packaged app, assets are in extraResources (alongside app.asar)
     // Try multiple possible locations
     const possiblePaths = [
-      path.join(process.resourcesPath, 'assets', 'AppIcon.ico'),
-      path.join(process.resourcesPath, 'app.asar', 'assets', 'AppIcon.ico'),
-      path.join(__dirname, 'assets', 'AppIcon.ico'),
-      path.join(__dirname, '../assets', 'AppIcon.ico')
+      path.join(process.resourcesPath, 'assets', 'AppIcon.ico'), // extraResources/assets/
+      path.join(process.resourcesPath, 'app.asar', 'assets', 'AppIcon.ico'), // app.asar/assets/
+      path.join(process.resourcesPath, 'app', 'assets', 'AppIcon.ico'), // app/assets/ (unpacked)
+      path.join(__dirname, 'assets', 'AppIcon.ico'), // dist/assets/
+      path.join(__dirname, '../assets', 'AppIcon.ico') // dist/../assets/
     ];
     
     for (const iconPath of possiblePaths) {
       if (fs.existsSync(iconPath)) {
+        console.log(`✅ Found icon at: ${iconPath}`);
         return iconPath;
       }
     }
+    // Log all tried paths for debugging
+    console.error(`❌ Icon not found in any of these locations:`);
+    possiblePaths.forEach(p => console.error(`   - ${p}`));
     // Fallback - return first path anyway
     return possiblePaths[0];
   } else {
@@ -128,6 +133,11 @@ function createWindow() {
 }
 
 function createTray() {
+  // Set app user model ID for Windows to show tray icon properly
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.fenix.tracker');
+  }
+  
   const iconPath = getIconPath();
   
   // Verify icon exists, log error if not (but don't crash)
@@ -142,6 +152,7 @@ function createTray() {
       return; // Exit early if we can't create tray
     }
   } else {
+    console.log(`✅ Tray icon found at: ${iconPath}`);
     tray = new Tray(iconPath);
   }
   
