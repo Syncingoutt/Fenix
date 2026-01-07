@@ -1,84 +1,157 @@
-name: Build and Release
+name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'  # Triggers on tags like v1.0.1, v1.1.0, etc.
-
-# Grant the workflow permission to create releases
-permissions:
-  contents: write
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - fix
 
 jobs:
-  build-and-release:
-    runs-on: windows-latest
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    
+    permissions:
+      contents: write
+      packages: write
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Cache Electron downloads
-        uses: actions/cache@v4
-        with:
-          path: |
-            C:\Users\runneradmin\AppData\Local\electron\Cache
-            C:\Users\runneradmin\AppData\Local\electron-builder\Cache
-          key: electron-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      
       - name: Install dependencies
         run: npm ci
-      
-      - name: Build with Electron Builder
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          # Fetch all tags
+          git fetch --tags
+          
+          # Get the latest tag (sorted by version)
+          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1 || echo "")
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No existing tags found, starting from v2.0.0"
+            CURRENT_VERSION="2.0.0"
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "tag=" >> $GITHUB_OUTPUT
+          else
+            # Extract version from tag (remove 'v' prefix)
+            CURRENT_VERSION="${LATEST_TAG#v}"
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Current version: $CURRENT_VERSION"
+          echo "Latest tag: $LATEST_TAG"
+
+      - name: Calculate next version
+        id: calc_version
+        run: |
+          CURRENT_VERSION="${{ steps.get_tag.outputs.version }}"
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+          
+          case "$VERSION_TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            fix)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          NEW_TAG="v$NEW_VERSION"
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+          echo "New tag: $NEW_TAG"
+
+      - name: Update package.json version
+        run: |
+          NEW_VERSION="${{ steps.calc_version.outputs.version }}"
+          npm version "$NEW_VERSION" --no-git-tag-version
+          echo "✅ Updated package.json to version $NEW_VERSION"
+
+      - name: Build application (for commit verification)
+        run: |
+          npx tsc
+          cp -r src/ui dist/ui
+
+      - name: Commit version bump
+        run: |
+          NEW_VERSION="${{ steps.calc_version.outputs.version }}"
+          NEW_TAG="${{ steps.calc_version.outputs.tag }}"
+          
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
+          git push origin main
+
+      - name: Create and push tag
+        run: |
+          NEW_TAG="${{ steps.calc_version.outputs.tag }}"
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
+
+      - name: Build Electron app
         run: npm run package
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      # Removed external action for reading JSON version to avoid repo resolution issues
-      
-      - name: Prepare release files
-        shell: pwsh
         run: |
-          # Find the .exe file (could be in root of release or in a subdirectory)
-          $exeFiles = Get-ChildItem -Path "release" -Filter "*.exe" -Recurse
-          if ($exeFiles.Count -eq 0) {
-            Write-Host "❌ No .exe file found in release directory"
-            Get-ChildItem -Path "release" -Recurse | ForEach-Object { Write-Host $_.FullName }
-            exit 1
-          }
+          RELEASE_NOTES="## Release ${{ steps.calc_version.outputs.tag }}
           
-          # Use the first .exe found (usually there's only one)
-          $exe = $exeFiles[0]
-          Write-Host "✅ Found executable: $($exe.Name) at $($exe.FullName)"
+          Automated release created from ${{ github.ref_name }} branch.
           
-          # Copy the installer to a release_assets directory for easier upload
-          New-Item -ItemType Directory -Path "release_assets" -Force | Out-Null
-          Copy-Item $exe.FullName "release_assets/$($exe.Name)"
+          ### Changes
+          See commit history for details."
           
-          Write-Host "✅ Release files prepared"
-      
-      - name: Upload release artifacts
-        uses: softprops/action-gh-release@v1
-        with:
-          files: release_assets/**
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: |
-            ## Release ${{ github.ref_name }}
-            
-            **Installation:**
-            - Download the `.exe` file from the assets below
-            - Run it to install/update the application
-            
-            **Changes:**
-            See the commit history for details.
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh release create "${{ steps.calc_version.outputs.tag }}" \
+            --title "Release ${{ steps.calc_version.outputs.tag }}" \
+            --notes "$RELEASE_NOTES" \
+            release/**/* \
+            --repo "${{ github.repository }}"
 
+      - name: Release summary
+        run: |
+          echo "## 🎉 Release Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.calc_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ steps.calc_version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Type**: ${{ github.event.inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View the release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.calc_version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
