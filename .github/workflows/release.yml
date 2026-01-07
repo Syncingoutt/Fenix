@@ -100,16 +100,17 @@ jobs:
           echo "New version: $NEW_VERSION"
           echo "New tag: $NEW_TAG"
 
-      - name: Update package.json version
+      - name: Update package.json version (temporary)
         run: |
           NEW_VERSION="${{ steps.calc_version.outputs.version }}"
           npm version "$NEW_VERSION" --no-git-tag-version
           echo "✅ Updated package.json to version $NEW_VERSION"
 
-      - name: Build application (for commit verification)
+      - name: Build Electron app
         run: |
           npx tsc
           cp -r src/ui dist/ui
+          npm run package -- --publish never
 
       - name: Commit version bump
         run: |
@@ -125,12 +126,6 @@ jobs:
           NEW_TAG="${{ steps.calc_version.outputs.tag }}"
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
-
-      - name: Build Electron app
-        run: |
-          npx tsc
-          cp -r src/ui dist/ui
-          npm run package -- --publish never
 
       - name: Create GitHub Release
         env:
