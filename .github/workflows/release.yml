@@ -159,11 +159,17 @@ jobs:
           $ymlFiles = Get-ChildItem -Path release -Filter "*.yml" -File | ForEach-Object { $_.FullName }
           $blockmapFiles = Get-ChildItem -Path release -Filter "*.blockmap" -File | ForEach-Object { $_.FullName }
           
-          # Combine all files needed for auto-updates
+          # Combine all files needed for auto-updates (exclude debug files)
           $allFiles = @()
-          if ($installerFiles) { $allFiles += $installerFiles }
-          if ($ymlFiles) { $allFiles += $ymlFiles }
-          if ($blockmapFiles) { $allFiles += $blockmapFiles }
+          if ($installerFiles) { 
+            $allFiles += $installerFiles | Where-Object { $_ -notlike "*debug*" }
+          }
+          if ($ymlFiles) { 
+            $allFiles += $ymlFiles | Where-Object { $_ -like "*latest.yml" }
+          }
+          if ($blockmapFiles) { 
+            $allFiles += $blockmapFiles 
+          }
           
           if ($installerFiles.Count -eq 0) {
             Write-Host "⚠️  No installer files found in release directory"
@@ -171,7 +177,8 @@ jobs:
             exit 1
           }
           
-          if ($ymlFiles.Count -eq 0) {
+          $latestYml = $ymlFiles | Where-Object { $_ -like "*latest.yml" }
+          if ($latestYml.Count -eq 0) {
             Write-Host "⚠️  WARNING: No latest.yml file found - auto-updates may not work!"
             Write-Host "Files in release directory:"
             Get-ChildItem -Path release
@@ -179,12 +186,33 @@ jobs:
             Write-Host "✅ Found latest.yml file for auto-updates"
           }
           
-          $filesArgs = $allFiles -join ' '
-          gh release create "${{ steps.calc_version.outputs.tag }}" `
-            --title "Release ${{ steps.calc_version.outputs.tag }}" `
-            --notes $RELEASE_NOTES `
-            $filesArgs `
-            --repo "${{ github.repository }}"
+          Write-Host "Files to upload:"
+          $allFiles | ForEach-Object { Write-Host "  $_" }
+          
+          # Build gh release create command with properly quoted file paths
+          $releaseTag = "${{ steps.calc_version.outputs.tag }}"
+          $releaseTitle = "Release $releaseTag"
+          
+          # Start building the command arguments
+          $ghArgs = @(
+            "release",
+            "create",
+            $releaseTag,
+            "--title",
+            $releaseTitle,
+            "--notes",
+            $RELEASE_NOTES,
+            "--repo",
+            "${{ github.repository }}"
+          )
+          
+          # Add each file as a separate argument (gh will handle the paths)
+          foreach ($file in $allFiles) {
+            $ghArgs += $file
+          }
+          
+          # Execute gh with arguments
+          & gh $ghArgs
 
       - name: Release summary
         shell: pwsh
