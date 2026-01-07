@@ -154,8 +154,16 @@ jobs:
           See commit history for details.
           "@
           
-          # Find installer files (only .exe files, not directories)
+          # Find installer files (.exe) and update metadata (.yml, .blockmap)
           $installerFiles = Get-ChildItem -Path release -Filter "*.exe" -File | ForEach-Object { $_.FullName }
+          $ymlFiles = Get-ChildItem -Path release -Filter "*.yml" -File | ForEach-Object { $_.FullName }
+          $blockmapFiles = Get-ChildItem -Path release -Filter "*.blockmap" -File | ForEach-Object { $_.FullName }
+          
+          # Combine all files needed for auto-updates
+          $allFiles = @()
+          if ($installerFiles) { $allFiles += $installerFiles }
+          if ($ymlFiles) { $allFiles += $ymlFiles }
+          if ($blockmapFiles) { $allFiles += $blockmapFiles }
           
           if ($installerFiles.Count -eq 0) {
             Write-Host "⚠️  No installer files found in release directory"
@@ -163,7 +171,15 @@ jobs:
             exit 1
           }
           
-          $filesArgs = $installerFiles -join ' '
+          if ($ymlFiles.Count -eq 0) {
+            Write-Host "⚠️  WARNING: No latest.yml file found - auto-updates may not work!"
+            Write-Host "Files in release directory:"
+            Get-ChildItem -Path release
+          } else {
+            Write-Host "✅ Found latest.yml file for auto-updates"
+          }
+          
+          $filesArgs = $allFiles -join ' '
           gh release create "${{ steps.calc_version.outputs.tag }}" `
             --title "Release ${{ steps.calc_version.outputs.tag }}" `
             --notes $RELEASE_NOTES `
