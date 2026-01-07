@@ -2,7 +2,7 @@
   "100300": { "name": "Flame Elementium", "baseID": "100300" },
   "100200": { "name": "Flame Sand", "baseID": "100200" },
   "100400": { "name": "Flame Residue", "baseID": "100400" },
-  "5029": { "name": "Winding Keys", "baseID": "5029" },
+  "5029": { "name": "Winding Key", "baseID": "5029" },
   "5011": { "name": "Elexir of Oblivion", "baseID": "5011" },
   "5028": { "name": "Netherrealm Resonance", "baseID": "5028" },
   "5080": { "name": "Energy Core", "baseID": "5080" },
@@ -126,9 +126,13 @@
   "10242": { "name": "The Fated Arcana Compass", "baseID": "10242"},
   "410501": { "name": "Queen's Grace - Slaughter", "baseID": "410501"},
   "410500": { "name": "Shallow Dream Talking - Armor ", "baseID": "410500"},
-  "140004": { "name": "Shallow Dream Talking - Charm ", "baseID": "140004"},
+  "140004": { "name": "Shallow Dream Talking - Weapon ", "baseID": "140004"},
   "10182": { "name": "Desire Incarnation Cube Compass ", "baseID": "10182"},
-  "410301": { "name": "Desire Core - Record", "baseID": "410301"}
+  "410301": { "name": "Desire Core - Record", "baseID": "410301"},
+  "10133": { "name": "Onslaught Might Compass", "baseID": "10133"},
+  "360201": { "name": "Night-Blooming Cereus Lv. 4", "baseID": "360201"},
+  "339001": { "name": "Inspiration Essence", "baseID": "339001"},
+  "990005": { "name": "Mist Essence", "baseID": "990005"}
 }
 
 

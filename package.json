@@ -37,7 +37,7 @@
     "publish": {
       "provider": "github",
       "owner": "Syncingoutt",
-      "repo": "Torchlight-Exchange-2"
+      "repo": "Fenix"
     },
     "extraResources": [
       "item_database.json"

@@ -1,4 +1,4 @@
-// renderer.js
+// renderer.ts
 interface InventoryItem {
   itemName: string;
   totalQuantity: number;
@@ -13,9 +13,21 @@ interface InventoryItem {
 interface ElectronAPI {
   getInventory: () => Promise<InventoryItem[]>;
   onInventoryUpdate: (callback: () => void) => void;
+  startHourlyTimer: () => void;
+  pauseHourlyTimer: () => void;
+  resumeHourlyTimer: () => void;
+  stopHourlyTimer: () => void;
+  resetRealtimeTimer: () => void;
+  getTimerState: () => Promise<{ realtimeSeconds: number; hourlySeconds: number }>;
+  onTimerTick: (callback: (data: { type: string; seconds: number }) => void) => void;
+  getAppVersion: () => Promise<string>;
+  checkForUpdates: () => Promise<{ success: boolean; message?: string }>;
+  onUpdateStatus: (callback: (data: { status: string; message?: string; version?: string }) => void) => void;
+  onUpdateProgress: (callback: (percent: number) => void) => void;
 }
 
 declare const electronAPI: ElectronAPI;
+declare const Chart: any;
 
 // === INVENTORY STATE ===
 let currentItems: InventoryItem[] = [];
@@ -23,21 +35,41 @@ let currentItems: InventoryItem[] = [];
 // Sorting
 let currentSortBy: 'priceUnit' | 'priceTotal' = 'priceTotal';
 let currentSortOrder: 'asc' | 'desc' = 'desc';
+let searchQuery: string = '';
 
 // === WEALTH TRACKING STATE ===
 let wealthMode: 'realtime' | 'hourly' = 'realtime';
-let wealthHistory: { time: number; value: number }[] = [];
-const MAX_POINTS = 120; // ~10 min realtime, 1h hourly
+let realtimeHistory: { time: number; value: number }[] = [];
+let hourlyHistory: { time: number; value: number }[] = [];
+const MAX_POINTS = 7200; // Store up to 2 hours of second-by-second data
 
+// Hourly mode: snapshot of inventory at start
+let hourlyStartSnapshot: Map<string, number> = new Map(); // baseId -> quantity
 let hourlyStartTime = 0;
-let hourlyStartValue = 0;
-let hourlyInterval: number | null = null;
-let hourlyPausedTime = 0; // Total time spent paused (in seconds)
-let hourlyPausedAt = 0; // When pause was initiated
+let hourlyElapsedSeconds = 0;
+let isHourlyActive = false;
+let hourlyPaused = false;
+
+// Hourly buckets - store data for each completed hour
+interface HourlyBucket {
+  hourNumber: number;
+  startValue: number;
+  endValue: number;
+  earnings: number;
+  history: { time: number; value: number }[];
+}
+let hourlyBuckets: HourlyBucket[] = [];
+let currentHourStartValue = 0;
+
+// Realtime tracking
+let realtimeStartValue = 0;
+let realtimeStartTime = 0;
+let realtimeElapsedSeconds = 0;
+let isRealtimeInitialized = false;
 
 // === DOM ELEMENTS ===
 const wealthValueEl = document.getElementById('wealthValue')!;
-const wealthRateEl = document.getElementById('wealthRate')!;
+const wealthHourlyEl = document.getElementById('wealthHourly')!;
 const realtimeBtn = document.getElementById('realtimeBtn') as HTMLButtonElement;
 const hourlyBtn = document.getElementById('hourlyBtn') as HTMLButtonElement;
 const hourlyControls = document.getElementById('hourlyControls')!;
@@ -47,10 +79,11 @@ const pauseHourlyBtn = document.getElementById('pauseHourly') as HTMLButtonEleme
 const resumeHourlyBtn = document.getElementById('resumeHourly') as HTMLButtonElement;
 const hourlyTimerEl = document.getElementById('hourlyTimer')!;
 const timerEl = document.getElementById('timer')!;
+const resetRealtimeBtn = document.getElementById('resetRealtimeBtn') as HTMLButtonElement;
 
-// Canvas
-const canvas = document.getElementById('wealthGraph') as HTMLCanvasElement;
-const ctx = canvas.getContext('2d')!;
+// Chart.js
+let chart: any;
+let hourCharts: any[] = []; // Store hour chart instances separately
 
 // ---- INITIAL UI STATE ----
 startHourlyBtn.style.display = 'inline-block';
@@ -60,25 +93,48 @@ resumeHourlyBtn.style.display = 'none';
 hourlyControls.classList.remove('active');
 realtimeBtn.classList.add('active');
 hourlyBtn.classList.remove('active');
-
-// Resize canvas
-function resizeCanvas() {
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-}
-window.addEventListener('resize', () => {
-  resizeCanvas();
-  drawGraph();
-});
-resizeCanvas();
+resetRealtimeBtn.style.display = 'block'; // Show reset button in realtime mode
 
 // === INITIAL LOAD ===
 async function loadInventory() {
   const inventory = await electronAPI.getInventory();
-  currentItems = inventory;
+  
+  // Set Flame Elementium price to 1 FE (it's the currency itself)
+  currentItems = inventory.map(item => {
+    if (item.baseId === '100300') {
+      return { ...item, price: 1 };
+    }
+    return item;
+  });
+  
+  // Initialize realtime tracking with the loaded inventory value (only once)
+  if (!isRealtimeInitialized) {
+    initRealtimeTracking();
+    isRealtimeInitialized = true;
+  }
+  
   renderInventory();
-  updateStats(inventory);
+  updateStats(currentItems);
+}
+
+// === GET ITEMS TO DISPLAY (based on mode) ===
+function getDisplayItems(): InventoryItem[] {
+  if (wealthMode === 'hourly' && isHourlyActive) {
+    // In hourly mode, only show items gained since start
+    return currentItems.map(item => {
+      const currentQty = item.totalQuantity;
+      const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
+      const gainedQty = currentQty - startQty;
+      
+      return {
+        ...item,
+        totalQuantity: gainedQty
+      };
+    }).filter(item => item.totalQuantity > 0); // Only show items with gains
+  }
+  
+  // In realtime mode or when hourly isn't active, show all items
+  return currentItems;
 }
 
 // === FILTER & SORT ===
@@ -86,7 +142,15 @@ function getSortedAndFilteredItems(): InventoryItem[] {
   const minPriceInput = document.getElementById('minPrice') as HTMLInputElement | null;
   const minPrice = parseFloat(minPriceInput?.value || '0') || 0;
 
-  let filtered = currentItems.filter(item => {
+  const itemsToDisplay = getDisplayItems();
+
+  let filtered = itemsToDisplay.filter(item => {
+    // Search filter
+    if (searchQuery && !item.itemName.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    // Price filter
     if (item.price === null) return minPrice === 0;
     const totalValue = item.price * item.totalQuantity;
     return totalValue >= minPrice;
@@ -125,7 +189,10 @@ function renderInventory() {
   const items = getSortedAndFilteredItems();
 
   if (items.length === 0) {
-    container.innerHTML = '<div class="loading">No items match your filters</div>';
+    const message = (wealthMode === 'hourly' && isHourlyActive) 
+      ? 'No new items gained yet' 
+      : 'No items match your filters';
+    container.innerHTML = `<div class="loading">${message}</div>`;
     updateSortIndicators();
     return;
   }
@@ -136,21 +203,26 @@ function renderInventory() {
       const pageLabel = getPageLabel(item);
 
       return `
-        <div class="item-row">
-          <div class="item-name">
-            ${item.itemName}
-            ${item.instances > 1 ? `<span style="color: #9ca3af; font-size: 14px;"> (${item.instances} stacks)</span>` : ''}
-            ${pageLabel ? `<div style="color: white; opacity: 0.5; font-size: 12px; margin-top: 4px;">${pageLabel}</div>` : ''}
-          </div>
-          <div class="item-quantity">${item.totalQuantity.toLocaleString()}</div>
-          <div class="item-price">
-            <div class="price-single ${item.price === null ? 'no-price' : ''}" style="text-align: left;">
-              ${item.price !== null ? item.price.toFixed(2) : 'Not Set'}
-            </div>
-            ${totalValue !== null ? `<div class="price-total" style="text-align: right;">${totalValue.toFixed(2)}</div>` : ''}
+      <div class="item-row">
+        <div class="item-name">
+          <img src="../../assets/${item.baseId}.webp" 
+               alt="${item.itemName}" 
+               class="item-icon"
+               onerror="this.style.display='none'">
+          <div class="item-name-content">
+            <div>${item.itemName}</div>
+            ${pageLabel ? `<div class="page-label">${pageLabel}</div>` : ''}
           </div>
         </div>
-      `;
+        <div class="item-quantity">${item.totalQuantity.toLocaleString()}</div>
+        <div class="item-price">
+          <div class="price-single ${item.price === null ? 'no-price' : ''}">
+            ${item.price !== null ? item.price.toFixed(2) : 'Not Set'}
+          </div>
+          ${totalValue !== null ? `<div class="price-total">${totalValue.toFixed(2)}</div>` : ''}
+        </div>
+      </div>
+    `;
     })
     .join('');
 
@@ -159,19 +231,9 @@ function renderInventory() {
 
 // === UPDATE STATS ===
 function updateStats(items: InventoryItem[]) {
-  const itemsPriced = items.filter(item => item.price !== null).length;
-  const totalValue = items.reduce((sum, item) => {
-    if (item.price !== null) return sum + item.totalQuantity * item.price;
-    return sum;
-  }, 0);
-
-  const itemsPricedEl = document.getElementById('itemsPriced');
-  if (itemsPricedEl) itemsPricedEl.textContent = `${itemsPriced}/${items.length}`;
-
-  if (wealthMode === 'realtime') {
-    updateWealthRealtime(totalValue);
-  } else if (wealthMode === 'hourly' && hourlyInterval === null) {
-    wealthValueEl.textContent = `${totalValue.toFixed(2)} FE`;
+  updateRealtimeWealth();
+  if (isHourlyActive && !hourlyPaused) {
+    updateHourlyWealth();
   }
 }
 
@@ -180,9 +242,17 @@ function updateSortIndicators() {
   document.querySelectorAll('[data-sort]').forEach(el => {
     const sortType = (el as HTMLElement).dataset.sort;
     if (!sortType) return;
+    
+    // Set text content without "Up" or "Down"
     (el as HTMLElement).textContent = sortType === 'priceUnit' ? 'Price' : 'Total';
+    
+    // Remove existing sort classes
+    (el as HTMLElement).classList.remove('sort-active', 'sort-asc', 'sort-desc');
+    
+    // Add appropriate classes for active sort
     if (sortType === currentSortBy) {
-      (el as HTMLElement).textContent += currentSortOrder === 'asc' ? ' Up' : ' Down';
+      (el as HTMLElement).classList.add('sort-active');
+      (el as HTMLElement).classList.add(currentSortOrder === 'asc' ? 'sort-asc' : 'sort-desc');
     }
   });
 }
@@ -203,152 +273,312 @@ function getCurrentTotalValue(): number {
   }, 0);
 }
 
-// === GRAPH: Init ===
+// === HOURLY: Calculate wealth gained since start ===
+function getHourlyWealthGain(): number {
+  let gainedValue = 0;
+  
+  for (const item of currentItems) {
+    if (item.price === null) continue;
+    
+    const currentQty = item.totalQuantity;
+    const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
+    const gainedQty = currentQty - startQty;
+    
+    if (gainedQty > 0) {
+      gainedValue += gainedQty * item.price;
+    }
+  }
+  
+  return gainedValue;
+}
+
+// === GRAPH: Init with Chart.js ===
 function initGraph() {
-  wealthHistory = [];
-  drawGraph();
+  const canvas = document.getElementById('wealth-graph') as HTMLCanvasElement;
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d')!;
+
+  // Destroy existing chart if it exists
+  if (chart) {
+    chart.destroy();
+  }
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Wealth (FE)',
+        data: [],
+        borderColor: '#DE5C0B',
+        backgroundColor: 'rgba(222, 92, 11, 0.1)',
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 0,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          display: true,
+          grid: { 
+            color: '#7E7E7E',
+            drawBorder: false
+          },
+          ticks: {
+            color: '#FAFAFA',
+            maxTicksLimit: 10
+          }
+        },
+        y: {
+          display: true,
+          grid: { 
+            color: '#7E7E7E',
+            drawBorder: false
+          },
+          ticks: {
+            color: '#FAFAFA'
+          }
+        }
+      },
+      plugins: {
+        legend: { 
+          display: false 
+        },
+        tooltip: {
+          enabled: true,
+          backgroundColor: '#272727',
+          titleColor: '#FAFAFA',
+          bodyColor: '#FAFAFA',
+          borderColor: '#7E7E7E',
+          borderWidth: 1
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      }
+    }
+  });
+
+  updateGraph();
 }
 
 // === GRAPH: Push Point ===
 function pushPoint(value: number) {
   const now = Date.now();
-  wealthHistory.push({ time: now, value });
-  if (wealthHistory.length > MAX_POINTS) wealthHistory.shift();
-  drawGraph();
-}
-
-// === GRAPH: Draw ===
-function drawGraph() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (wealthHistory.length === 0) {
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '14px monospace';
-    ctx.fillText('Collecting data…', 12, canvas.height / 2);
-    return;
-  }
-
-  const padding = 12;
-  const w = canvas.width - padding * 2;
-  const h = canvas.height - padding * 2;
-
-  const values = wealthHistory.map(p => p.value);
-  const minV = Math.min(...values);
-  const maxV = Math.max(...values);
-  const range = maxV - minV || 1;
-
-  // Grid
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = padding + (i / 4) * h;
-    ctx.beginPath();
-    ctx.moveTo(padding, y);
-    ctx.lineTo(padding + w, y);
-    ctx.stroke();
-  }
-
-  // Line
-  ctx.strokeStyle = '#667eea';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  wealthHistory.forEach((p, i) => {
-    const x = padding + (i / (wealthHistory.length - 1)) * w;
-    const y = padding + h - ((p.value - minV) / range) * h;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // Latest dot
-  const last = wealthHistory[wealthHistory.length - 1];
-  const lastX = padding + w;
-  const lastY = padding + h - ((last.value - minV) / range) * h;
-  ctx.fillStyle = '#667eea';
-  ctx.beginPath();
-  ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-// === WEALTH: Real-time ===
-function updateWealthRealtime(currentValue: number) {
-  wealthValueEl.textContent = `${currentValue.toFixed(2)} FE`;
-  pushPoint(currentValue);
-
-  if (wealthHistory.length >= 2) {
-    const first = wealthHistory[0];
-    const timeH = (Date.now() - first.time) / 3_600_000;
-    const rate = timeH > 0 ? (currentValue - first.value) / timeH : 0;
-    wealthRateEl.textContent = `${rate > 0 ? '+' : ''}${rate.toFixed(2)} FE/hr`;
-    wealthRateEl.className = rate >= 0 ? 'wealth-rate positive' : 'wealth-rate negative';
+  const point = { time: now, value: Math.round(value) };
+  
+  if (wealthMode === 'realtime') {
+    realtimeHistory.push(point);
+    if (realtimeHistory.length > MAX_POINTS) {
+      realtimeHistory.shift();
+    }
   } else {
-    wealthRateEl.textContent = '';
+    hourlyHistory.push(point);
+    if (hourlyHistory.length > MAX_POINTS) {
+      hourlyHistory.shift();
+    }
+  }
+
+  updateGraph();
+}
+
+// === GRAPH: Update Chart.js ===
+function updateGraph() {
+  if (!chart) return;
+
+  const currentHistory = wealthMode === 'realtime' ? realtimeHistory : hourlyHistory;
+
+  // Calculate time interval based on session length
+  const sessionDurationHours = currentHistory.length / 3600;
+  let intervalMinutes = 60;
+  
+  if (sessionDurationHours > 5) {
+    intervalMinutes = 120;
+  }
+  if (sessionDurationHours > 10) {
+    intervalMinutes = 180;
+  }
+  if (sessionDurationHours > 20) {
+    intervalMinutes = 240;
+  }
+
+  const labels = currentHistory.map((p, index) => {
+    const date = new Date(p.time);
+    const minutes = date.getMinutes();
+    const hours = date.getHours();
+    
+    if (index === 0 || index === currentHistory.length - 1) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+    
+    if (currentHistory.length > 0) {
+      const elapsedMinutes = Math.floor((p.time - currentHistory[0].time) / 60000);
+      if (elapsedMinutes % intervalMinutes === 0) {
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+    }
+    
+    return '';
+  });
+
+  const data = currentHistory.map(p => p.value);
+
+  chart.data.labels = labels;
+  chart.data.datasets[0].data = data;
+  chart.options.scales.x.ticks.maxTicksLimit = Math.min(12, Math.ceil(sessionDurationHours));
+  
+  chart.update('none');
+}
+
+// === WEALTH: Real-time (always running) ===
+function initRealtimeTracking() {
+  realtimeStartValue = getCurrentTotalValue();
+  realtimeStartTime = Date.now();
+  pushPoint(realtimeStartValue);
+}
+
+// === REALTIME: Reset Timer ===
+function resetRealtimeTracking() {
+  console.log('🔄 Resetting realtime timer and per hour calculation');
+  
+  // Reset timer state
+  realtimeElapsedSeconds = 0;
+  realtimeStartTime = Date.now();
+  
+  // Update start value to current total (so per hour calculation starts fresh)
+  realtimeStartValue = getCurrentTotalValue();
+  
+  // Clear realtime history graph
+  realtimeHistory = [];
+  
+  // Tell main process to reset the timer
+  electronAPI.resetRealtimeTimer();
+  
+  // Update display immediately
+  timerEl.textContent = formatTime(0);
+  updateRealtimeWealth();
+  
+  // Reset graph with current value
+  pushPoint(realtimeStartValue);
+}
+
+function updateRealtimeWealth() {
+  const currentValue = getCurrentTotalValue();
+  const elapsedTimeHours = realtimeElapsedSeconds / 3600;
+  const rate = elapsedTimeHours > 0 ? (currentValue - realtimeStartValue) / elapsedTimeHours : 0;
+  
+  // Update realtime display
+  if (wealthMode === 'realtime') {
+    wealthValueEl.textContent = currentValue.toFixed(2);
+    wealthHourlyEl.textContent = rate.toFixed(2);
+    pushPoint(currentValue);
+  }
+}
+
+// === WEALTH: Hourly tracking ===
+function updateHourlyWealth() {
+  const gainedValue = getHourlyWealthGain();
+  const elapsedTimeHours = hourlyElapsedSeconds / 3600;
+  const rate = elapsedTimeHours > 0 ? gainedValue / elapsedTimeHours : 0;
+  
+  // Update hourly display
+  if (wealthMode === 'hourly') {
+    wealthValueEl.textContent = gainedValue.toFixed(2);
+    wealthHourlyEl.textContent = rate.toFixed(2);
   }
 }
 
 // === HOURLY: Start ===
 function startHourlyTracking() {
-  if (hourlyInterval) return;
+  console.log('🕐 Starting hourly tracking...');
 
-  hourlyStartValue = getCurrentTotalValue();
+  // Take snapshot of current inventory
+  hourlyStartSnapshot.clear();
+  for (const item of currentItems) {
+    hourlyStartSnapshot.set(item.baseId, item.totalQuantity);
+  }
+
   hourlyStartTime = Date.now();
-  hourlyPausedTime = 0;
-
-  initGraph();
-  pushPoint(hourlyStartValue);
+  hourlyHistory = [];
+  hourlyBuckets = [];
+  currentHourStartValue = 0;
+  
+  // Start with 0 gain
+  if (wealthMode === 'hourly') {
+    hourlyHistory.push({ time: Date.now(), value: 0 });
+  }
 
   startHourlyBtn.style.display = 'none';
   stopHourlyBtn.style.display = 'inline-block';
   pauseHourlyBtn.style.display = 'inline-block';
   resumeHourlyBtn.style.display = 'none';
-  wealthValueEl.textContent = `${hourlyStartValue.toFixed(2)} FE`;
 
-  let elapsedSec = 0;
   hourlyTimerEl.textContent = '00:00:00';
+  
+  // Set state flags
+  isHourlyActive = true;
+  hourlyPaused = false;
+  
+  // Tell main process to start the timer
+  electronAPI.startHourlyTimer();
+  
+  // Initial update
+  updateHourlyWealth();
+  renderInventory();
+}
 
-  hourlyInterval = window.setInterval(() => {
-    elapsedSec++;
-    hourlyTimerEl.textContent = formatTime(elapsedSec);
-    const nowValue = getCurrentTotalValue();
-    pushPoint(nowValue);
-    wealthValueEl.textContent = `${nowValue.toFixed(2)} FE`;
-
-    if (elapsedSec >= 3600) stopHourlyTracking(true);
-  }, 1000);
+// === HOURLY: Capture bucket at end of each hour ===
+function captureHourlyBucket() {
+  const currentValue = getHourlyWealthGain();
+  const hourNumber = Math.floor(hourlyElapsedSeconds / 3600);
+  
+  const bucket: HourlyBucket = {
+    hourNumber,
+    startValue: currentHourStartValue,
+    endValue: currentValue,
+    earnings: currentValue - currentHourStartValue,
+    history: [...hourlyHistory] // Copy current history
+  };
+  
+  hourlyBuckets.push(bucket);
+  
+  // Reset for next hour
+  currentHourStartValue = currentValue;
+  hourlyHistory = [{ time: Date.now(), value: currentValue }];
+  
+  // Show notification
+  const box = document.querySelector('.wealth-box');
+  if (box) {
+    const anim = document.createElement('div');
+    anim.className = 'earnings-animation';
+    anim.textContent = `Hour ${hourNumber} Complete! +${bucket.earnings.toFixed(2)} FE`;
+    anim.style.color = '#10b981';
+    box.appendChild(anim);
+    setTimeout(() => anim.remove(), 2000);
+  }
 }
 
 // === HOURLY: Pause ===
 function pauseHourlyTracking() {
-  if (!hourlyInterval) return;
+  console.log('⏸️ Pausing hourly tracking');
+  hourlyPaused = true;
+  electronAPI.pauseHourlyTimer();
   
-  clearInterval(hourlyInterval);
-  hourlyInterval = null;
-  hourlyPausedAt = Date.now();
-
   pauseHourlyBtn.style.display = 'none';
   resumeHourlyBtn.style.display = 'inline-block';
 }
 
 // === HOURLY: Resume ===
 function resumeHourlyTracking() {
-  if (hourlyInterval) return;
-
-  // Add the pause duration to the total paused time
-  hourlyPausedTime += (Date.now() - hourlyPausedAt) / 1000;
-  
-  // Restart the interval
-  let elapsedSec = parseInt(hourlyTimerEl.textContent.split(':')[0]) * 3600 +
-                   parseInt(hourlyTimerEl.textContent.split(':')[1]) * 60 +
-                   parseInt(hourlyTimerEl.textContent.split(':')[2]);
-
-  hourlyInterval = window.setInterval(() => {
-    elapsedSec++;
-    hourlyTimerEl.textContent = formatTime(elapsedSec);
-    const nowValue = getCurrentTotalValue();
-    pushPoint(nowValue);
-    wealthValueEl.textContent = `${nowValue.toFixed(2)} FE`;
-
-    if (elapsedSec >= 3600) stopHourlyTracking(true);
-  }, 1000);
+  console.log('▶️ Resuming hourly tracking');
+  hourlyPaused = false;
+  electronAPI.resumeHourlyTimer();
 
   pauseHourlyBtn.style.display = 'inline-block';
   resumeHourlyBtn.style.display = 'none';
@@ -356,21 +586,27 @@ function resumeHourlyTracking() {
 
 // === HOURLY: Stop ===
 function stopHourlyTracking(auto = false) {
-  if (hourlyInterval === null) return;
-  clearInterval(hourlyInterval);
-  hourlyInterval = null;
+  console.log('⏹️ Stopping hourly tracking');
+  
+  // Tell main process to stop timer
+  electronAPI.stopHourlyTimer();
 
-  const final = getCurrentTotalValue();
-  const gain = final - hourlyStartValue;
+  const finalGain = getHourlyWealthGain();
 
-  // earnings animation
-  const box = document.querySelector('.wealth-box')!;
-  const anim = document.createElement('div');
-  anim.className = 'earnings-animation';
-  anim.textContent = `${gain >= 0 ? '+' : ''}${gain.toFixed(2)} FE`;
-  anim.style.color = gain >= 0 ? '#10b981' : '#ef4444';
-  box.appendChild(anim);
-  setTimeout(() => anim.remove(), 2000);
+  // Always capture the current hour as a complete bucket, regardless of time elapsed
+  const currentHourNumber = hourlyBuckets.length + 1;
+  
+  const bucket: HourlyBucket = {
+    hourNumber: currentHourNumber,
+    startValue: currentHourStartValue,
+    endValue: finalGain,
+    earnings: finalGain - currentHourStartValue,
+    history: [...hourlyHistory]
+  };
+  hourlyBuckets.push(bucket);
+
+  // Show breakdown modal
+  showBreakdownModal();
 
   // UI reset
   startHourlyBtn.style.display = 'inline-block';
@@ -378,57 +614,175 @@ function stopHourlyTracking(auto = false) {
   pauseHourlyBtn.style.display = 'none';
   resumeHourlyBtn.style.display = 'none';
   hourlyTimerEl.textContent = '00:00:00';
+  hourlyElapsedSeconds = 0;
+  
+  // Reset state flags
+  isHourlyActive = false;
+  hourlyPaused = false;
 }
 
-// === REALTIME: Start
-function startRealtimeTimer() {
-  if (!timerEl) {
-    console.error('Timer element not found.');
-    return;
-  }
+// === BREAKDOWN MODAL ===
+function showBreakdownModal() {
+  const modal = document.getElementById('breakdownModal')!;
+  const totalEl = document.getElementById('breakdownTotal')!;
+  const hoursContainer = document.getElementById('breakdownHours')!;
+  
+  const totalEarnings = hourlyBuckets.reduce((sum, bucket) => sum + bucket.earnings, 0);
+  
+  // Animate total with count-up effect
+  totalEl.textContent = `${totalEarnings.toFixed(2)} FE`;
+  
+  // Generate hour cards
+  hoursContainer.innerHTML = hourlyBuckets.map((bucket, index) => {
+    const duration = bucket.hourNumber <= Math.floor(hourlyElapsedSeconds / 3600) ? '60:00' : formatTime(hourlyElapsedSeconds % 3600).substring(3);
+    return `
+      <div class="hour-card">
+        <div class="hour-header">
+          <div class="hour-label">Hour ${bucket.hourNumber}</div>
+          <div class="hour-earnings">+${bucket.earnings.toFixed(2)} FE</div>
+        </div>
+        <canvas class="hour-graph" id="hourGraph${index}"></canvas>
+      </div>
+    `;
+  }).join('');
+  
+  // Show modal
+  modal.classList.add('active');
+  
+  // Render mini graphs for each hour
+  setTimeout(() => {
+    hourlyBuckets.forEach((bucket, index) => {
+      renderHourGraph(bucket, index);
+    });
+  }, 100);
+}
 
-  let elapsedSec = 0;
-
-  function formatTime(seconds: number): string {
-    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-    const s = String(seconds % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-  }
-
-  timerEl.textContent = '00:00:00';
-
-  setInterval(() => {
-    elapsedSec++;
-    timerEl.textContent = formatTime(elapsedSec);
-  }, 1000);
-
-  // === REALTIME: Timer hiding based on mode
-  // Switch to Realtime mode
-  realtimeBtn.addEventListener('click', () => {
-    realtimeBtn.classList.add('active');
-    hourlyBtn.classList.remove('active');
-
-    timerEl.style.display = 'inline';
-    hourlyControls.classList.remove('active');
-
-    // Reset timer counter
-    elapsedSec = 0;
-    timerEl.textContent = formatTime(elapsedSec);
+function renderHourGraph(bucket: HourlyBucket, index: number) {
+  const canvas = document.getElementById(`hourGraph${index}`) as HTMLCanvasElement;
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d')!;
+  
+  if (bucket.history.length === 0) return;
+  
+  // Sample data to max 60 points for performance
+  const sampleInterval = Math.max(1, Math.floor(bucket.history.length / 60));
+  const sampledHistory = bucket.history.filter((_, i) => i % sampleInterval === 0 || i === bucket.history.length - 1);
+  
+  // Create labels showing time progression (always showing as if it's a full hour)
+  const labels = Array.from({ length: 61 }, (_, i) => {
+    if (i % 10 === 0) return `${i}m`;
+    return '';
   });
-
-  hourlyBtn.addEventListener('click', () => {
-    hourlyBtn.classList.add('active');
-    realtimeBtn.classList.remove('active');
-
-    timerEl.style.display = 'none';
-    hourlyControls.classList.add('active');
-
-    // Reset timer counter
-    elapsedSec = 0;
-    timerEl.textContent = formatTime(elapsedSec);
+  
+  // Map the actual data across the full 60-minute span
+  const dataPoints = Array.from({ length: 61 }, (_, i) => {
+    const dataIndex = Math.floor((i / 60) * (sampledHistory.length - 1));
+    const point = sampledHistory[dataIndex];
+    return point ? point.value - bucket.startValue : 0;
+  });
+  
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: dataPoints,
+        borderColor: '#DE5C0B',
+        backgroundColor: 'rgba(222, 92, 11, 0.1)',
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 0,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      scales: {
+        x: { 
+          display: true,
+          grid: { color: '#7E7E7E', drawBorder: false },
+          ticks: { color: '#FAFAFA', maxTicksLimit: 7 }
+        },
+        y: { 
+          display: true,
+          grid: { color: '#7E7E7E', drawBorder: false },
+          ticks: { color: '#FAFAFA', maxTicksLimit: 5 }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false }
+      }
+    }
   });
 }
+
+function closeBreakdownModal() {
+  const modal = document.getElementById('breakdownModal')!;
+  modal.classList.remove('active');
+  
+  // Destroy all hour charts to free memory
+  hourCharts.forEach(chart => {
+    if (chart) chart.destroy();
+  });
+  hourCharts = [];
+  
+  // Reset everything
+  hourlyBuckets = [];
+  hourlyStartSnapshot.clear();
+  hourlyHistory = [];
+  currentHourStartValue = 0;
+  
+  // Re-render to show all items again
+  renderInventory();
+}
+
+// === REALTIME: Timer (always running in main process) ===
+async function initRealtimeTimer() {
+  // Get initial state from main process
+  const state = await electronAPI.getTimerState();
+  realtimeElapsedSeconds = state.realtimeSeconds;
+  timerEl.textContent = formatTime(realtimeElapsedSeconds);
+  
+  console.log('✅ Realtime timer initialized from main process');
+}
+
+// Listen to timer ticks from main process
+electronAPI.onTimerTick((data) => {
+  if (data.type === 'realtime') {
+    realtimeElapsedSeconds = data.seconds;
+    
+    // Only update the timer display if we're in realtime mode
+    if (wealthMode === 'realtime') {
+      timerEl.textContent = formatTime(realtimeElapsedSeconds);
+    }
+    
+    // Update wealth values every second
+    updateRealtimeWealth();
+  } else if (data.type === 'hourly') {
+    hourlyElapsedSeconds = data.seconds;
+    hourlyTimerEl.textContent = formatTime(hourlyElapsedSeconds);
+    
+    // Update wealth and push to history
+    const currentGain = getHourlyWealthGain();
+    if (wealthMode === 'hourly') {
+      hourlyHistory.push({ time: Date.now(), value: currentGain });
+      updateGraph();
+    }
+    
+    updateHourlyWealth();
+    renderInventory();
+
+    // Check if we've completed an hour
+    if (hourlyElapsedSeconds % 3600 === 0 && hourlyElapsedSeconds > 0) {
+      console.log(`🎉 Hour ${Math.floor(hourlyElapsedSeconds / 3600)} completed!`);
+      captureHourlyBucket();
+    }
+  }
+});
 
 // === MODE SWITCHING ===
 realtimeBtn.addEventListener('click', () => {
@@ -436,9 +790,16 @@ realtimeBtn.addEventListener('click', () => {
   realtimeBtn.classList.add('active');
   hourlyBtn.classList.remove('active');
   hourlyControls.classList.remove('active');
-  if (hourlyInterval) stopHourlyTracking();
-  initGraph();
-  updateWealthRealtime(getCurrentTotalValue());
+  
+  // Show realtime timer and reset button
+  timerEl.style.display = 'block';
+  resetRealtimeBtn.style.display = 'block';
+  timerEl.textContent = formatTime(realtimeElapsedSeconds);
+  
+  // Update display to show realtime values
+  updateRealtimeWealth();
+  renderInventory(); // Show all items
+  updateGraph();
 });
 
 hourlyBtn.addEventListener('click', () => {
@@ -447,25 +808,35 @@ hourlyBtn.addEventListener('click', () => {
   hourlyBtn.classList.add('active');
   hourlyControls.classList.add('active');
 
-  // reset graph & show big centered message
-  initGraph();
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#9ca3af';
-  ctx.font = '18px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('Press "Start Hour" to begin', canvas.width / 2, canvas.height / 2);
+  // Hide realtime timer and reset button when in hourly mode, show controls
+  timerEl.style.display = 'none';
+  resetRealtimeBtn.style.display = 'none';
 
-  const cur = getCurrentTotalValue();
-  wealthValueEl.textContent = `${cur.toFixed(2)} FE`;
+  // Update display to show hourly values (if session is active)
+  if (isHourlyActive) {
+    updateHourlyWealth();
+    renderInventory(); // Show only new items
+  } else {
+    wealthValueEl.textContent = '0.00';
+    wealthHourlyEl.textContent = '0.00';
+    renderInventory(); // Show all items (no active hourly session)
+  }
+  updateGraph();
 });
 
 startHourlyBtn.addEventListener('click', startHourlyTracking);
 stopHourlyBtn.addEventListener('click', () => stopHourlyTracking(false));
 pauseHourlyBtn.addEventListener('click', pauseHourlyTracking);
 resumeHourlyBtn.addEventListener('click', resumeHourlyTracking);
+resetRealtimeBtn.addEventListener('click', resetRealtimeTracking);
+
+// Breakdown modal close button
+document.getElementById('closeBreakdown')?.addEventListener('click', closeBreakdownModal);
 
 // === EVENT LISTENERS ===
-electronAPI.onInventoryUpdate(loadInventory);
+electronAPI.onInventoryUpdate(() => {
+  loadInventory(); // Reload inventory data, but don't control timers
+});
 
 document.getElementById('minPrice')?.addEventListener('input', renderInventory);
 
@@ -483,7 +854,127 @@ document.querySelectorAll('[data-sort]').forEach(el => {
   });
 });
 
+// Search functionality
+const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+const clearSearch = document.getElementById('clearSearch') as HTMLButtonElement;
+
+searchInput?.addEventListener('input', (e) => {
+  searchQuery = (e.target as HTMLInputElement).value;
+  renderInventory();
+  
+  // Show/hide clear button
+  if (searchQuery) {
+    clearSearch.style.display = 'block';
+  } else {
+    clearSearch.style.display = 'none';
+  }
+});
+
+clearSearch?.addEventListener('click', () => {
+  searchQuery = '';
+  searchInput.value = '';
+  clearSearch.style.display = 'none';
+  renderInventory();
+});
+
+// === SETTINGS MENU ===
+const settingsButton = document.getElementById('settingsButton')!;
+const settingsMenu = document.getElementById('settingsMenu')!;
+const appVersionEl = document.getElementById('appVersion')!;
+const checkUpdatesBtn = document.getElementById('checkUpdatesBtn') as HTMLButtonElement;
+const updateSpinner = document.getElementById('updateSpinner')!;
+const updateStatus = document.getElementById('updateStatus')!;
+
+// Load app version
+electronAPI.getAppVersion().then(version => {
+  appVersionEl.textContent = version;
+});
+
+// Toggle settings menu
+let settingsMenuOpen = false;
+settingsButton.addEventListener('click', (e) => {
+  e.stopPropagation();
+  settingsMenuOpen = !settingsMenuOpen;
+  settingsMenu.style.display = settingsMenuOpen ? 'block' : 'none';
+});
+
+// Close settings menu when clicking outside
+document.addEventListener('click', (e) => {
+  if (settingsMenuOpen && !settingsMenu.contains(e.target as Node) && !settingsButton.contains(e.target as Node)) {
+    settingsMenuOpen = false;
+    settingsMenu.style.display = 'none';
+  }
+});
+
+// Check for updates button
+checkUpdatesBtn.addEventListener('click', async () => {
+  checkUpdatesBtn.disabled = true;
+  updateSpinner.style.display = 'inline-block';
+  updateStatus.style.display = 'none';
+  
+  try {
+    const result = await electronAPI.checkForUpdates();
+    if (!result.success) {
+      updateStatus.textContent = result.message || 'Failed to check for updates';
+      updateStatus.className = 'update-status error';
+      updateStatus.style.display = 'block';
+      checkUpdatesBtn.disabled = false;
+      updateSpinner.style.display = 'none';
+    }
+    // If successful, we'll wait for update-status events
+  } catch (error: any) {
+    updateStatus.textContent = error.message || 'Failed to check for updates';
+    updateStatus.className = 'update-status error';
+    updateStatus.style.display = 'block';
+    checkUpdatesBtn.disabled = false;
+    updateSpinner.style.display = 'none';
+  }
+});
+
+// Listen for update status events
+electronAPI.onUpdateStatus((data) => {
+  updateSpinner.style.display = 'none';
+  updateStatus.style.display = 'block';
+  
+  switch (data.status) {
+    case 'checking':
+      updateStatus.textContent = 'Checking for updates...';
+      updateStatus.className = 'update-status info';
+      break;
+    case 'available':
+      updateStatus.textContent = `Update available: ${data.version}. Downloading...`;
+      updateStatus.className = 'update-status success';
+      break;
+    case 'not-available':
+      updateStatus.textContent = 'You are up to date!';
+      updateStatus.className = 'update-status success';
+      checkUpdatesBtn.disabled = false;
+      break;
+    case 'downloading':
+      updateStatus.textContent = data.message || 'Downloading update...';
+      updateStatus.className = 'update-status info';
+      break;
+    case 'downloaded':
+      updateStatus.textContent = 'Update downloaded! Restart to install.';
+      updateStatus.className = 'update-status success';
+      checkUpdatesBtn.disabled = false;
+      break;
+    case 'error':
+      updateStatus.textContent = data.message || 'Error checking for updates';
+      updateStatus.className = 'update-status error';
+      checkUpdatesBtn.disabled = false;
+      break;
+  }
+});
+
+// Listen for download progress
+electronAPI.onUpdateProgress((percent) => {
+  if (settingsMenuOpen && updateStatus.style.display !== 'none') {
+    updateStatus.textContent = `Downloading update: ${percent}%`;
+  }
+});
+
 // === INITIALIZE ===
 initGraph();
-loadInventory();
-startRealtimeTimer();
+loadInventory(); // This will call initRealtimeTracking() after inventory is loaded
+initRealtimeTimer(); // Initialize from main process timer

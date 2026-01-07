@@ -1,87 +1,110 @@
-const fs = require('fs');
-const path = require('path');
 const { execSync } = require('child_process');
+const path = require('path');
 
-const packageJsonPath = path.join(__dirname, '..', 'package.json');
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+// Get version type from command line arguments
+const versionType = process.argv[2];
 
-// Parse current version
-const [major, minor, patch] = packageJson.version.split('.').map(Number);
-
-// Increment patch version
-const newVersion = `${major}.${minor}.${patch + 1}`;
-const tagName = `v${newVersion}`;
-
-// Optional commit message from CLI args
-const userMessage = process.argv.slice(2).join(' ').trim();
-const commitMessage = userMessage ? userMessage : `Release ${tagName}`;
-
-console.log(`🚀 Releasing version ${newVersion}...`);
-console.log(`📦 Current version: ${packageJson.version}`);
-console.log(`✨ New version: ${newVersion}`);
-
-// Update package.json version
-packageJson.version = newVersion;
-fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
-console.log('✅ Updated package.json version');
-
-// Stage package.json
-try {
-  execSync('git add package.json', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
-  console.log('✅ Staged package.json');
-} catch (error) {
-  console.error('❌ Failed to stage package.json:', error.message);
+// Validate version type
+if (!versionType || !['major', 'minor', 'fix'].includes(versionType)) {
+  console.error('❌ Error: Invalid version type');
+  console.error('Usage: npm run prod [major|minor|fix]');
+  console.error('');
+  console.error('Examples:');
+  console.error('  npm run prod major  → 2.0.0 → 3.0.0');
+  console.error('  npm run prod minor  → 2.0.0 → 2.1.0');
+  console.error('  npm run prod fix    → 2.0.0 → 2.0.1');
   process.exit(1);
 }
 
-// Check if there are any changes to commit
+// Check if we're on main branch
 try {
-  const status = execSync('git status --porcelain', { encoding: 'utf8', cwd: path.join(__dirname, '..') });
-  const changes = status.trim().split('\n').filter(line => line.trim());
-  
-  // Remove package.json from changes list (we already staged it)
-  const otherChanges = changes.filter(line => !line.includes('package.json'));
-  
-  if (otherChanges.length > 0) {
-    console.log('📝 Staging other changes...');
-    execSync('git add -A', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
+  const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', {
+    encoding: 'utf8',
+    cwd: path.join(__dirname, '..'),
+  }).trim();
+
+  if (currentBranch !== 'main') {
+    console.error(`❌ Error: Releases can only be created from the 'main' branch`);
+    console.error(`   Current branch: ${currentBranch}`);
+    console.error(`   Please switch to main branch: git checkout main`);
+    process.exit(1);
   }
+} catch (error) {
+  console.error('❌ Error: Failed to check current branch');
+  console.error('   Make sure you are in a Git repository');
+  process.exit(1);
+}
+
+// Check if GitHub CLI is installed
+try {
+  execSync('gh --version', { stdio: 'ignore' });
+} catch (error) {
+  console.error('❌ Error: GitHub CLI (gh) is not installed');
+  console.error('   Install it from: https://cli.github.com/');
+  console.error('   Or manually trigger the workflow at: https://github.com/$OWNER/$REPO/actions/workflows/release.yml');
+  process.exit(1);
+}
+
+// Trigger GitHub Actions workflow
+try {
+  console.log(`🚀 Triggering release workflow with ${versionType} version bump...`);
+  console.log('   This will:');
+  console.log('   1. Calculate the next version based on the latest Git tag');
+  console.log('   2. Update package.json version');
+  console.log('   3. Commit and tag the version bump');
+  console.log('   4. Create a GitHub Release');
+  console.log('   5. Build and upload Electron artifacts');
+  console.log('');
   
-  // Commit all changes
-  console.log('💾 Committing changes...');
-  // Escape double quotes in user message to avoid breaking the command
-  const safeMessage = commitMessage.replace(/"/g, '\\"');
-  execSync(`git commit -m "${safeMessage}"`, { stdio: 'inherit', cwd: path.join(__dirname, '..') });
-  console.log('✅ Changes committed');
+  execSync(
+    `gh workflow run release.yml -f version_type=${versionType}`,
+    {
+      stdio: 'inherit',
+      cwd: path.join(__dirname, '..'),
+    }
+  );
+
+  // Get repository info for the URL
+  let repoUrl = 'your repository';
+  try {
+    const remoteUrl = execSync('git config --get remote.origin.url', {
+      encoding: 'utf8',
+      cwd: path.join(__dirname, '..'),
+    }).trim();
+    // Extract owner/repo from git URL (handles both https and ssh formats)
+    const match = remoteUrl.match(/github\.com[:/]([\w\-]+)\/([\w\-.]+)/);
+    if (match) {
+      repoUrl = `${match[1]}/${match[2].replace(/\.git$/, '')}`;
+    }
+  } catch (error) {
+    // If we can't detect, use placeholder
+  }
+
+  console.log('');
+  console.log('✅ Release workflow triggered successfully!');
+  console.log(`⏳ Monitor progress at: https://github.com/${repoUrl}/actions`);
+  console.log('💡 The workflow will run automatically and create the release.');
 } catch (error) {
-  console.error('❌ Failed to commit changes:', error.message);
+  // Get repository info for error messages
+  let repoUrl = 'your repository';
+  try {
+    const remoteUrl = execSync('git config --get remote.origin.url', {
+      encoding: 'utf8',
+      cwd: path.join(__dirname, '..'),
+    }).trim();
+    const match = remoteUrl.match(/github\.com[:/]([\w\-]+)\/([\w\-.]+)/);
+    if (match) {
+      repoUrl = `${match[1]}/${match[2].replace(/\.git$/, '')}`;
+    }
+  } catch (err) {
+    // If we can't detect, use placeholder
+  }
+
+  console.error('❌ Failed to trigger workflow:', error.message);
+  console.error('');
+  console.error('Alternatives:');
+  console.error(`  1. Manually trigger at: https://github.com/${repoUrl}/actions/workflows/release.yml`);
+  console.error('  2. Ensure GitHub CLI is authenticated: gh auth login');
   process.exit(1);
 }
-
-// Push to GitHub
-try {
-  console.log('📤 Pushing to GitHub...');
-  execSync('git push', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
-  console.log('✅ Pushed to GitHub');
-} catch (error) {
-  console.error('❌ Failed to push to GitHub:', error.message);
-  console.log('💡 Make sure you have a remote repository set up and have push permissions');
-  process.exit(1);
-}
-
-// Create and push tag
-try {
-  console.log(`🏷️  Creating tag ${tagName}...`);
-  execSync(`git tag ${tagName}`, { stdio: 'inherit', cwd: path.join(__dirname, '..') });
-  execSync(`git push origin ${tagName}`, { stdio: 'inherit', cwd: path.join(__dirname, '..') });
-  console.log(`✅ Tag ${tagName} created and pushed`);
-} catch (error) {
-  console.error('❌ Failed to create/push tag:', error.message);
-  process.exit(1);
-}
-
-console.log('\n🎉 Release process started!');
-console.log(`📋 Version ${newVersion} has been pushed to GitHub with tag ${tagName}`);
-console.log('⏳ GitHub Actions will now build and create the release automatically.');
-console.log('💡 You can monitor the progress at: https://github.com/Syncingoutt/Torchlight-Exchange-2/actions');
 

@@ -4,7 +4,7 @@
 
 <p>This project is not affiliated with or endorsed by XD (XD inc.) in any way.</p>
 
-<p><bold>Something to note, since I do not use the Chinese FE tracker DB, a lot of items might be missing. There are 135 items in the JSON file, so you will definitely see some items that are (unkown item(ID), however, i constantly update it as I play)</bold></p>
+<p><b>Something to note, since I do not use the Chinese FE tracker DB, a lot of items might be missing. There are 135 items in the JSON file, so you will definitely see some items that are (unkown item(ID), however, i constantly update it as I play)</b></p>
 
 <i>Disclaimer: Portions of this repository were created or refined using AI-assisted development tools. Cursor and Claude AI were both used extensively for script writing. UI/UX design was made by me without the use of AI.</i>
 

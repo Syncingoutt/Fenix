@@ -14,10 +14,29 @@ app.whenReady().then(() => {
 });
 
 let mainWindow: BrowserWindow | null = null;
-let tray: Tray | null = null; // Add tray variable
+let tray: Tray | null = null;
 let inventoryManager: InventoryManager;
 let lastLogPosition = 0;
 const WATCH_INTERVAL = 500;
+
+// Timer state managed in main process (never throttled)
+interface TimerState {
+  realtimeSeconds: number;
+  realtimeStartTime: number;
+  hourlySeconds: number;
+  hourlyStartTime: number;
+  hourlyActive: boolean;
+  hourlyPaused: boolean;
+}
+
+const timerState: TimerState = {
+  realtimeSeconds: 0,
+  realtimeStartTime: Date.now(),
+  hourlySeconds: 0,
+  hourlyStartTime: 0,
+  hourlyActive: false,
+  hourlyPaused: false
+};
 
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -42,7 +61,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      backgroundThrottling: false // Disable throttling
     }
   });
 
@@ -65,11 +85,9 @@ function createWindow() {
 }
 
 function createTray() {
-  // Create tray icon
   const iconPath = path.join(__dirname, '../assets/AppIcon.ico');
   tray = new Tray(iconPath);
   
-  // Create context menu
   const contextMenu = Menu.buildFromTemplate([
     {
       label: 'Show Overlay (Ctrl+`)',
@@ -109,7 +127,6 @@ function createTray() {
   tray.setToolTip('Torchlight Tracker');
   tray.setContextMenu(contextMenu);
   
-  // Double-click tray icon to toggle overlay
   tray.on('double-click', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) {
@@ -123,17 +140,33 @@ function createTray() {
 }
 
 // Configure auto-updater
-autoUpdater.autoDownload = false; // We'll ask user first
+autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
-// Update event handlers
+let isManualCheck = false; // Track if update check was triggered manually
+
 autoUpdater.on('checking-for-update', () => {
   console.log('🔍 Checking for updates...');
+  if (mainWindow && isManualCheck) {
+    mainWindow.webContents.send('update-status', {
+      status: 'checking',
+      message: 'Checking for updates...'
+    });
+  }
 });
 
 autoUpdater.on('update-available', (info) => {
   console.log('✨ Update available:', info.version);
-  if (mainWindow) {
+  if (mainWindow && isManualCheck) {
+    // For manual checks, notify renderer and start download automatically
+    mainWindow.webContents.send('update-status', {
+      status: 'available',
+      message: `Update available: ${info.version}`,
+      version: info.version
+    });
+    autoUpdater.downloadUpdate();
+  } else if (mainWindow && !isManualCheck) {
+    // For automatic checks, show dialog (existing behavior)
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Available',
@@ -150,26 +183,68 @@ autoUpdater.on('update-available', (info) => {
   }
 });
 
-autoUpdater.on('update-not-available', () => {
+autoUpdater.on('update-not-available', (info) => {
   console.log('✅ No updates available');
+  if (mainWindow && isManualCheck) {
+    mainWindow.webContents.send('update-status', {
+      status: 'not-available',
+      message: 'You are up to date!'
+    });
+    isManualCheck = false;
+  }
 });
 
 autoUpdater.on('error', (err) => {
   console.error('❌ Error checking for updates:', err);
+  if (mainWindow && isManualCheck) {
+    mainWindow.webContents.send('update-status', {
+      status: 'error',
+      message: `Error: ${err.message || 'Failed to check for updates'}`
+    });
+    isManualCheck = false;
+  }
 });
 
 autoUpdater.on('download-progress', (progressObj) => {
   const percent = Math.round(progressObj.percent);
   console.log(`📥 Downloading update: ${percent}%`);
-  // You can send this to renderer to show progress if needed
   if (mainWindow) {
     mainWindow.webContents.send('update-download-progress', percent);
+    if (isManualCheck) {
+      mainWindow.webContents.send('update-status', {
+        status: 'downloading',
+        message: `Downloading update: ${percent}%`
+      });
+    }
   }
 });
 
 autoUpdater.on('update-downloaded', (info) => {
   console.log('✅ Update downloaded:', info.version);
-  if (mainWindow) {
+  if (mainWindow && isManualCheck) {
+    // For manual checks, notify renderer and prompt for restart
+    mainWindow.webContents.send('update-status', {
+      status: 'downloaded',
+      message: 'Update downloaded! Restart to install.',
+      version: info.version
+    });
+    // Prompt for restart
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Downloaded',
+      message: 'Update downloaded successfully!',
+      detail: 'The update will be installed when you restart the application.',
+      buttons: ['Restart Now', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall(false, true);
+      }
+    });
+    isManualCheck = false;
+  } else if (mainWindow && !isManualCheck) {
+    // For automatic checks, show dialog (existing behavior)
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Downloaded',
@@ -186,16 +261,13 @@ autoUpdater.on('update-downloaded', (info) => {
   }
 });
 
-// Check for updates on startup (only in production, not dev)
 if (app.isPackaged) {
   autoUpdater.checkForUpdatesAndNotify();
 }
 
 app.whenReady().then(() => {
-  // Remove menu globally
   Menu.setApplicationMenu(null);
 
-  // Initialize
   console.log('🔥 Torchlight Tracker - Starting...');
   
   const itemDatabase = loadItemDatabase();
@@ -209,7 +281,6 @@ app.whenReady().then(() => {
   
   inventoryManager = new InventoryManager(itemDatabase, priceCache);
   
-  // Initial inventory load
   const logEntries = readLogFile();
   inventoryManager.buildInventory(logEntries);
   console.log(`✅ Initial inventory loaded`);
@@ -219,7 +290,35 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
 
-  // Register global hotkey Ctrl+` to toggle overlay
+  // Start main process timers (never throttled)
+  console.log('⏱️  Starting main process timers...');
+  
+  // Realtime timer - always running
+  setInterval(() => {
+    timerState.realtimeSeconds++;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('timer-tick', {
+        type: 'realtime',
+        seconds: timerState.realtimeSeconds
+      });
+    }
+  }, 1000);
+
+  // Hourly timer - only when active
+  setInterval(() => {
+    if (timerState.hourlyActive && !timerState.hourlyPaused) {
+      timerState.hourlySeconds++;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('timer-tick', {
+          type: 'hourly',
+          seconds: timerState.hourlySeconds
+        });
+      }
+    }
+  }, 1000);
+
+  console.log('✅ Main process timers started');
+
   const ret = globalShortcut.register('CommandOrControl+`', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) {
@@ -231,12 +330,10 @@ app.whenReady().then(() => {
     }
   });
   
-  // Start watching log file
   setInterval(() => {
     watchLogFile();
   }, WATCH_INTERVAL);
 
-  // Check for updates periodically (every 30 minutes, only in production)
   if (app.isPackaged) {
     setInterval(() => {
       autoUpdater.checkForUpdatesAndNotify();
@@ -251,7 +348,6 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  // Save price cache before closing
   savePriceCache(inventoryManager.getPriceCacheAsObject());
   
   if (process.platform !== 'darwin') {
@@ -259,7 +355,6 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Unregister hotkeys when app quits
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
@@ -269,7 +364,6 @@ ipcMain.handle('get-inventory', () => {
   return inventoryManager.getInventory();
 });
 
-// IPC handler to minimize/close window from renderer
 ipcMain.on('minimize-window', () => {
   if (mainWindow) {
     mainWindow.minimize();
@@ -293,6 +387,59 @@ ipcMain.on('toggle-window', () => {
   }
 });
 
+// Timer control IPC handlers
+ipcMain.on('start-hourly-timer', () => {
+  console.log('▶️  Starting hourly timer');
+  timerState.hourlyActive = true;
+  timerState.hourlyPaused = false;
+  timerState.hourlySeconds = 0;
+  timerState.hourlyStartTime = Date.now();
+});
+
+ipcMain.on('pause-hourly-timer', () => {
+  console.log('⏸️  Pausing hourly timer');
+  timerState.hourlyPaused = true;
+});
+
+ipcMain.on('resume-hourly-timer', () => {
+  console.log('▶️  Resuming hourly timer');
+  timerState.hourlyPaused = false;
+});
+
+ipcMain.on('stop-hourly-timer', () => {
+  console.log('⏹️  Stopping hourly timer');
+  timerState.hourlyActive = false;
+  timerState.hourlyPaused = false;
+  timerState.hourlySeconds = 0;
+});
+
+ipcMain.handle('get-timer-state', () => {
+  return {
+    realtimeSeconds: timerState.realtimeSeconds,
+    hourlySeconds: timerState.hourlySeconds
+  };
+});
+
+// Update IPC handlers
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('check-for-updates', async () => {
+  if (!app.isPackaged) {
+    return { success: false, message: 'Updates are only available in packaged app' };
+  }
+  
+  try {
+    isManualCheck = true;
+    await autoUpdater.checkForUpdates();
+    return { success: true, message: 'Checking for updates...' };
+  } catch (error: any) {
+    isManualCheck = false;
+    return { success: false, message: error.message || 'Failed to check for updates' };
+  }
+});
+
 // Log file watcher
 function watchLogFile() {
   const currentSize = getLogSize();
@@ -309,8 +456,6 @@ function watchLogFile() {
     let currentPriceCheckBaseId: string | null = null;
 
     for (const line of newLines) {
-      // Step 1: Capture the baseId from XchgSyncSearchPrice SendMessage
-      // Match both old and new formats for baseId
       if ((line.includes('+itemBaseId') || line.includes('+refer')) && line.includes('[')) {
         const match = line.match(/\[(\d+)\]/);
         if (match) {
@@ -319,7 +464,6 @@ function watchLogFile() {
         }
       }
 
-      // Step 2: Start buffering when we see XchgSearchPrice RecvMessage
       if (line.includes('----Socket RecvMessage STT----XchgSearchPrice----')) {
         inPriceCheck = true;
         priceCheckBuffer = [];
@@ -327,11 +471,9 @@ function watchLogFile() {
       } else if (inPriceCheck) {
         priceCheckBuffer.push(line);
         
-        // Step 3: End when we see RecvMessage End
         if (line.includes('----Socket RecvMessage End----')) {
           console.log(`✅ Price data received, buffer has ${priceCheckBuffer.length} lines`);
           
-          // Parse prices from buffer
           const prices: number[] = [];
           for (const bufLine of priceCheckBuffer) {
             if ((bufLine.includes('+unitPrices+') || bufLine.includes('|          +')) && bufLine.includes('[')) {
@@ -340,7 +482,6 @@ function watchLogFile() {
                 const price = parseFloat(match[1]);
                 if (!isNaN(price)) {
                   prices.push(price);
-                  // Stop after 100 prices (first currency type only)
                   if (prices.length >= 100) break;
                 }
               }
@@ -366,7 +507,6 @@ function watchLogFile() {
         }
       }
 
-      // Inventory change detection
       if (line.includes('ItemChange@') && line.includes('Id=')) {
         const parsed = parseLogLine(line);
         if (parsed) {
@@ -375,13 +515,11 @@ function watchLogFile() {
       }
     }
 
-    // If inventory changed, rebuild it once after processing all lines
     if (inventoryChanged) {
       const logEntries = readLogFile();
       inventoryManager.buildInventory(logEntries);
     }
 
-    // Send update to renderer if anything changed
     if ((inventoryChanged || priceUpdated) && mainWindow) {
       mainWindow.webContents.send('inventory-updated');
     }
