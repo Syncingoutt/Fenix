@@ -110,7 +110,7 @@ jobs:
         run: |
           npx tsc
           cp -r src/ui dist/ui
-          npm run package -- --publish never
+          npx electron-builder --publish never
 
       - name: Commit version bump
         run: |
