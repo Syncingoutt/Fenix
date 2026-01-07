@@ -109,8 +109,18 @@ jobs:
         shell: pwsh
         run: |
           $NEW_VERSION = "${{ steps.calc_version.outputs.version }}"
-          npm version $NEW_VERSION --no-git-tag-version
-          Write-Host "✅ Updated package.json to version $NEW_VERSION"
+          
+          # Read current version from package.json
+          $packageJson = Get-Content -Path package.json -Raw | ConvertFrom-Json
+          $CURRENT_VERSION = $packageJson.version
+          
+          if ($CURRENT_VERSION -eq $NEW_VERSION) {
+            Write-Host "⚠️  Version already set to $NEW_VERSION, skipping update"
+          } else {
+            Write-Host "Updating version from $CURRENT_VERSION to $NEW_VERSION"
+            npm version $NEW_VERSION --no-git-tag-version
+            Write-Host "✅ Updated package.json to version $NEW_VERSION"
+          }
 
       - name: Build Electron app
         run: npm run build && npx electron-builder --publish never
