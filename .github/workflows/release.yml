@@ -110,7 +110,7 @@ jobs:
         run: |
           npx tsc
           cp -r src/ui dist/ui
-          npx electron-builder --publish never
+          npx electron-builder --win --x64 --publish never
 
       - name: Commit version bump
         run: |
@@ -138,10 +138,19 @@ jobs:
           ### Changes
           See commit history for details."
           
+          # Find installer files (only .exe, .dmg, .AppImage, etc. - no directories)
+          INSTALLER_FILES=$(find release -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.zip" -o -name "*.tar.gz" \) | tr '\n' ' ')
+          
+          if [ -z "$INSTALLER_FILES" ]; then
+            echo "⚠️  No installer files found in release directory"
+            ls -la release/
+            exit 1
+          fi
+          
           gh release create "${{ steps.calc_version.outputs.tag }}" \
             --title "Release ${{ steps.calc_version.outputs.tag }}" \
             --notes "$RELEASE_NOTES" \
-            release/**/* \
+            $INSTALLER_FILES \
             --repo "${{ github.repository }}"
 
       - name: Release summary
