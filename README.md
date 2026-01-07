@@ -4,7 +4,7 @@
 
 <p>This project is not affiliated with or endorsed by XD (XD inc.) in any way.</p>
 
-<p>Something to note, since I do not use the Chinese FE tracker DB, a lot of items might be missing. There are 135 items in the JSON file, so you will definitely see some items that are (unkown item(ID), however, i constantly update it as I play)</p>
+<p><bold>Something to note, since I do not use the Chinese FE tracker DB, a lot of items might be missing. There are 135 items in the JSON file, so you will definitely see some items that are (unkown item(ID), however, i constantly update it as I play)</bold></p>
 
 <i>Disclaimer: Portions of this repository were created or refined using AI-assisted development tools. Cursor and Claude AI were both used extensively for script writing. UI/UX design was made by me without the use of AI.</i>
 
@@ -21,6 +21,8 @@
 <img width="660" height="449" alt="image" src="https://github.com/user-attachments/assets/3578bfca-c971-41d7-8d90-b6f7b9570409" />
 <br><br>
 6. The keybind to open the interface is Ctrl + Grave(`).<br><br>
+
+<i>NOTE: The app has auto-updating, so you will not be required to re-download the app after installing it. </i>
 
 <details>
   <summary>
