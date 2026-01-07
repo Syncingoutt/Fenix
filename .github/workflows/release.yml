@@ -14,7 +14,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     
     permissions:
@@ -44,121 +44,131 @@ jobs:
 
       - name: Get latest tag
         id: get_tag
+        shell: pwsh
         run: |
           # Fetch all tags
           git fetch --tags
           
           # Get the latest tag (sorted by version)
-          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1 || echo "")
+          $tags = git tag -l "v*" | Sort-Object { [version]($_ -replace '^v', '') }
+          $LATEST_TAG = if ($tags.Count -gt 0) { $tags[-1] } else { "" }
           
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No existing tags found, starting from v2.0.0"
-            CURRENT_VERSION="2.0.0"
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            echo "tag=" >> $GITHUB_OUTPUT
-          else
+          if ([string]::IsNullOrEmpty($LATEST_TAG)) {
+            Write-Host "No existing tags found, starting from v2.0.0"
+            $CURRENT_VERSION = "2.0.0"
+            Write-Host "version=$CURRENT_VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            Write-Host "tag=" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
             # Extract version from tag (remove 'v' prefix)
-            CURRENT_VERSION="${LATEST_TAG#v}"
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          fi
+            $CURRENT_VERSION = $LATEST_TAG -replace '^v', ''
+            Write-Host "version=$CURRENT_VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            Write-Host "tag=$LATEST_TAG" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
           
-          echo "Current version: $CURRENT_VERSION"
-          echo "Latest tag: $LATEST_TAG"
+          Write-Host "Current version: $CURRENT_VERSION"
+          Write-Host "Latest tag: $LATEST_TAG"
 
       - name: Calculate next version
         id: calc_version
+        shell: pwsh
         run: |
-          CURRENT_VERSION="${{ steps.get_tag.outputs.version }}"
-          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          $CURRENT_VERSION = "${{ steps.get_tag.outputs.version }}"
+          $VERSION_TYPE = "${{ github.event.inputs.version_type }}"
           
-          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
-          MAJOR="${VERSION_PARTS[0]}"
-          MINOR="${VERSION_PARTS[1]}"
-          PATCH="${VERSION_PARTS[2]}"
+          $parts = $CURRENT_VERSION -split '\.'
+          $MAJOR = [int]$parts[0]
+          $MINOR = [int]$parts[1]
+          $PATCH = [int]$parts[2]
           
-          case "$VERSION_TYPE" in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            fix)
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
+          switch ($VERSION_TYPE) {
+            "major" {
+              $MAJOR++
+              $MINOR = 0
+              $PATCH = 0
+            }
+            "minor" {
+              $MINOR++
+              $PATCH = 0
+            }
+            "fix" {
+              $PATCH++
+            }
+          }
           
-          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-          NEW_TAG="v$NEW_VERSION"
+          $NEW_VERSION = "$MAJOR.$MINOR.$PATCH"
+          $NEW_TAG = "v$NEW_VERSION"
           
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
-          echo "New tag: $NEW_TAG"
+          Write-Host "version=$NEW_VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "tag=$NEW_TAG" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "New version: $NEW_VERSION"
+          Write-Host "New tag: $NEW_TAG"
 
       - name: Update package.json version (temporary)
+        shell: pwsh
         run: |
-          NEW_VERSION="${{ steps.calc_version.outputs.version }}"
-          npm version "$NEW_VERSION" --no-git-tag-version
-          echo "✅ Updated package.json to version $NEW_VERSION"
+          $NEW_VERSION = "${{ steps.calc_version.outputs.version }}"
+          npm version $NEW_VERSION --no-git-tag-version
+          Write-Host "✅ Updated package.json to version $NEW_VERSION"
 
       - name: Build Electron app
-        run: |
-          npx tsc
-          cp -r src/ui dist/ui
-          npx electron-builder --win --x64 --publish never
+        run: npm run package
 
       - name: Commit version bump
+        shell: pwsh
         run: |
-          NEW_VERSION="${{ steps.calc_version.outputs.version }}"
-          NEW_TAG="${{ steps.calc_version.outputs.tag }}"
+          $NEW_VERSION = "${{ steps.calc_version.outputs.version }}"
+          $NEW_TAG = "${{ steps.calc_version.outputs.tag }}"
           
           git add package.json package-lock.json
           git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
           git push origin main
 
       - name: Create and push tag
+        shell: pwsh
         run: |
-          NEW_TAG="${{ steps.calc_version.outputs.tag }}"
-          git tag "$NEW_TAG"
-          git push origin "$NEW_TAG"
+          $NEW_TAG = "${{ steps.calc_version.outputs.tag }}"
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
         run: |
-          RELEASE_NOTES="## Release ${{ steps.calc_version.outputs.tag }}
+          $RELEASE_NOTES = @"
+          ## Release ${{ steps.calc_version.outputs.tag }}
           
           Automated release created from ${{ github.ref_name }} branch.
           
           ### Changes
-          See commit history for details."
+          See commit history for details.
+          "@
           
-          # Find installer files (only .exe, .dmg, .AppImage, etc. - no directories)
-          INSTALLER_FILES=$(find release -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.zip" -o -name "*.tar.gz" \) | tr '\n' ' ')
+          # Find installer files (only .exe files, not directories)
+          $installerFiles = Get-ChildItem -Path release -Filter "*.exe" -File | ForEach-Object { $_.FullName }
           
-          if [ -z "$INSTALLER_FILES" ]; then
-            echo "⚠️  No installer files found in release directory"
-            ls -la release/
+          if ($installerFiles.Count -eq 0) {
+            Write-Host "⚠️  No installer files found in release directory"
+            Get-ChildItem -Path release
             exit 1
-          fi
+          }
           
-          gh release create "${{ steps.calc_version.outputs.tag }}" \
-            --title "Release ${{ steps.calc_version.outputs.tag }}" \
-            --notes "$RELEASE_NOTES" \
-            $INSTALLER_FILES \
+          $filesArgs = $installerFiles -join ' '
+          gh release create "${{ steps.calc_version.outputs.tag }}" `
+            --title "Release ${{ steps.calc_version.outputs.tag }}" `
+            --notes $RELEASE_NOTES `
+            $filesArgs `
             --repo "${{ github.repository }}"
 
       - name: Release summary
+        shell: pwsh
         run: |
-          echo "## 🎉 Release Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: ${{ steps.calc_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tag**: ${{ steps.calc_version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release Type**: ${{ github.event.inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "View the release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.calc_version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          @"
+          ## 🎉 Release Complete
+
+          - **Version**: ${{ steps.calc_version.outputs.version }}
+          - **Tag**: ${{ steps.calc_version.outputs.tag }}
+          - **Release Type**: ${{ github.event.inputs.version_type }}
+
+          View the release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.calc_version.outputs.tag }}
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
