@@ -70,3 +70,25 @@ See the amount of FE you have earned. There is a button to reset it, but it alwa
     </li>
   </ul>
 </details>
+
+<details>
+<summary><h2>Why is SmartScreen detecting this app?</h2></summary>
+<p>Windows SmartScreen may show a warning when you first download Fenix because the installer is not code-signed. This is normal for open-source software distributed without a code signing certificate.</p>
+
+<h3>Is it safe?</h3>
+<p><strong>Yes, it's safe.</strong> The app is:</p>
+<ul>
+  <li>Open source - you can review the code on GitHub</li>
+  <li>Hosted on GitHub Releases (a trusted source)</li>
+  <li>Not signed with a certificate (which costs $100-400/year)</li>
+</ul>
+
+<h3>How to install despite the warning:</h3>
+<ol>
+  <li>When you see the SmartScreen warning, click <strong>"More info"</strong></li>
+  <li>Click <strong>"Run anyway"</strong> (this option appears after clicking "More info")</li>
+  <li>Proceed with the installation</li>
+</ol>
+
+<p><i>Note: After enough users download and run the installer from GitHub, Windows may build reputation for the file and the warning may disappear automatically over time. This typically takes several months with regular downloads.</i></p>
+</details>
