@@ -1713,3 +1713,68 @@ img:not(.header-logo-pic) {
 .settings-close-btn:active {
   transform: scale(0.95);
 }
+
+.settings-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(16px * var(--scale));
+  background: var(--bg-shade);
+  border: calc(2px * var(--scale)) solid var(--border);
+  border-radius: calc(12px * var(--scale));
+  transition: all 0.2s ease;
+}
+
+.settings-option:hover {
+  border-color: var(--primary);
+  background: rgba(222, 92, 11, 0.08);
+}
+
+.settings-option-label {
+  font-size: calc(16px * var(--text-scale));
+  font-weight: 500;
+  color: var(--text);
+}
+
+.settings-checkbox-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.settings-checkbox-wrapper input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-checkbox {
+  width: calc(44px * var(--scale));
+  height: calc(24px * var(--scale));
+  background: var(--border);
+  border-radius: calc(12px * var(--scale));
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.settings-checkbox::after {
+  content: '';
+  position: absolute;
+  width: calc(20px * var(--scale));
+  height: calc(20px * var(--scale));
+  border-radius: 50%;
+  background: white;
+  top: calc(2px * var(--scale));
+  left: calc(2px * var(--scale));
+  transition: transform 0.2s ease;
+  box-shadow: 0 calc(2px * var(--scale)) calc(4px * var(--scale)) rgba(0, 0, 0, 0.2);
+}
+
+.settings-checkbox-wrapper input[type="checkbox"]:checked ~ .settings-checkbox {
+  background: var(--primary);
+}
+
+.settings-checkbox-wrapper input[type="checkbox"]:checked ~ .settings-checkbox::after {
+  transform: translateX(calc(20px * var(--scale)));
+}

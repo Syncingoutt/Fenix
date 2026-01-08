@@ -47,7 +47,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // Settings methods
   getSettings: () => ipcRenderer.invoke('get-settings'),
-  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean }) => ipcRenderer.invoke('save-settings', settings),
+  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }) => ipcRenderer.invoke('save-settings', settings),
   testKeybind: (keybind: string) => ipcRenderer.invoke('test-keybind', keybind),
   onCloseSettingsModal: (callback: () => void) => {
     ipcRenderer.on('close-settings-modal', callback);

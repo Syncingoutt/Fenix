@@ -604,7 +604,7 @@ ipcMain.handle('get-settings', () => {
   return getSettings();
 });
 
-ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean }) => {
+ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }) => {
   try {
     saveSettings(settings);
     

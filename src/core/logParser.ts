@@ -112,7 +112,7 @@ export function isLogPathConfigured(): boolean {
 /**
  * Get settings from config file
  */
-export function getSettings(): { keybind?: string; fullscreenMode?: boolean } {
+export function getSettings(): { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean } {
   const config = loadConfig();
   return config.settings || {};
 }
@@ -120,7 +120,7 @@ export function getSettings(): { keybind?: string; fullscreenMode?: boolean } {
 /**
  * Save settings to config file (preserves log path)
  */
-export function saveSettings(settings: { keybind?: string; fullscreenMode?: boolean }): void {
+export function saveSettings(settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }): void {
   const config = loadConfig();
   config.settings = { ...config.settings, ...settings };
   saveConfig(config);

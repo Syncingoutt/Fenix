@@ -32,8 +32,8 @@ interface ElectronAPI {
   isLogPathConfigured: () => Promise<boolean>;
   selectLogFile: () => Promise<string | null>;
   onShowLogPathSetup: (callback: () => void) => void;
-  getSettings: () => Promise<{ keybind?: string; fullscreenMode?: boolean }>;
-  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean }) => Promise<{ success: boolean; error?: string }>;
+  getSettings: () => Promise<{ keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }>;
+  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }) => Promise<{ success: boolean; error?: string }>;
   testKeybind: (keybind: string) => Promise<{ success: boolean; error?: string }>;
   onCloseSettingsModal: (callback: () => void) => void;
   onWindowModeChanged: (callback: (data: { fullscreenMode: boolean }) => void) => void;
@@ -53,6 +53,11 @@ let itemDatabase: Record<string, { name: string; tradable?: boolean; group?: str
 let currentSortBy: 'priceUnit' | 'priceTotal' = 'priceTotal';
 let currentSortOrder: 'asc' | 'desc' = 'desc';
 let searchQuery: string = '';
+
+// Tax preference
+let includeTax: boolean = false;
+const TAX_RATE = 0.125; // 12.5% tax rate (1 FE per 8 FE = 1/8 = 12.5%)
+const FLAME_ELEMENTIUM_ID = '100300'; // Never apply tax to currency
 
 // === WEALTH TRACKING STATE ===
 let wealthMode: 'realtime' | 'hourly' = 'realtime';
@@ -176,7 +181,8 @@ function getSortedAndFilteredItems(): InventoryItem[] {
     // Price filter
     if (item.price === null) return minPrice === 0;
     const totalValue = item.price * item.totalQuantity;
-    return totalValue >= minPrice;
+    const totalValueAfterTax = applyTax(totalValue, item.baseId);
+    return totalValueAfterTax >= minPrice;
   });
 
   filtered.sort((a, b) => {
@@ -186,8 +192,8 @@ function getSortedAndFilteredItems(): InventoryItem[] {
       const priceB = b.price ?? -1;
       comparison = priceA - priceB;
     } else if (currentSortBy === 'priceTotal') {
-      const totalA = (a.price ?? 0) * a.totalQuantity;
-      const totalB = (b.price ?? 0) * b.totalQuantity;
+      const totalA = applyTax((a.price ?? 0) * a.totalQuantity, a.baseId);
+      const totalB = applyTax((b.price ?? 0) * b.totalQuantity, b.baseId);
       comparison = totalA - totalB;
     }
     return currentSortOrder === 'asc' ? comparison : -comparison;
@@ -223,6 +229,8 @@ function renderInventory() {
   container.innerHTML = items
     .map(item => {
       const totalValue = item.price !== null ? item.price * item.totalQuantity : null;
+      // Apply tax to total value (but not to base price)
+      const totalValueAfterTax = totalValue !== null ? applyTax(totalValue, item.baseId) : null;
       const pageLabel = getPageLabel(item);
 
       return `
@@ -242,7 +250,7 @@ function renderInventory() {
           <div class="price-single ${item.price === null ? 'no-price' : ''}">
             ${item.price !== null ? item.price.toFixed(2) : 'Not Set'}
           </div>
-          ${totalValue !== null ? `<div class="price-total">${totalValue.toFixed(2)}</div>` : ''}
+          ${totalValueAfterTax !== null ? `<div class="price-total">${totalValueAfterTax.toFixed(2)}</div>` : ''}
         </div>
       </div>
     `;
@@ -282,8 +290,10 @@ function renderBreakdown() {
     
     const group = itemData.group || 'none';
     const itemValue = item.price * item.totalQuantity;
+    // Apply tax to item value for breakdown
+    const itemValueAfterTax = applyTax(itemValue, item.baseId);
     
-    groupTotals.set(group, (groupTotals.get(group) || 0) + itemValue);
+    groupTotals.set(group, (groupTotals.get(group) || 0) + itemValueAfterTax);
   }
 
   // Convert to array and sort by total value (highest first)
@@ -335,10 +345,27 @@ function formatTime(seconds: number): string {
   return `${h}:${m}:${s}`;
 }
 
+// === HELPER: Apply Tax ===
+function applyTax(value: number, baseId: string | null = null): number {
+  // Never apply tax if preference is disabled
+  if (!includeTax) return value;
+  
+  // Never apply tax to Flame Elementium (currency)
+  if (baseId === FLAME_ELEMENTIUM_ID) return value;
+  
+  // Apply tax: subtract 12.5% (1 FE per 8 FE = multiply by 0.875)
+  const taxedValue = value * (1 - TAX_RATE);
+  return taxedValue;
+}
+
 // === CURRENT TOTAL VALUE ===
 function getCurrentTotalValue(): number {
   return currentItems.reduce((sum, item) => {
-    if (item.price !== null) return sum + item.totalQuantity * item.price;
+    if (item.price !== null) {
+      const totalValue = item.totalQuantity * item.price;
+      // Apply tax to total (but not to base price)
+      return sum + applyTax(totalValue, item.baseId);
+    }
     return sum;
   }, 0);
 }
@@ -355,7 +382,9 @@ function getHourlyWealthGain(): number {
     const gainedQty = currentQty - startQty;
     
     if (gainedQty > 0) {
-      gainedValue += gainedQty * item.price;
+      const itemValue = gainedQty * item.price;
+      // Apply tax to gained value
+      gainedValue += applyTax(itemValue, item.baseId);
     }
   }
   
@@ -1248,13 +1277,17 @@ const keybindStatus = document.getElementById('keybindStatus')!;
 const settingsSaveBtn = document.getElementById('settingsSaveBtn') as HTMLButtonElement;
 const settingsFooterMessage = document.getElementById('settingsFooterMessage')!;
 const generalSection = document.getElementById('generalSection')!;
+const preferencesSection = document.getElementById('preferencesSection')!;
 const fullscreenModeRadio = document.getElementById('fullscreenModeRadio') as HTMLInputElement;
 const normalModeRadio = document.getElementById('normalModeRadio') as HTMLInputElement;
+const includeTaxCheckbox = document.getElementById('includeTaxCheckbox') as HTMLInputElement | null;
+const settingsSidebarItems = document.querySelectorAll('.settings-sidebar-item');
 
 let isRecordingKeybind = false;
-let currentSettings: { keybind?: string; fullscreenMode?: boolean } = {};
+let currentSettings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean } = {};
 let pendingKeybind: string | null = null;
 let pendingFullscreenMode: boolean | null = null;
+let pendingIncludeTax: boolean | null = null;
 
 // Open settings modal
 openSettingsBtn.addEventListener('click', async () => {
@@ -1265,6 +1298,8 @@ openSettingsBtn.addEventListener('click', async () => {
   currentSettings = await electronAPI.getSettings();
   pendingKeybind = currentSettings.keybind || 'CommandOrControl+`';
   pendingFullscreenMode = currentSettings.fullscreenMode !== undefined ? currentSettings.fullscreenMode : true;
+  pendingIncludeTax = currentSettings.includeTax !== undefined ? currentSettings.includeTax : false;
+  includeTax = pendingIncludeTax;
   
   // Display current keybind
   keybindInput.value = formatKeybind(pendingKeybind);
@@ -1280,6 +1315,11 @@ openSettingsBtn.addEventListener('click', async () => {
     normalModeRadio.checked = true;
   }
   
+  // Set tax checkbox
+  if (includeTaxCheckbox) {
+    includeTaxCheckbox.checked = pendingIncludeTax;
+  }
+  
   // Reset save button state
   settingsSaveBtn.disabled = false;
   settingsSaveBtn.textContent = 'Save';
@@ -1288,8 +1328,19 @@ openSettingsBtn.addEventListener('click', async () => {
   settingsFooterMessage.textContent = '';
   settingsFooterMessage.classList.remove('show', 'success', 'error');
   
-  // Show general section
+  // Show general section by default
   generalSection.classList.add('active');
+  preferencesSection.classList.remove('active');
+  
+  // Reset sidebar active state
+  settingsSidebarItems.forEach(item => {
+    const section = item.getAttribute('data-section');
+    if (section === 'general') {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
   
   settingsModal.classList.add('active');
 });
@@ -1312,6 +1363,7 @@ function closeSettingsModal() {
   changeKeybindBtn.textContent = 'Change';
   pendingKeybind = null;
   pendingFullscreenMode = null;
+  pendingIncludeTax = null;
 }
 
 // Change keybind button
@@ -1445,13 +1497,43 @@ normalModeRadio.addEventListener('change', () => {
   }
 });
 
+// Handle tax checkbox change
+if (includeTaxCheckbox) {
+  includeTaxCheckbox.addEventListener('change', () => {
+    if (includeTaxCheckbox) {
+      pendingIncludeTax = includeTaxCheckbox.checked;
+    }
+  });
+}
+
+// Sidebar navigation
+settingsSidebarItems.forEach(item => {
+  item.addEventListener('click', () => {
+    const section = item.getAttribute('data-section');
+    if (!section) return;
+    
+    // Update active state
+    settingsSidebarItems.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    
+    // Show/hide sections
+    if (section === 'general') {
+      generalSection.classList.add('active');
+      preferencesSection.classList.remove('active');
+    } else if (section === 'preferences') {
+      generalSection.classList.remove('active');
+      preferencesSection.classList.add('active');
+    }
+  });
+});
+
 // Save settings
 settingsSaveBtn.addEventListener('click', async () => {
   settingsSaveBtn.disabled = true;
   settingsSaveBtn.textContent = 'Saving...';
   
   try {
-    const settingsToSave: { keybind?: string; fullscreenMode?: boolean } = {};
+    const settingsToSave: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean } = {};
     
     if (pendingKeybind) {
       settingsToSave.keybind = pendingKeybind;
@@ -1461,22 +1543,36 @@ settingsSaveBtn.addEventListener('click', async () => {
       settingsToSave.fullscreenMode = pendingFullscreenMode;
     }
     
-    const result = await electronAPI.saveSettings(settingsToSave);
-    
-    if (result.success) {
-      currentSettings = { ...currentSettings, ...settingsToSave };
+      // Always include tax preference from checkbox state (get fresh reference to ensure we have latest state)
+      const checkboxElement = document.getElementById('includeTaxCheckbox') as HTMLInputElement | null;
+      const currentTaxValue = checkboxElement ? checkboxElement.checked : (pendingIncludeTax ?? false);
+      settingsToSave.includeTax = currentTaxValue;
       
-      // Update pending values to match saved values
-      if (settingsToSave.keybind) {
-        pendingKeybind = settingsToSave.keybind;
-      }
-      if (settingsToSave.fullscreenMode !== undefined) {
-        pendingFullscreenMode = settingsToSave.fullscreenMode;
-      }
+      const result = await electronAPI.saveSettings(settingsToSave);
       
-      // Show success message in footer
-      settingsFooterMessage.textContent = 'Settings saved successfully';
-      settingsFooterMessage.className = 'settings-footer-message success show';
+      if (result.success) {
+        currentSettings = { ...currentSettings, ...settingsToSave };
+        
+        // Update pending values to match saved values
+        if (settingsToSave.keybind) {
+          pendingKeybind = settingsToSave.keybind;
+        }
+        if (settingsToSave.fullscreenMode !== undefined) {
+          pendingFullscreenMode = settingsToSave.fullscreenMode;
+        }
+        
+        // CRITICAL: Update the global tax preference BEFORE calling render functions
+        includeTax = currentTaxValue;
+        pendingIncludeTax = currentTaxValue;
+        
+        // Refresh all displays when tax preference changes
+        renderInventory();
+        renderBreakdown();
+        updateStats(currentItems);
+        
+        // Show success message in footer
+        settingsFooterMessage.textContent = 'Settings saved successfully';
+        settingsFooterMessage.className = 'settings-footer-message success show';
       
       // Clear keybind status
       keybindStatus.textContent = '';
@@ -1517,8 +1613,13 @@ settingsSaveBtn.addEventListener('click', async () => {
 });
 
 // === INITIALIZE ===
-// Check if log path is configured before loading inventory
-electronAPI.isLogPathConfigured().then((configured) => {
+// Load tax preference on startup and initialize
+Promise.all([
+  electronAPI.getSettings(),
+  electronAPI.isLogPathConfigured()
+]).then(([settings, configured]) => {
+  includeTax = settings.includeTax !== undefined ? settings.includeTax : false;
+  
   if (configured) {
     initGraph();
     loadInventory(); // This will call initRealtimeTracking() after inventory is loaded
