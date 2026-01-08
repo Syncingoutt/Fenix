@@ -286,7 +286,7 @@ function renderBreakdown() {
     return `
       <div class="breakdown-group">
         <img src="../../assets/${group}.webp" alt="${group}" class="breakdown-icon" onerror="this.style.display='none'">
-        <span class="breakdown-group-value">${total.toFixed(0)}FE</span>
+        <span class="breakdown-group-value">${total.toFixed(0)} FE</span>
       </div>
     `;
   }).join('');
