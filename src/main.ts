@@ -35,6 +35,7 @@ app.whenReady().then(() => {
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let inventoryManager: InventoryManager;
+let itemDatabase: ReturnType<typeof loadItemDatabase>;
 let lastLogPosition = 0;
 const WATCH_INTERVAL = 500;
 
@@ -338,7 +339,7 @@ app.whenReady().then(() => {
 
   console.log('🔥 Torchlight Tracker - Starting...');
   
-  const itemDatabase = loadItemDatabase();
+  itemDatabase = loadItemDatabase();
   console.log(`📦 Loaded ${Object.keys(itemDatabase).length} items`);
   
   const priceCache = loadPriceCache();
@@ -430,6 +431,10 @@ app.on('will-quit', () => {
 // IPC Handlers
 ipcMain.handle('get-inventory', () => {
   return inventoryManager.getInventory();
+});
+
+ipcMain.handle('get-item-database', () => {
+  return itemDatabase;
 });
 
 ipcMain.on('minimize-window', () => {

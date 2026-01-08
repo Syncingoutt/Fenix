@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getInventory: () => ipcRenderer.invoke('get-inventory'),
+  getItemDatabase: () => ipcRenderer.invoke('get-item-database'),
   onInventoryUpdate: (callback: () => void) => {
     ipcRenderer.on('inventory-updated', callback);
   },

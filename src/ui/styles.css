@@ -514,6 +514,36 @@ img:not(.header-logo-pic) {
 
 .breakdown-content {
   padding: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.breakdown-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breakdown-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.breakdown-group-value {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.breakdown-empty {
+  text-align: center;
+  color: var(--border);
+  font-size: 14px;
+  padding: 20px;
 }
 
 .breakdown-item {

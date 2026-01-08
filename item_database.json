@@ -21,6 +21,7 @@
   "3000002": { "name": "Proof of the Brave II", "tradable": true, "group": "currency" },
   "3000003": { "name": "Proof of the Brave III", "tradable": true, "group": "currency" },
   "3000004": { "name": "Proof of the Brave IV", "tradable": true, "group": "currency" },
+  "210002": { "name": "Corrupted Axis", "tradable": true, "group": "currency" },
 
   "200003": { "name": "Fine Ember", "tradable": true, "group": "ember" },
   "200028": { "name": "Precious Ember", "tradable": true, "group": "ember" },
@@ -61,9 +62,9 @@
   "330001": { "name": "Snowpaper Fragment", "tradable": true, "group": "canvas" },
   "339001": { "name": "Inspiration Essence", "tradable": true, "group": "canvas" },
 
-  "360101": { "name": "Sage Lv.1", "tradable": true, "group": "city" },
-  "360102": { "name": "Silver mound Lv.2", "tradable": true, "group": "city" },
-  "360201": { "name": "Night-Blooming Cereus Lv. 4", "tradable": true, "group": "city" },
+  "360101": { "name": "Sage Lv.1", "tradable": true, "group": "sandlord" },
+  "360102": { "name": "Silver mound Lv.2", "tradable": true, "group": "sandlord" },
+  "360201": { "name": "Night-Blooming Cereus Lv. 4", "tradable": true, "group": "sandlord" },
 
   "370101": { "name": "Prism Gauge - Rare", "tradable": true, "group": "overrealm" },
   "370201": { "name": "Prism Gauge - Legendary", "tradable": true, "group": "overrealm" },
@@ -93,7 +94,6 @@
   "410501": { "name": "Queen's Grace - Slaughter", "tradable": true, "group": "dream" },
 
   "210000": { "name": "Aemberon Core", "tradable": true, "group": "surge" },
-  "210002": { "name": "Corrupted Axis", "tradable": true, "group": "clockwork" },
 
   "10010": { "name": "Novel Compass", "tradable": true, "group": "compass" },
   "10011": { "name": "Lavish Novel Compass", "tradable": true, "group": "compass" },

@@ -12,6 +12,7 @@ interface InventoryItem {
 
 interface ElectronAPI {
   getInventory: () => Promise<InventoryItem[]>;
+  getItemDatabase: () => Promise<Record<string, { name: string; tradable?: boolean; group?: string }>>;
   onInventoryUpdate: (callback: () => void) => void;
   startHourlyTimer: () => void;
   pauseHourlyTimer: () => void;
@@ -31,6 +32,7 @@ declare const Chart: any;
 
 // === INVENTORY STATE ===
 let currentItems: InventoryItem[] = [];
+let itemDatabase: Record<string, { name: string; tradable?: boolean; group?: string }> = {};
 
 // Sorting
 let currentSortBy: 'priceUnit' | 'priceTotal' = 'priceTotal';
@@ -97,7 +99,12 @@ resetRealtimeBtn.style.display = 'block'; // Show reset button in realtime mode
 
 // === INITIAL LOAD ===
 async function loadInventory() {
-  const inventory = await electronAPI.getInventory();
+  const [inventory, db] = await Promise.all([
+    electronAPI.getInventory(),
+    electronAPI.getItemDatabase()
+  ]);
+  
+  itemDatabase = db;
   
   // Set Flame Elementium price to 1 FE (it's the currency itself)
   currentItems = inventory.map(item => {
@@ -115,6 +122,7 @@ async function loadInventory() {
   
   renderInventory();
   updateStats(currentItems);
+  renderBreakdown();
 }
 
 // === GET ITEMS TO DISPLAY (based on mode) ===
@@ -235,6 +243,48 @@ function updateStats(items: InventoryItem[]) {
   if (isHourlyActive && !hourlyPaused) {
     updateHourlyWealth();
   }
+  renderBreakdown();
+}
+
+// === RENDER BREAKDOWN ===
+function renderBreakdown() {
+  const breakdownEl = document.getElementById('breakdown');
+  if (!breakdownEl) return;
+
+  // Calculate group totals
+  const groupTotals = new Map<string, number>();
+  
+  for (const item of currentItems) {
+    if (item.price === null) continue;
+    
+    const itemData = itemDatabase[item.baseId];
+    if (!itemData || itemData.tradable === false) continue;
+    
+    const group = itemData.group || 'none';
+    const itemValue = item.price * item.totalQuantity;
+    
+    groupTotals.set(group, (groupTotals.get(group) || 0) + itemValue);
+  }
+
+  // Convert to array and sort by total value (highest first)
+  const groups = Array.from(groupTotals.entries())
+    .map(([group, total]) => ({ group, total }))
+    .sort((a, b) => b.total - a.total);
+
+  if (groups.length === 0) {
+    breakdownEl.innerHTML = '<div class="breakdown-empty">No items with prices</div>';
+    return;
+  }
+
+  // Render in 3-column grid
+  breakdownEl.innerHTML = groups.map(({ group, total }) => {
+    return `
+      <div class="breakdown-group">
+        <img src="../../assets/${group}.webp" alt="${group}" class="breakdown-icon" onerror="this.style.display='none'">
+        <span class="breakdown-group-value">${total.toFixed(0)}FE</span>
+      </div>
+    `;
+  }).join('');
 }
 
 // === SORT INDICATORS ===
