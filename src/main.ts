@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, crashReporter, globalShortcut, Menu, screen, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, crashReporter, globalShortcut, Menu, screen, Tray } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
@@ -236,19 +236,11 @@ autoUpdater.on('update-available', (info) => {
     });
     autoUpdater.downloadUpdate();
   } else if (mainWindow && !isManualCheck) {
-    // For automatic checks, show dialog (existing behavior)
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update Available',
-      message: `A new version (${info.version}) is available!`,
-      detail: `Current version: ${app.getVersion()}\n\nWould you like to download and install it now?`,
-      buttons: ['Download Now', 'Later'],
-      defaultId: 0,
-      cancelId: 1
-    }).then((result) => {
-      if (result.response === 0) {
-        autoUpdater.downloadUpdate();
-      }
+    // For automatic checks, show custom modal
+    mainWindow.webContents.send('show-update-dialog', {
+      type: 'available',
+      version: info.version,
+      currentVersion: app.getVersion()
     });
   }
 });
@@ -298,35 +290,16 @@ autoUpdater.on('update-downloaded', (info) => {
       message: 'Update downloaded! Restart to install.',
       version: info.version
     });
-    // Prompt for restart
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update Downloaded',
-      message: 'Update downloaded successfully!',
-      detail: 'The update will be installed when you restart the application.',
-      buttons: ['Restart Now', 'Later'],
-      defaultId: 0,
-      cancelId: 1
-    }).then((result) => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall(false, true);
-      }
+    // Show custom modal for restart prompt
+    mainWindow.webContents.send('show-update-dialog', {
+      type: 'downloaded',
+      version: info.version
     });
     isManualCheck = false;
   } else if (mainWindow && !isManualCheck) {
-    // For automatic checks, show dialog (existing behavior)
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update Downloaded',
-      message: 'Update downloaded successfully!',
-      detail: 'The update will be installed when you restart the application.',
-      buttons: ['Restart Now', 'Later'],
-      defaultId: 0,
-      cancelId: 1
-    }).then((result) => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall(false, true);
-      }
+    // For automatic checks, transition to install prompt in same modal
+    mainWindow.webContents.send('update-downloaded-transition', {
+      version: info.version
     });
   }
 });
@@ -513,6 +486,16 @@ ipcMain.handle('check-for-updates', async () => {
     isManualCheck = false;
     return { success: false, message: error.message || 'Failed to check for updates' };
   }
+});
+
+// Handle update dialog responses from renderer
+ipcMain.on('update-dialog-response', (event, response: 'download' | 'restart' | 'later') => {
+  if (response === 'download') {
+    autoUpdater.downloadUpdate();
+  } else if (response === 'restart') {
+    autoUpdater.quitAndInstall(false, true);
+  }
+  // 'later' response just closes the modal, no action needed
 });
 
 // Log file watcher

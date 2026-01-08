@@ -29,5 +29,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onUpdateProgress: (callback: (percent: number) => void) => {
     ipcRenderer.on('update-download-progress', (_event, percent) => callback(percent));
+  },
+  // Update dialog methods
+  onShowUpdateDialog: (callback: (data: { type: 'available' | 'downloaded'; version: string; currentVersion?: string }) => void) => {
+    ipcRenderer.on('show-update-dialog', (_event, data) => callback(data));
+  },
+  onUpdateDownloadedTransition: (callback: (data: { version: string }) => void) => {
+    ipcRenderer.on('update-downloaded-transition', (_event, data) => callback(data));
+  },
+  sendUpdateDialogResponse: (response: 'download' | 'restart' | 'later') => {
+    ipcRenderer.send('update-dialog-response', response);
   }
 });

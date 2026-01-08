@@ -25,6 +25,9 @@ interface ElectronAPI {
   checkForUpdates: () => Promise<{ success: boolean; message?: string }>;
   onUpdateStatus: (callback: (data: { status: string; message?: string; version?: string }) => void) => void;
   onUpdateProgress: (callback: (percent: number) => void) => void;
+  onShowUpdateDialog: (callback: (data: { type: 'available' | 'downloaded'; version: string; currentVersion?: string }) => void) => void;
+  onUpdateDownloadedTransition: (callback: (data: { version: string }) => void) => void;
+  sendUpdateDialogResponse: (response: 'download' | 'restart' | 'later') => void;
 }
 
 declare const electronAPI: ElectronAPI;
@@ -1004,6 +1007,12 @@ electronAPI.onUpdateStatus((data) => {
     case 'available':
       updateStatus.textContent = `Update available: ${data.version}. Downloading...`;
       updateStatus.className = 'update-status success';
+      // For manual checks, download starts automatically, so show progress modal
+      // If modal is not showing, it means this is a manual check that auto-started
+      if (currentUpdateType === null) {
+        showUpdateModal('available', data.version || '');
+        showDownloadProgress();
+      }
       break;
     case 'not-available':
       updateStatus.textContent = 'You are up to date!';
@@ -1018,6 +1027,10 @@ electronAPI.onUpdateStatus((data) => {
       updateStatus.textContent = 'Update downloaded! Restart to install.';
       updateStatus.className = 'update-status success';
       checkUpdatesBtn.disabled = false;
+      // Transition to install prompt if modal is showing
+      if (updateModal.classList.contains('active')) {
+        transitionToInstallPrompt(data.version || '');
+      }
       break;
     case 'error':
       updateStatus.textContent = data.message || 'Error checking for updates';
@@ -1032,6 +1045,117 @@ electronAPI.onUpdateProgress((percent) => {
   if (settingsMenuOpen && updateStatus.style.display !== 'none') {
     updateStatus.textContent = `Downloading update: ${percent}%`;
   }
+  // Update progress bar in modal if it's showing
+  updateDownloadProgress(percent);
+});
+
+// === UPDATE MODAL ===
+const updateModal = document.getElementById('updateModal')!;
+const updateModalTitle = document.getElementById('updateModalTitle')!;
+const updateModalSubtitle = document.getElementById('updateModalSubtitle')!;
+const updateModalMessage = document.getElementById('updateModalMessage')!;
+const updateProgressContainer = document.getElementById('updateProgressContainer')!;
+const updateProgressFill = document.getElementById('updateProgressFill')!;
+const updateProgressText = document.getElementById('updateProgressText')!;
+const updateBtnPrimary = document.getElementById('updateBtnPrimary') as HTMLButtonElement;
+const updateBtnSecondary = document.getElementById('updateBtnSecondary') as HTMLButtonElement;
+
+let currentUpdateType: 'available' | 'downloaded' | null = null;
+let currentUpdateVersion: string = '';
+
+function showUpdateModal(type: 'available' | 'downloaded', version: string, currentVersion?: string) {
+  currentUpdateType = type;
+  currentUpdateVersion = version;
+  
+  if (type === 'available') {
+    updateModalTitle.textContent = 'Update Available';
+    updateModalSubtitle.textContent = `Version ${version}`;
+    updateModalMessage.textContent = `A new version (${version}) is available!\n\nCurrent version: ${currentVersion || 'Unknown'}\n\nWould you like to download and install it now?`;
+    updateBtnPrimary.textContent = 'Download Now';
+    updateBtnSecondary.textContent = 'Later';
+    updateProgressContainer.style.display = 'none';
+    updateBtnPrimary.style.display = 'block';
+    updateBtnSecondary.style.display = 'block';
+    updateBtnPrimary.disabled = false;
+    updateBtnSecondary.disabled = false;
+  } else if (type === 'downloaded') {
+    updateModalTitle.textContent = 'Update Downloaded';
+    updateModalSubtitle.textContent = `Version ${version}`;
+    updateModalMessage.textContent = 'Update downloaded successfully!\n\nThe update will be installed when you restart the application.';
+    updateBtnPrimary.textContent = 'Restart Now';
+    updateBtnSecondary.textContent = 'Later';
+    updateProgressContainer.style.display = 'none';
+    updateBtnPrimary.style.display = 'block';
+    updateBtnSecondary.style.display = 'block';
+    updateBtnPrimary.disabled = false;
+    updateBtnSecondary.disabled = false;
+  }
+  
+  updateModal.classList.add('active');
+}
+
+function hideUpdateModal() {
+  updateModal.classList.remove('active');
+  currentUpdateType = null;
+  currentUpdateVersion = '';
+}
+
+function showDownloadProgress() {
+  updateProgressContainer.style.display = 'block';
+  updateModalTitle.textContent = 'Downloading Update';
+  updateModalSubtitle.textContent = `Version ${currentUpdateVersion}`;
+  updateModalMessage.textContent = 'Please wait while the update is being downloaded...';
+  updateBtnPrimary.style.display = 'none';
+  updateBtnSecondary.style.display = 'none';
+}
+
+function updateDownloadProgress(percent: number) {
+  if (updateModal.classList.contains('active') && updateProgressContainer.style.display !== 'none') {
+    updateProgressFill.style.width = `${percent}%`;
+    updateProgressText.textContent = `${Math.round(percent)}%`;
+  }
+}
+
+function transitionToInstallPrompt(version: string) {
+  updateProgressContainer.style.display = 'none';
+  updateModalTitle.textContent = 'Update Downloaded';
+  updateModalSubtitle.textContent = `Version ${version}`;
+  updateModalMessage.textContent = 'Update downloaded successfully!\n\nThe update will be installed when you restart the application.';
+  updateBtnPrimary.textContent = 'Restart Now';
+  updateBtnSecondary.textContent = 'Later';
+  updateBtnPrimary.style.display = 'block';
+  updateBtnSecondary.style.display = 'block';
+  updateBtnPrimary.disabled = false;
+  updateBtnSecondary.disabled = false;
+  currentUpdateType = 'downloaded';
+}
+
+// Button event listeners
+updateBtnPrimary.addEventListener('click', () => {
+  if (currentUpdateType === 'available') {
+    // Start download
+    electronAPI.sendUpdateDialogResponse('download');
+    showDownloadProgress();
+  } else if (currentUpdateType === 'downloaded') {
+    // Restart now
+    electronAPI.sendUpdateDialogResponse('restart');
+    hideUpdateModal();
+  }
+});
+
+updateBtnSecondary.addEventListener('click', () => {
+  electronAPI.sendUpdateDialogResponse('later');
+  hideUpdateModal();
+});
+
+// Listen for update dialog requests from main process
+electronAPI.onShowUpdateDialog((data) => {
+  showUpdateModal(data.type, data.version, data.currentVersion);
+});
+
+// Listen for seamless transition from download to install prompt
+electronAPI.onUpdateDownloadedTransition((data) => {
+  transitionToInstallPrompt(data.version);
 });
 
 // === INITIALIZE ===
