@@ -130,6 +130,50 @@ function extractBaseId(fullId: string): string {
   return fullId.split('_')[0];
 }
 
+/**
+ * Parse a BagMgr@:InitBagData line
+ * Format: BagMgr@:InitBagData PageId = 102 SlotId = 1 ConfigBaseId = 100300 Num = 320
+ */
+function parseInitBagDataLine(line: string): ParsedLogEntry | null {
+  if (!line.includes('BagMgr@:InitBagData')) return null;
+
+  const pageMatch = line.match(/PageId\s*=\s*(\d+)/);
+  const pageId = pageMatch ? parseInt(pageMatch[1]) : null;
+  
+  // Only process PageId 102 and 103
+  if (pageId !== 102 && pageId !== 103) {
+    return null;
+  }
+
+  const slotMatch = line.match(/SlotId\s*=\s*(\d+)/);
+  const slotId = slotMatch ? parseInt(slotMatch[1]) : null;
+
+  const baseIdMatch = line.match(/ConfigBaseId\s*=\s*(\d+)/);
+  if (!baseIdMatch) return null;
+  const baseId = baseIdMatch[1];
+
+  const numMatch = line.match(/Num\s*=\s*(\d+)/);
+  if (!numMatch) return null;
+  const bagNum = parseInt(numMatch[1]);
+
+  const timestampMatch = line.match(/\[([\d\.\-:]+)\]/);
+  const timestamp = timestampMatch ? timestampMatch[1] : 'unknown';
+
+  // For InitBagData, we create a synthetic fullId (since it doesn't have one)
+  // We use baseId + pageId + slotId + timestamp to make it unique
+  const fullId = `${baseId}_init_${pageId}_${slotId}_${timestamp}`;
+
+  return {
+    timestamp,
+    action: 'Add',
+    fullId,
+    baseId,
+    bagNum,
+    slotId,
+    pageId
+  };
+}
+
 export function parseLogLine(line: string): ParsedLogEntry | null {
   const idMatch = line.match(/Id=([^\s]+)/);
   if (!idMatch) return null;
@@ -192,6 +236,59 @@ export function readLogFile(): ParsedLogEntry[] {
   const logContent = buffer.toString('utf-8');
   const lines = logContent.split('\n');
 
+  // First, check if there's a ResetItemsLayout event (sort operation)
+  // Look for the most recent ResetItemsLayout start/end pair
+  let lastResetItemsLayoutStart = -1;
+  let lastResetItemsLayoutEnd = -1;
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (line.includes('ItemChange@ ProtoName=ResetItemsLayout end') && lastResetItemsLayoutEnd === -1) {
+      lastResetItemsLayoutEnd = i;
+    }
+    if (line.includes('ItemChange@ ProtoName=ResetItemsLayout start') && lastResetItemsLayoutStart === -1 && lastResetItemsLayoutEnd !== -1) {
+      lastResetItemsLayoutStart = i;
+      break;
+    }
+  }
+
+  // If we found a ResetItemsLayout event, capture BagMgr@:InitBagData entries for both pages
+  if (lastResetItemsLayoutStart !== -1 && lastResetItemsLayoutEnd !== -1) {
+    const entries: ParsedLogEntry[] = [];
+    
+    // Look for InitBagData entries after the ResetItemsLayout end, within a reasonable window
+    // (we'll check up to 100 lines after the end, or until we hit another ResetItemsLayout start)
+    const searchEnd = Math.min(lastResetItemsLayoutEnd + 100, lines.length);
+    
+    for (let i = lastResetItemsLayoutEnd; i < searchEnd; i++) {
+      const line = lines[i];
+      
+      // Stop if we hit another ResetItemsLayout start (new sort operation)
+      if (line.includes('ItemChange@ ProtoName=ResetItemsLayout start')) {
+        break;
+      }
+      
+      // Parse InitBagData entries for PageId 102 and 103
+      const parsed = parseInitBagDataLine(line);
+      if (parsed) {
+        entries.push(parsed);
+      }
+    }
+    
+    // If we found InitBagData entries, use them (even if only one page is present)
+    // These represent the complete state after sorting
+    if (entries.length > 0) {
+      const hasPage102 = entries.some(e => e.pageId === 102);
+      const hasPage103 = entries.some(e => e.pageId === 103);
+      const pagesList = [];
+      if (hasPage102) pagesList.push('102');
+      if (hasPage103) pagesList.push('103');
+      return entries;
+    }
+    // If no InitBagData entries found, fall through to normal processing
+  }
+
+  // Fall back to normal processing (find last reset for each page)
   let lastReset102 = -1;
   let lastReset103 = -1;
 

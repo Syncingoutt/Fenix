@@ -824,11 +824,22 @@ function watchLogFile() {
         }
       }
 
+      // Detect ItemChange entries
       if (line.includes('ItemChange@') && line.includes('Id=')) {
         const parsed = parseLogLine(line);
         if (parsed) {
           inventoryChanged = true;
         }
+      }
+      
+      // Detect ResetItemsLayout events (sort operations)
+      if (line.includes('ItemChange@ ProtoName=ResetItemsLayout')) {
+        inventoryChanged = true;
+      }
+      
+      // Detect InitBagData entries (they appear after ResetItemsLayout)
+      if (line.includes('BagMgr@:InitBagData')) {
+        inventoryChanged = true;
       }
     }
 
