@@ -5,6 +5,7 @@ import { app } from 'electron';
 export interface ItemData {
   name: string;
   tradable?: boolean; // Optional for backwards compatibility, defaults to true if not specified
+  group?: string; // Optional group identifier (e.g., "compass", "none")
 }
 
 export interface ItemDatabase {
