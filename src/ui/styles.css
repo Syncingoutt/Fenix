@@ -14,6 +14,16 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Hide scrollbar but keep scrolling functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 body {
   font-family: "Manrope", sans-serif;
   background: var(--bg);
@@ -21,6 +31,13 @@ body {
   padding: 20px;
   max-width: 1440px;
   margin: 0 auto;
+  /* Hide scrollbar but keep scrolling functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 img:not(.header-logo-pic) {
