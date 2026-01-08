@@ -9,6 +9,17 @@
   </head>
 
   <body>
+      <!-- Custom Title Bar (only visible in windowed mode) -->
+      <div id="custom-title-bar" style="display: none;">
+        <div class="title-bar-drag-area">
+          <div class="title-bar-title">Fenix</div>
+        </div>
+        <div class="title-bar-controls">
+          <button id="title-bar-minimize" class="title-bar-button" title="Minimize">−</button>
+          <button id="title-bar-maximize" class="title-bar-button" title="Maximize">□</button>
+          <button id="title-bar-close" class="title-bar-button" title="Close">×</button>
+        </div>
+      </div>
       <header>
         <div class="header">
           <div class="header-logo">
@@ -234,6 +245,38 @@
           <div class="settings-main">
             <div class="settings-section" id="generalSection">
               <div class="settings-section-title">General Settings</div>
+              
+              <div class="settings-group">
+                <div class="settings-group-label">Window Mode</div>
+                <div class="settings-group-description">Choose how the app window behaves</div>
+                <div class="window-mode-toggle">
+                  <label class="window-mode-option">
+                    <input type="radio" name="windowMode" value="fullscreen" id="fullscreenModeRadio">
+                    <div class="window-mode-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 8H8V4M20 8H16V4M4 16H8V20M20 16H16V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <div class="window-mode-content">
+                      <span class="window-mode-title">Fullscreen Mode</span>
+                      <div class="window-mode-description">Always-on-top fullscreen overlay for gaming</div>
+                    </div>
+                  </label>
+                  <label class="window-mode-option">
+                    <input type="radio" name="windowMode" value="normal" id="normalModeRadio">
+                    <div class="window-mode-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                        <path d="M3 8H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                    <div class="window-mode-content">
+                      <span class="window-mode-title">Windowed Mode</span>
+                      <div class="window-mode-description">Resizable window with title bar and controls</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
               
               <div class="settings-group">
                 <div class="settings-group-label">Toggle Overlay Keybind</div>

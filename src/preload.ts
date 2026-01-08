@@ -6,8 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onInventoryUpdate: (callback: () => void) => {
     ipcRenderer.on('inventory-updated', callback);
   },
-  minimizeWindow: () => ipcRenderer.send('minimize-window'),
-  closeWindow: () => ipcRenderer.send('close-window'),
   toggleWindow: () => ipcRenderer.send('toggle-window'),
   
   // Timer control methods
@@ -49,6 +47,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // Settings methods
   getSettings: () => ipcRenderer.invoke('get-settings'),
-  saveSettings: (settings: { keybind?: string }) => ipcRenderer.invoke('save-settings', settings),
-  testKeybind: (keybind: string) => ipcRenderer.invoke('test-keybind', keybind)
+  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean }) => ipcRenderer.invoke('save-settings', settings),
+  testKeybind: (keybind: string) => ipcRenderer.invoke('test-keybind', keybind),
+  onCloseSettingsModal: (callback: () => void) => {
+    ipcRenderer.on('close-settings-modal', callback);
+  },
+  onWindowModeChanged: (callback: (data: { fullscreenMode: boolean }) => void) => {
+    ipcRenderer.on('window-mode-changed', (_event, data) => callback(data));
+  },
+  minimizeWindow: () => {
+    ipcRenderer.send('minimize-window');
+  },
+  maximizeWindow: () => {
+    ipcRenderer.send('maximize-window');
+  },
+  closeWindow: () => {
+    ipcRenderer.send('close-window');
+  }
 });

@@ -40,6 +40,7 @@ let lastLogPosition = 0;
 let lastSendBaseId: string | null = null; // Track the most recent SEND message's baseId across log reads
 const WATCH_INTERVAL = 500;
 let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
+let fullscreenMode: boolean = true; // Default to fullscreen overlay mode
 
 // Timer state managed in main process (never throttled)
 interface TimerState {
@@ -93,22 +94,25 @@ function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { x, y, width, height } = primaryDisplay.bounds;
   
+  // Always create frameless window - we'll use custom title bar for windowed mode
+  // This avoids needing to recreate the window when switching modes
   mainWindow = new BrowserWindow({
-    x: x,
-    y: y,
-    width: width,
-    height: height,
+    width: fullscreenMode ? width : 1920,
+    height: fullscreenMode ? height : 1080,
+    x: fullscreenMode ? x : undefined,
+    y: fullscreenMode ? y : undefined,
+    minWidth: 800,
+    minHeight: 600,
     icon: getIconPath(),
-    frame: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    resizable: false,
-    movable: false,
+    frame: false, // Always frameless - we'll add custom title bar
+    alwaysOnTop: fullscreenMode,
+    skipTaskbar: fullscreenMode,
+    resizable: !fullscreenMode,
+    movable: !fullscreenMode,
     focusable: true,
-    fullscreenable: false,
+    fullscreenable: !fullscreenMode,
     transparent: false,
-    hasShadow: false,
-    type: 'toolbar',
+    hasShadow: !fullscreenMode,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -119,8 +123,15 @@ function createWindow() {
 
   mainWindow.setMenu(null);
   mainWindow.hide();
-  mainWindow.setBounds({ x: x, y: y, width: width, height: height });
-  mainWindow.setSkipTaskbar(true);
+  
+  if (fullscreenMode) {
+    mainWindow.setBounds({ x: x, y: y, width: width, height: height });
+    mainWindow.setSkipTaskbar(true);
+  } else {
+    mainWindow.center();
+    mainWindow.setSkipTaskbar(false);
+  }
+  
   mainWindow.webContents.session.clearCache();
   mainWindow.loadFile(path.join(__dirname, 'ui/index.html'));
   
@@ -130,7 +141,11 @@ function createWindow() {
   
   mainWindow.on('show', () => {
     if (mainWindow) {
-      mainWindow.setSkipTaskbar(true);
+      if (fullscreenMode) {
+        mainWindow.setSkipTaskbar(true);
+      } else {
+        mainWindow.setSkipTaskbar(false);
+      }
     }
   });
 }
@@ -380,6 +395,9 @@ app.whenReady().then(() => {
   if (settings.keybind) {
     currentKeybind = settings.keybind;
   }
+  if (typeof settings.fullscreenMode === 'boolean') {
+    fullscreenMode = settings.fullscreenMode;
+  }
   registerKeybind(currentKeybind);
   
   setInterval(() => {
@@ -441,14 +459,28 @@ ipcMain.handle('get-item-database', () => {
 });
 
 ipcMain.on('minimize-window', () => {
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.minimize();
   }
 });
 
+ipcMain.on('maximize-window', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
 ipcMain.on('close-window', () => {
-  if (mainWindow) {
-    mainWindow.hide();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (fullscreenMode) {
+      mainWindow.hide();
+    } else {
+      mainWindow.close();
+    }
   }
 });
 
@@ -572,7 +604,7 @@ ipcMain.handle('get-settings', () => {
   return getSettings();
 });
 
-ipcMain.handle('save-settings', (event, settings: { keybind?: string }) => {
+ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean }) => {
   try {
     saveSettings(settings);
     
@@ -586,7 +618,58 @@ ipcMain.handle('save-settings', (event, settings: { keybind?: string }) => {
       }
     }
     
-    return { success: true };
+    // Check if window mode changed
+    const windowModeChanged = settings.fullscreenMode !== undefined && settings.fullscreenMode !== fullscreenMode;
+    
+    // Return success first before recreating window
+    const result = { success: true };
+    
+    // Update window mode if it changed - update properties dynamically
+    if (windowModeChanged && typeof settings.fullscreenMode === 'boolean' && mainWindow && !mainWindow.isDestroyed()) {
+      fullscreenMode = settings.fullscreenMode;
+      
+      // Update window properties that can be changed dynamically
+      try {
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { x, y, width, height } = primaryDisplay.bounds;
+        
+        if (fullscreenMode) {
+          // Switch to fullscreen overlay mode
+          mainWindow.setAlwaysOnTop(true);
+          mainWindow.setSkipTaskbar(true);
+          mainWindow.setResizable(false);
+          mainWindow.setMovable(false);
+          mainWindow.setBounds({ x, y, width, height });
+        } else {
+          // Switch to normal window mode
+          mainWindow.setAlwaysOnTop(false);
+          mainWindow.setSkipTaskbar(false);
+          mainWindow.setResizable(true);
+          mainWindow.setMovable(true);
+          // Resize to normal window size (centered)
+          const normalWidth = 1600;
+          const normalHeight = 900;
+          const centerX = x + (width - normalWidth) / 2;
+          const centerY = y + (height - normalHeight) / 2;
+          mainWindow.setBounds({ 
+            x: centerX, 
+            y: centerY, 
+            width: normalWidth, 
+            height: normalHeight 
+          });
+        }
+        
+        // Notify renderer to show/hide custom title bar
+        mainWindow.webContents.send('window-mode-changed', { fullscreenMode });
+        
+        // Close settings modal
+        mainWindow.webContents.send('close-settings-modal');
+      } catch (error: any) {
+        console.error('Error updating window properties:', error);
+      }
+    }
+    
+    return result;
   } catch (error: any) {
     console.error('Failed to save settings:', error);
     return { success: false, error: error.message || 'Failed to save settings' };

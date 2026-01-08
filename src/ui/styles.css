@@ -27,6 +27,78 @@ body {
   margin: 0 auto;
 }
 
+/* Custom Title Bar (for windowed mode) */
+#custom-title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 32px;
+  background: var(--bg-shade);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+  user-select: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+}
+
+.title-bar-drag-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+  -webkit-app-region: drag;
+}
+
+.title-bar-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.title-bar-controls {
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-button {
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.title-bar-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.title-bar-button:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#title-bar-close:hover {
+  background: #e81123;
+  color: white;
+}
+
+#title-bar-close:active {
+  background: #c50e1f;
+}
+
+/* Adjust body padding when title bar is visible */
+body.has-title-bar {
+  padding-top: 52px; /* 20px original + 32px title bar */
+}
+
 body::-webkit-scrollbar {
   display: none;
 }
@@ -1424,6 +1496,92 @@ img:not(.header-logo-pic) {
 
 .keybind-status.error {
   color: #ef4444;
+}
+
+.window-mode-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.window-mode-option {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg-shade);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.window-mode-option:hover {
+  border-color: var(--primary);
+  background: rgba(222, 92, 11, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.window-mode-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.window-mode-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(222, 92, 11, 0.1);
+  border-radius: 10px;
+  color: var(--primary);
+  transition: all 0.2s ease;
+}
+
+.window-mode-option:hover .window-mode-icon {
+  background: rgba(222, 92, 11, 0.2);
+  transform: scale(1.05);
+}
+
+.window-mode-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.window-mode-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  transition: color 0.2s;
+}
+
+.window-mode-description {
+  font-size: 13px;
+  color: var(--border);
+  line-height: 1.5;
+}
+
+.window-mode-option input[type="radio"]:checked ~ .window-mode-icon {
+  background: var(--primary);
+  color: white;
+}
+
+.window-mode-option input[type="radio"]:checked ~ .window-mode-content .window-mode-title {
+  color: var(--primary);
+}
+
+.window-mode-option:has(input[type="radio"]:checked) {
+  border-color: var(--primary);
+  background: rgba(222, 92, 11, 0.15);
+  box-shadow: 0 0 0 3px rgba(222, 92, 11, 0.1);
 }
 
 .settings-footer {

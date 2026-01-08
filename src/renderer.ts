@@ -32,9 +32,14 @@ interface ElectronAPI {
   isLogPathConfigured: () => Promise<boolean>;
   selectLogFile: () => Promise<string | null>;
   onShowLogPathSetup: (callback: () => void) => void;
-  getSettings: () => Promise<{ keybind?: string }>;
-  saveSettings: (settings: { keybind?: string }) => Promise<{ success: boolean; error?: string }>;
+  getSettings: () => Promise<{ keybind?: string; fullscreenMode?: boolean }>;
+  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean }) => Promise<{ success: boolean; error?: string }>;
   testKeybind: (keybind: string) => Promise<{ success: boolean; error?: string }>;
+  onCloseSettingsModal: (callback: () => void) => void;
+  onWindowModeChanged: (callback: (data: { fullscreenMode: boolean }) => void) => void;
+  minimizeWindow: () => void;
+  maximizeWindow: () => void;
+  closeWindow: () => void;
 }
 
 declare const electronAPI: ElectronAPI;
@@ -1188,6 +1193,51 @@ electronAPI.onShowLogPathSetup(() => {
   setupModal.classList.add('active');
 });
 
+// Listen for close settings modal request (when window mode changes)
+electronAPI.onCloseSettingsModal(() => {
+  closeSettingsModal();
+});
+
+// === CUSTOM TITLE BAR ===
+const customTitleBar = document.getElementById('custom-title-bar')!;
+const titleBarMinimize = document.getElementById('title-bar-minimize') as HTMLButtonElement;
+const titleBarMaximize = document.getElementById('title-bar-maximize') as HTMLButtonElement;
+const titleBarClose = document.getElementById('title-bar-close') as HTMLButtonElement;
+
+// Function to update title bar visibility
+function updateTitleBarVisibility(fullscreenMode: boolean) {
+  if (fullscreenMode) {
+    customTitleBar.style.display = 'none';
+    document.body.classList.remove('has-title-bar');
+  } else {
+    customTitleBar.style.display = 'flex';
+    document.body.classList.add('has-title-bar');
+  }
+}
+
+// Listen for window mode changes
+electronAPI.onWindowModeChanged((data) => {
+  updateTitleBarVisibility(data.fullscreenMode);
+});
+
+// Initialize title bar visibility on load
+electronAPI.getSettings().then(settings => {
+  updateTitleBarVisibility(settings.fullscreenMode !== false); // Default to true if undefined
+});
+
+// Title bar button handlers
+titleBarMinimize.addEventListener('click', () => {
+  electronAPI.minimizeWindow();
+});
+
+titleBarMaximize.addEventListener('click', () => {
+  electronAPI.maximizeWindow();
+});
+
+titleBarClose.addEventListener('click', () => {
+  electronAPI.closeWindow();
+});
+
 // === SETTINGS MODAL ===
 const settingsModal = document.getElementById('settingsModal')!;
 const settingsCloseBtn = document.getElementById('settingsCloseBtn') as HTMLButtonElement;
@@ -1198,10 +1248,13 @@ const keybindStatus = document.getElementById('keybindStatus')!;
 const settingsSaveBtn = document.getElementById('settingsSaveBtn') as HTMLButtonElement;
 const settingsFooterMessage = document.getElementById('settingsFooterMessage')!;
 const generalSection = document.getElementById('generalSection')!;
+const fullscreenModeRadio = document.getElementById('fullscreenModeRadio') as HTMLInputElement;
+const normalModeRadio = document.getElementById('normalModeRadio') as HTMLInputElement;
 
 let isRecordingKeybind = false;
-let currentSettings: { keybind?: string } = {};
+let currentSettings: { keybind?: string; fullscreenMode?: boolean } = {};
 let pendingKeybind: string | null = null;
+let pendingFullscreenMode: boolean | null = null;
 
 // Open settings modal
 openSettingsBtn.addEventListener('click', async () => {
@@ -1211,11 +1264,21 @@ openSettingsBtn.addEventListener('click', async () => {
   // Load current settings
   currentSettings = await electronAPI.getSettings();
   pendingKeybind = currentSettings.keybind || 'CommandOrControl+`';
+  pendingFullscreenMode = currentSettings.fullscreenMode !== undefined ? currentSettings.fullscreenMode : true;
   
   // Display current keybind
   keybindInput.value = formatKeybind(pendingKeybind);
   keybindStatus.textContent = '';
   keybindStatus.className = 'keybind-status';
+  
+  // Set window mode radio buttons
+  if (pendingFullscreenMode) {
+    fullscreenModeRadio.checked = true;
+    normalModeRadio.checked = false;
+  } else {
+    fullscreenModeRadio.checked = false;
+    normalModeRadio.checked = true;
+  }
   
   // Reset save button state
   settingsSaveBtn.disabled = false;
@@ -1248,6 +1311,7 @@ function closeSettingsModal() {
   keybindInput.classList.remove('recording');
   changeKeybindBtn.textContent = 'Change';
   pendingKeybind = null;
+  pendingFullscreenMode = null;
 }
 
 // Change keybind button
@@ -1368,22 +1432,47 @@ function formatKeybind(keybind: string): string {
     .replace(/Shift/g, 'Shift');
 }
 
+// Handle window mode radio button changes
+fullscreenModeRadio.addEventListener('change', () => {
+  if (fullscreenModeRadio.checked) {
+    pendingFullscreenMode = true;
+  }
+});
+
+normalModeRadio.addEventListener('change', () => {
+  if (normalModeRadio.checked) {
+    pendingFullscreenMode = false;
+  }
+});
+
 // Save settings
 settingsSaveBtn.addEventListener('click', async () => {
   settingsSaveBtn.disabled = true;
   settingsSaveBtn.textContent = 'Saving...';
   
   try {
-    const settingsToSave: { keybind?: string } = {};
+    const settingsToSave: { keybind?: string; fullscreenMode?: boolean } = {};
     
     if (pendingKeybind) {
       settingsToSave.keybind = pendingKeybind;
+    }
+    
+    if (pendingFullscreenMode !== null) {
+      settingsToSave.fullscreenMode = pendingFullscreenMode;
     }
     
     const result = await electronAPI.saveSettings(settingsToSave);
     
     if (result.success) {
       currentSettings = { ...currentSettings, ...settingsToSave };
+      
+      // Update pending values to match saved values
+      if (settingsToSave.keybind) {
+        pendingKeybind = settingsToSave.keybind;
+      }
+      if (settingsToSave.fullscreenMode !== undefined) {
+        pendingFullscreenMode = settingsToSave.fullscreenMode;
+      }
       
       // Show success message in footer
       settingsFooterMessage.textContent = 'Settings saved successfully';
