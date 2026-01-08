@@ -16,11 +16,12 @@
 <img width="1000" height="800" alt="image" src="https://github.com/user-attachments/assets/7a75b5b8-90b2-4db1-9584-199047a8f80b" />
 <br><br>
 4. Open the application.<br>
-5. Sort the 3rd and 4th pages of your inventory.
+5. Sort any page of your inventory.
 <br><br>
 <img width="500" height="400" alt="image" src="https://github.com/user-attachments/assets/3578bfca-c971-41d7-8d90-b6f7b9570409" />
 <br><br>
-6. The keybind to open the interface is Ctrl + Grave(`).<br><br>
+6. The default keybind to open the interface is Ctrl + Grave(`).<br><br>
+7. You may be required to set up the file path to UE_game.log, by default, this folder is found in \SteamLibrary\steamapps\common\Torchlight Infinite\UE_game\TorchLight\Saved\Logs
 
 <i>NOTE: The app has auto-updating, so you will not be required to re-download the app after installing it. </i>
 
@@ -75,7 +76,7 @@ See the amount of FE you have earned. There is a button to reset it, but it alwa
       <b>Database</b> for item price checking syncing between users, making tracking prices even easier.
     </li>
     <li>
-      <b>Tax</b> Currently, tax is not applied to items; the plan is to add a toggle in the settings drop-down to enable tax.
+      <s><b>Tax</b> Currently, tax is not applied to items; the plan is to add a toggle in the settings drop-down to enable tax.</s> (IMPLEMENTED)
     </li>
   </ul>
 </details>
