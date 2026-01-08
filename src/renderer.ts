@@ -251,11 +251,16 @@ function renderBreakdown() {
   const breakdownEl = document.getElementById('breakdown');
   if (!breakdownEl) return;
 
+  // Use getDisplayItems() to respect current mode (realtime vs hourly)
+  const itemsToUse = getDisplayItems();
+
   // Calculate group totals
   const groupTotals = new Map<string, number>();
   
-  for (const item of currentItems) {
+  for (const item of itemsToUse) {
     if (item.price === null) continue;
+    // Skip items with 0 or negative quantity (only show gains in hourly mode)
+    if (item.totalQuantity <= 0) continue;
     
     const itemData = itemDatabase[item.baseId];
     if (!itemData || itemData.tradable === false) continue;
@@ -581,6 +586,7 @@ function startHourlyTracking() {
   // Initial update
   updateHourlyWealth();
   renderInventory();
+  renderBreakdown(); // Reset breakdown to show only gained items
 }
 
 // === HOURLY: Capture bucket at end of each hour ===
@@ -825,6 +831,7 @@ electronAPI.onTimerTick((data) => {
     
     updateHourlyWealth();
     renderInventory();
+    renderBreakdown(); // Update breakdown during hourly session
 
     // Check if we've completed an hour
     if (hourlyElapsedSeconds % 3600 === 0 && hourlyElapsedSeconds > 0) {
@@ -849,6 +856,7 @@ realtimeBtn.addEventListener('click', () => {
   // Update display to show realtime values
   updateRealtimeWealth();
   renderInventory(); // Show all items
+  renderBreakdown(); // Update breakdown for realtime mode
   updateGraph();
 });
 
@@ -866,10 +874,12 @@ hourlyBtn.addEventListener('click', () => {
   if (isHourlyActive) {
     updateHourlyWealth();
     renderInventory(); // Show only new items
+    renderBreakdown(); // Update breakdown for hourly mode
   } else {
     wealthValueEl.textContent = '0.00';
     wealthHourlyEl.textContent = '0.00';
     renderInventory(); // Show all items (no active hourly session)
+    renderBreakdown(); // Update breakdown (will show 0s if no hourly session)
   }
   updateGraph();
 });
