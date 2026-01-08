@@ -457,7 +457,6 @@ ipcMain.on('toggle-window', () => {
 
 // Timer control IPC handlers
 ipcMain.on('start-hourly-timer', () => {
-  console.log('▶️  Starting hourly timer');
   timerState.hourlyActive = true;
   timerState.hourlyPaused = false;
   timerState.hourlySeconds = 0;
@@ -465,20 +464,22 @@ ipcMain.on('start-hourly-timer', () => {
 });
 
 ipcMain.on('pause-hourly-timer', () => {
-  console.log('⏸️  Pausing hourly timer');
   timerState.hourlyPaused = true;
 });
 
 ipcMain.on('resume-hourly-timer', () => {
-  console.log('▶️  Resuming hourly timer');
   timerState.hourlyPaused = false;
 });
 
 ipcMain.on('stop-hourly-timer', () => {
-  console.log('⏹️  Stopping hourly timer');
   timerState.hourlyActive = false;
   timerState.hourlyPaused = false;
   timerState.hourlySeconds = 0;
+});
+
+ipcMain.on('reset-realtime-timer', () => {
+  timerState.realtimeSeconds = 0;
+  timerState.realtimeStartTime = Date.now();
 });
 
 ipcMain.handle('get-timer-state', () => {
