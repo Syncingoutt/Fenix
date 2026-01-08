@@ -1,4 +1,4 @@
-<h1>Fenix</h1>
+<h1>Fenix - FE per hour tracker</h1>
 
 <p>Torchlight Infinite overlay tracking app for real-time FE per hour and inventory updates.</p>
 
