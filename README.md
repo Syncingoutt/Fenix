@@ -21,8 +21,8 @@
 <img width="500" height="400" alt="image" src="https://github.com/user-attachments/assets/3578bfca-c971-41d7-8d90-b6f7b9570409" />
 <br><br>
 6. The default keybind to open the interface is Ctrl + Grave(`).<br><br>
-7. You may be required to set up the file path to UE_game.log, by default, this folder is found in
-<code>\SteamLibrary\steamapps\common\Torchlight Infinite\UE_game\TorchLight\Saved\Logs</code>
+7. You may be required to set up the file path to UE_game.log, by default, this folder is found in<br>
+<code>\SteamLibrary\steamapps\common\Torchlight Infinite\UE_game\TorchLight\Saved\Logs</code><br><br>
 
 <i>NOTE: The app has auto-updating, so you will not be required to re-download the app after installing it. </i>
 
