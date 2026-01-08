@@ -377,12 +377,6 @@ app.whenReady().then(() => {
     watchLogFile();
   }, WATCH_INTERVAL);
 
-  if (app.isPackaged) {
-    setInterval(() => {
-      autoUpdater.checkForUpdatesAndNotify();
-    }, 30 * 60 * 1000);
-  }
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
