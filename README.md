@@ -69,10 +69,13 @@ See the amount of FE you have earned. There is a button to reset it, but it alwa
       <img width="269" height="631" alt="image" src="https://github.com/user-attachments/assets/a3bf96e6-2b38-407c-90a1-56f3b6fb5977" /><br>
     </li>
     <li>
-      Strategies, the ability to create a strategy, select what compasses are used, tree, etc.. and show FE/hr of that strategy with item breakdown.
+      <b>Strategies</b> the ability to create a strategy, select what compasses are used, tree, etc.. and show FE/hr of that strategy with item breakdown.
     </li>
     <li>
-      Database for item price checking syncing between users, making tracking prices even easier.
+      <b>Database</b> for item price checking syncing between users, making tracking prices even easier.
+    </li>
+    <li>
+      <b>Tax</b> Currently, tax is not applied to items; the plan is to add a toggle in the settings drop-down to enable tax.
     </li>
   </ul>
 </details>
