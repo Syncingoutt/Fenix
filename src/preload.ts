@@ -46,5 +46,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectLogFile: () => ipcRenderer.invoke('select-log-file'),
   onShowLogPathSetup: (callback: () => void) => {
     ipcRenderer.on('show-log-path-setup', callback);
-  }
+  },
+  // Settings methods
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  saveSettings: (settings: { keybind?: string }) => ipcRenderer.invoke('save-settings', settings),
+  testKeybind: (keybind: string) => ipcRenderer.invoke('test-keybind', keybind)
 });

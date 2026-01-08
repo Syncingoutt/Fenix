@@ -61,11 +61,28 @@ export function getLogPath(): string {
 }
 
 /**
- * Save the log path to config file
+ * Load the entire config file
  */
-export function setLogPath(logPath: string): void {
+function loadConfig(): any {
   const configPath = getConfigPath();
-  const config = { logPath };
+  
+  if (fs.existsSync(configPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    } catch (error) {
+      console.warn('Failed to read config file:', error);
+      return {};
+    }
+  }
+  
+  return {};
+}
+
+/**
+ * Save the entire config file
+ */
+function saveConfig(config: any): void {
+  const configPath = getConfigPath();
   
   try {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
@@ -76,11 +93,37 @@ export function setLogPath(logPath: string): void {
 }
 
 /**
+ * Save the log path to config file (preserves other settings)
+ */
+export function setLogPath(logPath: string): void {
+  const config = loadConfig();
+  config.logPath = logPath;
+  saveConfig(config);
+}
+
+/**
  * Check if log path is configured
  */
 export function isLogPathConfigured(): boolean {
   const logPath = getLogPath();
   return logPath !== DEFAULT_LOG_PATH && logPath !== '' && fs.existsSync(logPath);
+}
+
+/**
+ * Get settings from config file
+ */
+export function getSettings(): { keybind?: string } {
+  const config = loadConfig();
+  return config.settings || {};
+}
+
+/**
+ * Save settings to config file (preserves log path)
+ */
+export function saveSettings(settings: { keybind?: string }): void {
+  const config = loadConfig();
+  config.settings = settings;
+  saveConfig(config);
 }
 
 function extractBaseId(fullId: string): string {

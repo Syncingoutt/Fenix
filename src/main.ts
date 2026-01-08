@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
 import { loadItemDatabase, loadPriceCache, savePriceCache } from './core/database';
-import { readLogFile, parseLogLine, parsePriceCheck, getLogSize, readLogFromPosition, getLogPath, setLogPath, isLogPathConfigured, initLogParser } from './core/logParser';
+import { readLogFile, parseLogLine, parsePriceCheck, getLogSize, readLogFromPosition, getLogPath, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
@@ -39,6 +39,7 @@ let itemDatabase: ReturnType<typeof loadItemDatabase>;
 let lastLogPosition = 0;
 let lastSendBaseId: string | null = null; // Track the most recent SEND message's baseId across log reads
 const WATCH_INTERVAL = 500;
+let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
 
 // Timer state managed in main process (never throttled)
 interface TimerState {
@@ -374,16 +375,12 @@ app.whenReady().then(() => {
 
   console.log('✅ Main process timers started');
 
-  const ret = globalShortcut.register('CommandOrControl+`', () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
-    }
-  });
+  // Load settings and register keybind
+  const settings = getSettings();
+  if (settings.keybind) {
+    currentKeybind = settings.keybind;
+  }
+  registerKeybind(currentKeybind);
   
   setInterval(() => {
     watchLogFile();
@@ -407,6 +404,32 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
+
+// Keybind management
+function registerKeybind(keybind: string): boolean {
+  // Unregister old keybind first
+  globalShortcut.unregisterAll();
+  
+  const ret = globalShortcut.register(keybind, () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+  
+  if (ret) {
+    currentKeybind = keybind;
+    console.log(`✅ Keybind registered: ${keybind}`);
+  } else {
+    console.error(`❌ Failed to register keybind: ${keybind}`);
+  }
+  
+  return ret;
+}
 
 // IPC Handlers
 ipcMain.handle('get-inventory', () => {
@@ -542,6 +565,46 @@ ipcMain.handle('select-log-file', async () => {
   }
   
   return null;
+});
+
+// Settings IPC handlers
+ipcMain.handle('get-settings', () => {
+  return getSettings();
+});
+
+ipcMain.handle('save-settings', (event, settings: { keybind?: string }) => {
+  try {
+    saveSettings(settings);
+    
+    // Update keybind if it changed
+    if (settings.keybind && settings.keybind !== currentKeybind) {
+      const success = registerKeybind(settings.keybind);
+      if (!success) {
+        // Revert to old keybind if new one failed
+        registerKeybind(currentKeybind);
+        return { success: false, error: 'Failed to register keybind. It may already be in use.' };
+      }
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to save settings:', error);
+    return { success: false, error: error.message || 'Failed to save settings' };
+  }
+});
+
+ipcMain.handle('test-keybind', (event, keybind: string) => {
+  // Temporarily register the keybind to test if it's available
+  const oldKeybind = currentKeybind;
+  const success = registerKeybind(keybind);
+  
+  if (success) {
+    // Restore old keybind after test
+    registerKeybind(oldKeybind);
+    return { success: true };
+  }
+  
+  return { success: false, error: 'Keybind is already in use or invalid' };
 });
 
 // Log file watcher

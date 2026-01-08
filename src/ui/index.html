@@ -32,6 +32,10 @@
                 <span id="appVersion" class="settings-value">Loading...</span>
               </div>
               <div class="settings-menu-divider"></div>
+              <button id="openSettingsBtn" class="settings-menu-button">
+                <span>Settings</span>
+              </button>
+              <div class="settings-menu-divider"></div>
               <button id="checkUpdatesBtn" class="settings-menu-button">
                 <span>Check for Updates</span>
                 <span id="updateSpinner" class="update-spinner" style="display: none;">⏳</span>
@@ -213,6 +217,40 @@
 
         <div class="setup-modal-actions">
           <button class="setup-btn setup-btn-primary" id="setupBtnSelect">Select Log File</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="settings-modal" id="settingsModal">
+      <div class="settings-modal-content">
+        <button class="settings-close-btn" id="settingsCloseBtn" title="Close">✕</button>
+        <div class="settings-layout">
+          <div class="settings-sidebar">
+            <div class="settings-sidebar-item active" data-section="general">
+              General
+            </div>
+          </div>
+          <div class="settings-main">
+            <div class="settings-section" id="generalSection">
+              <div class="settings-section-title">General Settings</div>
+              
+              <div class="settings-group">
+                <div class="settings-group-label">Toggle Overlay Keybind</div>
+                <div class="settings-group-description">Press a key combination to toggle the overlay window</div>
+                <div class="keybind-input-wrapper">
+                  <input type="text" id="keybindInput" class="keybind-input" readonly placeholder="Press keys...">
+                  <button id="changeKeybindBtn" class="keybind-btn">Change</button>
+                  <button id="resetKeybindBtn" class="keybind-btn secondary">Reset</button>
+                </div>
+                <div class="keybind-status" id="keybindStatus"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="settings-footer">
+          <div class="settings-footer-message" id="settingsFooterMessage"></div>
+          <button class="settings-save-btn" id="settingsSaveBtn">Save</button>
         </div>
       </div>
     </div>

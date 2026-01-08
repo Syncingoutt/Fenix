@@ -32,6 +32,9 @@ interface ElectronAPI {
   isLogPathConfigured: () => Promise<boolean>;
   selectLogFile: () => Promise<string | null>;
   onShowLogPathSetup: (callback: () => void) => void;
+  getSettings: () => Promise<{ keybind?: string }>;
+  saveSettings: (settings: { keybind?: string }) => Promise<{ success: boolean; error?: string }>;
+  testKeybind: (keybind: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare const electronAPI: ElectronAPI;
@@ -949,6 +952,7 @@ const settingsButton = document.getElementById('settingsButton')!;
 const settingsMenu = document.getElementById('settingsMenu')!;
 const appVersionEl = document.getElementById('appVersion')!;
 const checkUpdatesBtn = document.getElementById('checkUpdatesBtn') as HTMLButtonElement;
+const openSettingsBtn = document.getElementById('openSettingsBtn') as HTMLButtonElement;
 const updateSpinner = document.getElementById('updateSpinner')!;
 const updateStatus = document.getElementById('updateStatus')!;
 
@@ -1182,6 +1186,245 @@ setupBtnSelect.addEventListener('click', async () => {
 // Listen for first launch setup request
 electronAPI.onShowLogPathSetup(() => {
   setupModal.classList.add('active');
+});
+
+// === SETTINGS MODAL ===
+const settingsModal = document.getElementById('settingsModal')!;
+const settingsCloseBtn = document.getElementById('settingsCloseBtn') as HTMLButtonElement;
+const keybindInput = document.getElementById('keybindInput') as HTMLInputElement;
+const changeKeybindBtn = document.getElementById('changeKeybindBtn') as HTMLButtonElement;
+const resetKeybindBtn = document.getElementById('resetKeybindBtn') as HTMLButtonElement;
+const keybindStatus = document.getElementById('keybindStatus')!;
+const settingsSaveBtn = document.getElementById('settingsSaveBtn') as HTMLButtonElement;
+const settingsFooterMessage = document.getElementById('settingsFooterMessage')!;
+const generalSection = document.getElementById('generalSection')!;
+
+let isRecordingKeybind = false;
+let currentSettings: { keybind?: string } = {};
+let pendingKeybind: string | null = null;
+
+// Open settings modal
+openSettingsBtn.addEventListener('click', async () => {
+  settingsMenuOpen = false;
+  settingsMenu.style.display = 'none';
+  
+  // Load current settings
+  currentSettings = await electronAPI.getSettings();
+  pendingKeybind = currentSettings.keybind || 'CommandOrControl+`';
+  
+  // Display current keybind
+  keybindInput.value = formatKeybind(pendingKeybind);
+  keybindStatus.textContent = '';
+  keybindStatus.className = 'keybind-status';
+  
+  // Reset save button state
+  settingsSaveBtn.disabled = false;
+  settingsSaveBtn.textContent = 'Save';
+  
+  // Clear footer message
+  settingsFooterMessage.textContent = '';
+  settingsFooterMessage.classList.remove('show', 'success', 'error');
+  
+  // Show general section
+  generalSection.classList.add('active');
+  
+  settingsModal.classList.add('active');
+});
+
+// Close settings modal when clicking outside or on close button
+settingsCloseBtn.addEventListener('click', () => {
+  closeSettingsModal();
+});
+
+settingsModal.addEventListener('click', (e) => {
+  if (e.target === settingsModal) {
+    closeSettingsModal();
+  }
+});
+
+function closeSettingsModal() {
+  settingsModal.classList.remove('active');
+  isRecordingKeybind = false;
+  keybindInput.classList.remove('recording');
+  changeKeybindBtn.textContent = 'Change';
+  pendingKeybind = null;
+}
+
+// Change keybind button
+changeKeybindBtn.addEventListener('click', () => {
+  if (isRecordingKeybind) {
+    // Stop recording
+    isRecordingKeybind = false;
+    keybindInput.classList.remove('recording');
+    keybindInput.value = formatKeybind(pendingKeybind || currentSettings.keybind || 'CommandOrControl+`');
+    changeKeybindBtn.textContent = 'Change';
+    keybindStatus.textContent = '';
+    keybindStatus.className = 'keybind-status';
+    keybindInput.blur();
+  } else {
+    // Start recording
+    isRecordingKeybind = true;
+    keybindInput.classList.add('recording');
+    keybindInput.value = 'Press keys...';
+    changeKeybindBtn.textContent = 'Cancel';
+    keybindStatus.textContent = 'Press your desired key combination';
+    keybindStatus.className = 'keybind-status';
+    keybindInput.focus();
+  }
+});
+
+// Reset keybind button
+resetKeybindBtn.addEventListener('click', () => {
+  pendingKeybind = 'CommandOrControl+`';
+  keybindInput.value = formatKeybind(pendingKeybind);
+  keybindInput.classList.remove('recording');
+  isRecordingKeybind = false;
+  changeKeybindBtn.textContent = 'Change';
+  keybindStatus.textContent = 'Reset to default keybind';
+  keybindStatus.className = 'keybind-status';
+});
+
+// Keybind input - capture key presses
+keybindInput.addEventListener('keydown', async (e) => {
+  if (!isRecordingKeybind) return;
+  
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const parts: string[] = [];
+  
+  if (e.ctrlKey || e.metaKey) parts.push('CommandOrControl');
+  if (e.altKey) parts.push('Alt');
+  if (e.shiftKey) parts.push('Shift');
+  
+  // Get the key
+  let key = '';
+  if (e.key === '`' || e.key === '~') {
+    key = '`';
+  } else if (e.key === 'Escape') {
+    // Cancel recording
+    isRecordingKeybind = false;
+    keybindInput.classList.remove('recording');
+    const currentKeybind = pendingKeybind || currentSettings.keybind || 'CommandOrControl+`';
+    keybindInput.value = formatKeybind(currentKeybind);
+    changeKeybindBtn.textContent = 'Change';
+    keybindStatus.textContent = '';
+    keybindStatus.className = 'keybind-status';
+    keybindInput.blur();
+    return;
+  } else if (e.key.length === 1) {
+    // Single character key
+    key = e.key.toLowerCase();
+  } else if (e.key.startsWith('F') && e.key.length <= 3) {
+    // Function keys (F1-F12)
+    key = e.key;
+  } else {
+    // Other special keys
+    const keyMap: { [key: string]: string } = {
+      'Enter': 'Return',
+      ' ': 'Space',
+      'ArrowUp': 'Up',
+      'ArrowDown': 'Down',
+      'ArrowLeft': 'Left',
+      'ArrowRight': 'Right',
+      'Backspace': 'Backspace',
+      'Delete': 'Delete',
+      'Tab': 'Tab',
+      'Home': 'Home',
+      'End': 'End',
+      'PageUp': 'PageUp',
+      'PageDown': 'PageDown'
+    };
+    key = keyMap[e.key] || e.key;
+  }
+  
+  if (key) {
+    parts.push(key);
+    const keybind = parts.join('+');
+    
+    // Test if keybind is available
+    const testResult = await electronAPI.testKeybind(keybind);
+    
+    if (testResult.success) {
+      pendingKeybind = keybind;
+      keybindInput.value = formatKeybind(keybind);
+      keybindInput.classList.remove('recording');
+      isRecordingKeybind = false;
+      changeKeybindBtn.textContent = 'Change';
+      keybindStatus.textContent = 'Keybind set successfully';
+      keybindStatus.className = 'keybind-status success';
+    } else {
+      keybindStatus.textContent = testResult.error || 'Keybind is already in use';
+      keybindStatus.className = 'keybind-status error';
+    }
+  }
+});
+
+// Format keybind for display
+function formatKeybind(keybind: string): string {
+  return keybind
+    .replace(/CommandOrControl/g, 'Ctrl')
+    .replace(/Alt/g, 'Alt')
+    .replace(/Shift/g, 'Shift');
+}
+
+// Save settings
+settingsSaveBtn.addEventListener('click', async () => {
+  settingsSaveBtn.disabled = true;
+  settingsSaveBtn.textContent = 'Saving...';
+  
+  try {
+    const settingsToSave: { keybind?: string } = {};
+    
+    if (pendingKeybind) {
+      settingsToSave.keybind = pendingKeybind;
+    }
+    
+    const result = await electronAPI.saveSettings(settingsToSave);
+    
+    if (result.success) {
+      currentSettings = { ...currentSettings, ...settingsToSave };
+      
+      // Show success message in footer
+      settingsFooterMessage.textContent = 'Settings saved successfully';
+      settingsFooterMessage.className = 'settings-footer-message success show';
+      
+      // Clear keybind status
+      keybindStatus.textContent = '';
+      keybindStatus.className = 'keybind-status';
+      
+      // Re-enable save button
+      settingsSaveBtn.disabled = false;
+      settingsSaveBtn.textContent = 'Save';
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        settingsFooterMessage.classList.remove('show');
+      }, 3000);
+    } else {
+      // Show error message in footer
+      settingsFooterMessage.textContent = result.error || 'Failed to save settings';
+      settingsFooterMessage.className = 'settings-footer-message error show';
+      
+      // Clear keybind status
+      keybindStatus.textContent = '';
+      keybindStatus.className = 'keybind-status';
+      
+      settingsSaveBtn.disabled = false;
+      settingsSaveBtn.textContent = 'Save';
+    }
+  } catch (error: any) {
+    // Show error message in footer
+    settingsFooterMessage.textContent = error.message || 'Failed to save settings';
+    settingsFooterMessage.className = 'settings-footer-message error show';
+    
+    // Clear keybind status
+    keybindStatus.textContent = '';
+    keybindStatus.className = 'keybind-status';
+    
+    settingsSaveBtn.disabled = false;
+    settingsSaveBtn.textContent = 'Save';
+  }
 });
 
 // === INITIALIZE ===
