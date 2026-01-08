@@ -1,138 +1,404 @@
 {
-  "100300": { "name": "Flame Elementium", "baseID": "100300" },
-  "100200": { "name": "Flame Sand", "baseID": "100200" },
-  "100400": { "name": "Flame Residue", "baseID": "100400" },
-  "5029": { "name": "Winding Key", "baseID": "5029" },
-  "5011": { "name": "Elexir of Oblivion", "baseID": "5011" },
-  "5028": { "name": "Netherrealm Resonance", "baseID": "5028" },
-  "5080": { "name": "Energy Core", "baseID": "5080" },
-  "200030": { "name": "Ultimate Ember", "baseID": "200030" },
-  "200029": { "name": "Matchless Ember", "baseID": "200029" },
-  "200028": { "name": "Precious Ember", "baseID": "200028" },
-  "200003": { "name": "Fine Ember", "baseID": "200003" },
-  "300006": { "name": "Sacred Fossil", "baseID": "300006" },
-  "200021": { "name": "Truth Fossil", "baseID": "200021" },
-  "3000003": { "name": "Proof of the Brave III", "baseID": "3000003" },
-  "3000002": { "name": "Proof of the Brave II", "baseID": "3000002" },
-  "3000001": { "name": "Proof of the Brave I", "baseID": "3000001" },
-  "210000": { "name": "Aemberon Core", "baseID": "210000" },
-  "5703": { "name": "TOWER token - Undetermined Fate", "baseID": "5703" },
-  "5311": { "name": "Aeterna Reverberation - Eternal", "baseID": "5311" },
-  "5250": { "name": "Transendence Wedge (Legendary)", "baseID":"5250"},
-  "5144": { "name": "Memory Thread - Epic", "baseID": "5144" },
-  "5700": { "name": "TOWER token - Energy", "baseID": "5700" },
-  "5310": { "name": "Aeterna Reverberation - Fleeting", "baseID": "5310" },
-  "5300": { "name": "Pages of Aeterna", "baseID": "5300" },
-  "5230": { "name": "Transendence Wedge (Rare)", "baseID": "5230" },
-  "5210": { "name": "Divinity Stone", "baseID": "5210" },
-  "5143": { "name": "Memory Thread - Rare", "baseID": "5143" },
-  "5220": { "name": "Transendence Wedge (Magic)", "baseID": "5220" },
-  "5201": { "name": "Divinity Fragment", "baseID": "5201" },
-  "5142": { "name": "Memory Thread - Magic", "baseID": "5142" },
-  "5140": { "name": "Memory Scrap", "baseID": "5140" },
-  "5141": { "name": "Memory Thread - Normal", "baseID": "5141" },
-  "330001": { "name": "Snowpaper Fragment", "baseID": "330001" },
-  "360403": { "name": "Base Mod", "baseID": "360403" },
-  "370201": { "name": "Prism Gauge - Legendary", "baseID": "370201" },
-  "370101": { "name": "Prism Gauge - Rare", "baseID": "370101" },
-  "400008": { "name": "Deep Space Beacon", "baseID": "400008" },
-  "400033": { "name": "Voidlands Beacon (Timemark 8)", "baseID": "400033" },
-  "400028": { "name": "Thunder Wastes Beacon (Timemark 8)", "baseID": "400028" },
-  "400022": { "name": "Steel Forge Beacon (Timemark 8)", "baseID": "400022" },
-  "400015": { "name": "Blistering Lava Sea Beacon (Timemark 8)", "baseID": "400015" },
-  "400007": { "name": "Glacial Abyss Beacon (Timemark 8)", "baseID": "400007" },
-  "400032": { "name": "Voidlands Beacon (Timemark 7)", "baseID": "400032" },
-  "400027": { "name": "Thunder Wastes Beacon (Timemark 7)", "baseID": "400027" },
-  "400021": { "name": "Steel Forge Beacon (Timemark 7)", "baseID": "400021" },
-  "400014": { "name": "Blistering Lava Sea Beacon (Timemark 7)", "baseID": "400014" },
-  "400006": { "name": "Glacial Abyss Beacon (Timemark 7)", "baseID": "400006" },
-  "10191": { "name": "Familial Aeterna Compass", "baseID": "10191" },
-  "10161": { "name": "Bandit Dark Surge Compass", "baseID": "10161" },
-  "10151": { "name": "Brilliant Mechanical Compass", "baseID": "10151" },
-  "10131": { "name": "Flourishing Might Compass", "baseID": "10131" },
-  "10102": { "name": "Colorful Flourescent Compass", "baseID": "10102" },
-  "10082": { "name": "Bounty Ember Compass", "baseID": "10082" },
-  "10071": { "name": "Militant Compass", "baseID": "10071" },
-  "10046": { "name": "Boss Compass", "baseID": "10046" },
-  "10023": { "name": "Strength in Numbers Compass", "baseID": "10023" },
-  "10240": { "name": "Arcana Compass", "baseID": "10240" },
-  "10230": { "name": "Frozen Canvas Compass", "baseID": "10230" },
-  "10220": { "name": "Doll Compass", "baseID": "10220" },
-  "10210": { "name": "Folkore Compass", "baseID": "10210" },
-  "10190": { "name": "Aeterna Compass", "baseID": "10190" },
-  "10180": { "name": "Cube Compass", "baseID": "10180" },
-  "10170": { "name": "Blacksail Compass", "baseID": "10170" },
-  "10160": { "name": "Dark Surge Compass", "baseID": "10160" },
-  "10150": { "name": "Mechanical Compass", "baseID": "10150" },
-  "10140": { "name": "Hunting Compass", "baseID": "10140" },
-  "10130": { "name": "Might Compass", "baseID": "10130" },
-  "10101": { "name": "Flourescent Compass", "baseID": "10101" },
-  "10042": { "name": "Elite Compass", "baseID": "10042" },
-  "10032": { "name": "Veteran Compass", "baseID": "10032" },
-  "10022": { "name": "Soldier Compass", "baseID": "10022" },
-  "10010": { "name": "Novel Compass", "baseID": "10010" },
-  "6153": { "name": "Tomorrow's Direction", "baseID": "6153" },
-  "6118": { "name": "Echo of the Gods", "baseID": "6118" },
-  "6026": { "name": "Antonius's Help", "baseID": "6026" },
-  "6007": { "name": "Lost Secrets", "baseID": "6007" },
-  "6003": { "name": "Crow's Fall", "baseID": "6003" },
-  "6004": { "name": "Maud's Trick", "baseID": "6004" },
-  "6205": { "name": "Uncertain Voyage", "baseID": "6205" },
-  "6002": { "name": "Secret of the Glacial Abyss", "baseID": "6002" },
-  "140006": { "name": "Shallow Dream Talking - Trinket ", "baseID": "140006" },
-  "12050": { "name":"Beacon Profound Probe","baseID":"12050" },
-  "3000004":{ "name":"Proof of the Brave IV","baseID":"3000004" },
-  "6125":{ "name":"Hundredfold Windfall","baseID":"6125" },
-  "10033":{ "name":"Unrivaled Veteran Compass","baseID":"10033" },
-  "10122":{ "name":"Valiant War Compass","baseID":"10122" },
-  "10051":{ "name":"Progressing beacon Compass","baseID":"10051" },
-  "430002":{ "name":"Beginning of the End","baseID":"430002" },
-  "410103":{ "name":"Edict: Ruin","baseID":"410103" },
-  "410102":{ "name":"Edict: Dive","baseID":"410102" },
-  "410101":{ "name":"Edict: Dart","baseID":"410101" },
-  "10241":{ "name":"Trump Card Arcana Compass","baseID":"10241" },
-  "3000005":{ "name":"Proof of the Brave V","baseID":"3000005" },
-  "10221":{ "name":"Collection Doll Compass","baseID":"10221" },
-  "10120":{ "name":"War Compass","baseID":"10120" },
-  "10050":{ "name":"Beacon Compass","baseID":"10050" },
-  "990007": { "name": "Resident's eye", "baseID": "990007" },
-  "10142": { "name": "General Hunting Compass", "baseID": "10142" },
-  "10043": { "name": "Generous Elite Compass", "baseID": "10043" },
-  "10211": { "name": "Uncanny Folklore Compass", "baseID": "10211" },
-  "10011": { "name": "Lavish Novel Compass", "baseID": "10011" },
-  "210002": { "name": "Corrupted Axis", "baseID": "210002" },
-  "360102": { "name": "Silver mound Lv.2", "baseID": "360102" },
-  "360101": { "name": "Sage Lv.1", "baseID": "360101" },
-  "10052": { "name": "Ecliptic Compass", "baseID": "10052" },
-  "10081": { "name": "Ember Compass", "baseID": "10081" },
-  "101200": { "name": "Flame Sand - Bound", "baseID": "101200" },
-  "101300": { "name": "Flame Elementium - Bound", "baseID": "101300" },
-  "10171": { "name": "Returning Blacksail Compass", "baseID": "10171" },
-  "10200": { "name": "Nightmare Compass", "baseID": "10200" },
-  "10250": { "name": "Sandlord Compass", "baseID": "10250" },
-  "201003": { "name": "Fine Ember - Bound", "baseID": "201003" },
-  "10260": { "name": "Outlaw Compass", "baseID": "10260" },
-  "6055": { "name": "Antonius' Research", "baseID": "6055" },
-  "5039": { "name": "Winding Key - Bound", "baseID": "5039" },
-  "5012": { "name": "Elexir of Oblivion - Bound", "baseID": "5012" },
-  "10270": { "name": "Cage Compass", "baseID": "10270" },
-  "10001 ": { "name": "Sinful Plunder Compass", "baseID": "10001 " },
-  "10072": { "name": "Priceless Militant Compass", "baseID": "10072 " },
-  "10181": { "name": "Cube Compass: Two Extremes", "baseID": "10181 " },
-  "430000": { "name": "The Beginning", "baseID": "430000 " },
-  "440004": { "name": "Divinity Emblem - Hunting", "baseID": "440004 " },
-  "10231": { "name": "Frozen Canvas Compass: Abundance", "baseID": "10231 " },
-  "430001": { "name": "The End", "baseID": "430001 " },
-  "10242": { "name": "The Fated Arcana Compass", "baseID": "10242"},
-  "410501": { "name": "Queen's Grace - Slaughter", "baseID": "410501"},
-  "410500": { "name": "Shallow Dream Talking - Armor ", "baseID": "410500"},
-  "140004": { "name": "Shallow Dream Talking - Weapon ", "baseID": "140004"},
-  "10182": { "name": "Desire Incarnation Cube Compass ", "baseID": "10182"},
-  "410301": { "name": "Desire Core - Record", "baseID": "410301"},
-  "10133": { "name": "Onslaught Might Compass", "baseID": "10133"},
-  "360201": { "name": "Night-Blooming Cereus Lv. 4", "baseID": "360201"},
-  "339001": { "name": "Inspiration Essence", "baseID": "339001"},
-  "990005": { "name": "Mist Essence", "baseID": "990005"}
+  "5011": {
+    "name": "Elexir of Oblivion"
+  },
+  "5012": {
+    "name": "Elexir of Oblivion - Bound"
+  },
+  "5028": {
+    "name": "Netherrealm Resonance"
+  },
+  "5029": {
+    "name": "Winding Key"
+  },
+  "5039": {
+    "name": "Winding Key - Bound"
+  },
+  "5080": {
+    "name": "Energy Core"
+  },
+  "5140": {
+    "name": "Memory Scrap"
+  },
+  "5141": {
+    "name": "Memory Thread - Normal"
+  },
+  "5142": {
+    "name": "Memory Thread - Magic"
+  },
+  "5143": {
+    "name": "Memory Thread - Rare"
+  },
+  "5144": {
+    "name": "Memory Thread - Epic"
+  },
+  "5201": {
+    "name": "Divinity Fragment"
+  },
+  "5210": {
+    "name": "Divinity Stone"
+  },
+  "5220": {
+    "name": "Transendence Wedge (Magic)"
+  },
+  "5230": {
+    "name": "Transendence Wedge (Rare)"
+  },
+  "5250": {
+    "name": "Transendence Wedge (Legendary)"
+  },
+  "5300": {
+    "name": "Pages of Aeterna"
+  },
+  "5310": {
+    "name": "Aeterna Reverberation - Fleeting"
+  },
+  "5311": {
+    "name": "Aeterna Reverberation - Eternal"
+  },
+  "5700": {
+    "name": "TOWER token - Energy"
+  },
+  "5703": {
+    "name": "TOWER token - Undetermined Fate"
+  },
+  "6002": {
+    "name": "Secret of the Glacial Abyss"
+  },
+  "6003": {
+    "name": "Crow's Fall"
+  },
+  "6004": {
+    "name": "Maud's Trick"
+  },
+  "6007": {
+    "name": "Lost Secrets"
+  },
+  "6026": {
+    "name": "Antonius's Help"
+  },
+  "6055": {
+    "name": "Antonius' Research"
+  },
+  "6118": {
+    "name": "Echo of the Gods"
+  },
+  "6125": {
+    "name": "Hundredfold Windfall"
+  },
+  "6153": {
+    "name": "Tomorrow's Direction"
+  },
+  "6205": {
+    "name": "Uncertain Voyage"
+  },
+  "10010": {
+    "name": "Novel Compass"
+  },
+  "10011": {
+    "name": "Lavish Novel Compass"
+  },
+  "10022": {
+    "name": "Soldier Compass"
+  },
+  "10023": {
+    "name": "Strength in Numbers Compass"
+  },
+  "10032": {
+    "name": "Veteran Compass"
+  },
+  "10033": {
+    "name": "Unrivaled Veteran Compass"
+  },
+  "10042": {
+    "name": "Elite Compass"
+  },
+  "10043": {
+    "name": "Generous Elite Compass"
+  },
+  "10046": {
+    "name": "Boss Compass"
+  },
+  "10050": {
+    "name": "Beacon Compass"
+  },
+  "10051": {
+    "name": "Progressing beacon Compass"
+  },
+  "10052": {
+    "name": "Ecliptic Compass"
+  },
+  "10071": {
+    "name": "Militant Compass"
+  },
+  "10072": {
+    "name": "Priceless Militant Compass"
+  },
+  "10081": {
+    "name": "Ember Compass"
+  },
+  "10082": {
+    "name": "Bounty Ember Compass"
+  },
+  "10101": {
+    "name": "Flourescent Compass"
+  },
+  "10102": {
+    "name": "Colorful Flourescent Compass"
+  },
+  "10120": {
+    "name": "War Compass"
+  },
+  "10122": {
+    "name": "Valiant War Compass"
+  },
+  "10130": {
+    "name": "Might Compass"
+  },
+  "10131": {
+    "name": "Flourishing Might Compass"
+  },
+  "10133": {
+    "name": "Onslaught Might Compass"
+  },
+  "10140": {
+    "name": "Hunting Compass"
+  },
+  "10142": {
+    "name": "General Hunting Compass"
+  },
+  "10150": {
+    "name": "Mechanical Compass"
+  },
+  "10151": {
+    "name": "Brilliant Mechanical Compass"
+  },
+  "10160": {
+    "name": "Dark Surge Compass"
+  },
+  "10161": {
+    "name": "Bandit Dark Surge Compass"
+  },
+  "10170": {
+    "name": "Blacksail Compass"
+  },
+  "10171": {
+    "name": "Returning Blacksail Compass"
+  },
+  "10180": {
+    "name": "Cube Compass"
+  },
+  "10181": {
+    "name": "Cube Compass: Two Extremes"
+  },
+  "10182": {
+    "name": "Desire Incarnation Cube Compass "
+  },
+  "10190": {
+    "name": "Aeterna Compass"
+  },
+  "10191": {
+    "name": "Familial Aeterna Compass"
+  },
+  "10200": {
+    "name": "Nightmare Compass"
+  },
+  "10210": {
+    "name": "Folkore Compass"
+  },
+  "10211": {
+    "name": "Uncanny Folklore Compass"
+  },
+  "10220": {
+    "name": "Doll Compass"
+  },
+  "10221": {
+    "name": "Collection Doll Compass"
+  },
+  "10230": {
+    "name": "Frozen Canvas Compass"
+  },
+  "10231": {
+    "name": "Frozen Canvas Compass: Abundance"
+  },
+  "10240": {
+    "name": "Arcana Compass"
+  },
+  "10241": {
+    "name": "Trump Card Arcana Compass"
+  },
+  "10242": {
+    "name": "The Fated Arcana Compass"
+  },
+  "10250": {
+    "name": "Sandlord Compass"
+  },
+  "10260": {
+    "name": "Outlaw Compass"
+  },
+  "10270": {
+    "name": "Cage Compass"
+  },
+  "12050": {
+    "name": "Beacon Profound Probe"
+  },
+  "100200": {
+    "name": "Flame Sand"
+  },
+  "100300": {
+    "name": "Flame Elementium"
+  },
+  "100400": {
+    "name": "Flame Residue"
+  },
+  "101200": {
+    "name": "Flame Sand - Bound"
+  },
+  "101300": {
+    "name": "Flame Elementium - Bound"
+  },
+  "140004": {
+    "name": "Shallow Dream Talking - Weapon "
+  },
+  "140006": {
+    "name": "Shallow Dream Talking - Trinket "
+  },
+  "200003": {
+    "name": "Fine Ember"
+  },
+  "200021": {
+    "name": "Truth Fossil"
+  },
+  "200028": {
+    "name": "Precious Ember"
+  },
+  "200029": {
+    "name": "Matchless Ember"
+  },
+  "200030": {
+    "name": "Ultimate Ember"
+  },
+  "201003": {
+    "name": "Fine Ember - Bound"
+  },
+  "210000": {
+    "name": "Aemberon Core"
+  },
+  "210002": {
+    "name": "Corrupted Axis"
+  },
+  "300006": {
+    "name": "Sacred Fossil"
+  },
+  "330001": {
+    "name": "Snowpaper Fragment"
+  },
+  "339001": {
+    "name": "Inspiration Essence"
+  },
+  "360101": {
+    "name": "Sage Lv.1"
+  },
+  "360102": {
+    "name": "Silver mound Lv.2"
+  },
+  "360201": {
+    "name": "Night-Blooming Cereus Lv. 4"
+  },
+  "360403": {
+    "name": "Base Mod"
+  },
+  "370101": {
+    "name": "Prism Gauge - Rare"
+  },
+  "370201": {
+    "name": "Prism Gauge - Legendary"
+  },
+  "400006": {
+    "name": "Glacial Abyss Beacon (Timemark 7)"
+  },
+  "400007": {
+    "name": "Glacial Abyss Beacon (Timemark 8)"
+  },
+  "400008": {
+    "name": "Deep Space Beacon"
+  },
+  "400014": {
+    "name": "Blistering Lava Sea Beacon (Timemark 7)"
+  },
+  "400015": {
+    "name": "Blistering Lava Sea Beacon (Timemark 8)"
+  },
+  "400021": {
+    "name": "Steel Forge Beacon (Timemark 7)"
+  },
+  "400022": {
+    "name": "Steel Forge Beacon (Timemark 8)"
+  },
+  "400027": {
+    "name": "Thunder Wastes Beacon (Timemark 7)"
+  },
+  "400028": {
+    "name": "Thunder Wastes Beacon (Timemark 8)"
+  },
+  "400032": {
+    "name": "Voidlands Beacon (Timemark 7)"
+  },
+  "400033": {
+    "name": "Voidlands Beacon (Timemark 8)"
+  },
+  "410101": {
+    "name": "Edict: Dart"
+  },
+  "410102": {
+    "name": "Edict: Dive"
+  },
+  "410103": {
+    "name": "Edict: Ruin"
+  },
+  "410301": {
+    "name": "Desire Core - Record"
+  },
+  "410500": {
+    "name": "Shallow Dream Talking - Armor "
+  },
+  "410501": {
+    "name": "Queen's Grace - Slaughter"
+  },
+  "430000": {
+    "name": "The Beginning"
+  },
+  "430001": {
+    "name": "The End"
+  },
+  "430002": {
+    "name": "Beginning of the End"
+  },
+  "440004": {
+    "name": "Divinity Emblem - Hunting"
+  },
+  "990005": {
+    "name": "Mist Essence"
+  },
+  "990007": {
+    "name": "Resident's eye"
+  },
+  "3000001": {
+    "name": "Proof of the Brave I"
+  },
+  "3000002": {
+    "name": "Proof of the Brave II"
+  },
+  "3000003": {
+    "name": "Proof of the Brave III"
+  },
+  "3000004": {
+    "name": "Proof of the Brave IV"
+  },
+  "3000005": {
+    "name": "Proof of the Brave V"
+  },
+  "10001 ": {
+    "name": "Sinful Plunder Compass"
+  }
 }
-
-
