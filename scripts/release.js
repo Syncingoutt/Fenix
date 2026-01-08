@@ -3,19 +3,16 @@ const path = require('path');
 
 // Get version type from command line arguments
 const versionType = process.argv[2];
-const commitMessage = process.argv[3] || 'chore: update before release';
 
 // Validate version type
 if (!versionType || !['major', 'minor', 'fix'].includes(versionType)) {
   console.error('❌ Error: Invalid version type');
-  console.error('Usage: npm run prod [major|minor|fix] [commit message]');
+  console.error('Usage: npm run prod [major|minor|fix]');
   console.error('');
   console.error('Examples:');
   console.error('  npm run prod major');
   console.error('  npm run prod minor');
   console.error('  npm run prod fix');
-  console.error('  npm run prod fix "feat: added X thing"');
-  console.error('  npm run prod minor "fix: resolved Y issue"');
   process.exit(1);
 }
 
@@ -72,7 +69,7 @@ try {
   }
 }
 
-// Check for uncommitted changes and commit them
+// Check for uncommitted changes - fail if any exist
 try {
   const status = execSync('git status --porcelain', {
     encoding: 'utf8',
@@ -80,46 +77,32 @@ try {
   }).trim();
 
   if (status) {
-    console.log('📝 Found uncommitted changes, committing them...');
-    console.log('');
-    
-    // Show what will be committed
-    console.log('Changes to be committed:');
+    console.error('❌ Error: Uncommitted changes detected');
+    console.error('');
+    console.error('All changes must be committed before creating a release.');
+    console.error('This ensures releases are created from clean, committed code.');
+    console.error('');
+    console.error('Uncommitted changes:');
     execSync('git status --short', {
       stdio: 'inherit',
       cwd: path.join(__dirname, '..'),
     });
-    console.log('');
-    
-    // Stage all changes
-    execSync('git add .', {
-      cwd: path.join(__dirname, '..'),
-    });
-    
-    // Commit with provided message or default
-    execSync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
-      stdio: 'inherit',
-      cwd: path.join(__dirname, '..'),
-      shell: true
-    });
-    
-    // Push to main
-    console.log('⬆️  Pushing changes to main...');
-    execSync('git push origin main', {
-      stdio: 'inherit',
-      cwd: path.join(__dirname, '..'),
-    });
-    
-    console.log('✅ Changes committed and pushed');
-    console.log('');
+    console.error('');
+    console.error('Please commit your changes first:');
+    console.error('  git add .');
+    console.error('  git commit -m "your commit message"');
+    console.error('  git push origin main');
+    console.error('');
+    console.error('Then run the release command again.');
+    process.exit(1);
   } else {
     console.log('✅ No uncommitted changes');
     console.log('');
   }
 } catch (error) {
-  console.error('❌ Error: Failed to commit/push changes');
+  console.error('❌ Error: Failed to check git status');
   console.error(`   ${error.message}`);
-  console.error('   Please commit your changes manually and try again');
+  console.error('   Make sure you are in a Git repository');
   process.exit(1);
 }
 

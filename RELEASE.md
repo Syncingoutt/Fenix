@@ -15,20 +15,29 @@ npm run prod fix    # 2.0.0 → 2.0.1
 ### Prerequisites
 
 - Must be on the `main` branch
+- **All changes must be committed and pushed** (the script will fail if uncommitted changes exist)
 - GitHub CLI (`gh`) installed and authenticated
 - Write access to the repository
 
 ### Process
 
-1. **Trigger**: Run `npm run prod [major|minor|fix]` from the `main` branch
+1. **Development**: Make your changes, commit them with proper messages, and push to `main`
+   ```bash
+   git add .
+   git commit -m "feat: added new feature"
+   git push origin main
+   ```
+
+2. **Trigger Release**: When ready, run `npm run prod [major|minor|fix]` from the `main` branch
    - Script validates version type and current branch
+   - **Fails if uncommitted changes exist** (ensures releases are from clean, committed code)
    - Triggers GitHub Actions workflow via `gh workflow run`
 
 2. **CI Execution** (GitHub Actions):
    - Reads the latest Git tag to determine current version
    - Calculates next version based on input (major/minor/fix)
    - Updates `package.json.version` automatically
-   - Commits the version bump to `main` with `[skip ci]`
+   - Commits the version bump to `main` with `[skip ci]` (this is the only commit the release process makes)
    - Creates and pushes a Git tag (e.g., `v2.1.0`)
    - Builds the Electron application
    - Creates a GitHub Release with the tag
@@ -58,12 +67,19 @@ The workflow:
    - **minor**: Increments MINOR, resets PATCH to 0
    - **fix**: Increments PATCH only
 
+## Important Notes
+
+- **Commits and releases are separate**: The release script does NOT commit your changes. You must commit and push your changes first, then trigger the release.
+- **Clean working directory required**: The release script will fail if there are uncommitted changes. This ensures releases are created from clean, committed code.
+- **Version bump commit**: The only commit the release process makes is the automatic version bump commit in `package.json`.
+
 ## Manual Trigger (Alternative)
 
 If GitHub CLI is not available, manually trigger the workflow:
 
-1. Go to: `https://github.com/OWNER/REPO/actions/workflows/release.yml`
-2. Click "Run workflow"
-3. Select version type (major/minor/fix)
-4. Click "Run workflow"
+1. Ensure all changes are committed and pushed to `main`
+2. Go to: `https://github.com/OWNER/REPO/actions/workflows/release.yml`
+3. Click "Run workflow"
+4. Select version type (major/minor/fix)
+5. Click "Run workflow"
 
