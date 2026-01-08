@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 
 export interface ParsedLogEntry {
   timestamp: string;
@@ -16,70 +17,71 @@ export interface PriceCheckData {
   timestamp: string;
 }
 
-// Common Steam installation paths
-const STEAM_PATHS = [
-  'C:\\Program Files (x86)\\Steam',
-  'C:\\Program Files\\Steam',
-  'D:\\SteamLibrary',
-  'D:\\Steam',
-  'E:\\SteamLibrary',
-  'E:\\Steam',
-  'F:\\SteamLibrary',
-  'F:\\Steam'
-];
+// Default path (will be overridden by user selection)
+const DEFAULT_LOG_PATH = '';
 
-function findLogPath(): string {
-  const logFileName = 'UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log';
-  const gamePath = 'steamapps\\common\\Torchlight Infinite';
-  
-  // First, try the most common specific paths
-  const specificPaths = [
-    'D:\\SteamLibrary\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log',
-    'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log',
-    'C:\\Program Files\\Steam\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log'
-  ];
-  
-  for (const path of specificPaths) {
-    if (fs.existsSync(path)) {
-      return path;
-    }
-  }
-  
-  // Then, try to find Steam installation and check for the game
-  for (const steamPath of STEAM_PATHS) {
-    if (fs.existsSync(steamPath)) {
-      const fullPath = `${steamPath}\\${gamePath}\\${logFileName}`;
-      if (fs.existsSync(fullPath)) {
-        return fullPath;
-      }
-    }
-  }
-  
-  // If still not found, check all drive letters (A-Z)
-  const driveLetters = 'CDEFGHIJKLMNOPQRSTUVWXYZ';
-  for (let i = 0; i < driveLetters.length; i++) {
-    const drive = `${driveLetters[i]}:\\`;
-    if (fs.existsSync(drive)) {
-      // Check common Steam paths on this drive
-      const possiblePaths = [
-        `${drive}SteamLibrary\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log`,
-        `${drive}Steam\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log`,
-        `${drive}Program Files (x86)\\Steam\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log`,
-        `${drive}Program Files\\Steam\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log`
-      ];
-      
-      for (const path of possiblePaths) {
-        if (fs.existsSync(path)) {
-          return path;
-        }
-      }
-    }
-  }
-  
-  throw new Error('Could not find Torchlight Infinite log file. Please ensure the game is installed via Steam.');
+// Store userData path (set by main process)
+let userDataPath: string | null = null;
+
+/**
+ * Initialize the log parser with userData path (called from main process)
+ */
+export function initLogParser(userData: string): void {
+  userDataPath = userData;
 }
 
-const LOG_PATH = findLogPath();
+/**
+ * Get the path to the config file where we store the log path
+ */
+function getConfigPath(): string {
+  if (!userDataPath) {
+    throw new Error('Log parser not initialized. Call initLogParser() first.');
+  }
+  return path.join(userDataPath, 'config.json');
+}
+
+/**
+ * Load the saved log path from config file
+ */
+export function getLogPath(): string {
+  const configPath = getConfigPath();
+  
+  if (fs.existsSync(configPath)) {
+    try {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      if (config.logPath && fs.existsSync(config.logPath)) {
+        return config.logPath;
+      }
+    } catch (error) {
+      console.warn('Failed to read config file:', error);
+    }
+  }
+  
+  return DEFAULT_LOG_PATH;
+}
+
+/**
+ * Save the log path to config file
+ */
+export function setLogPath(logPath: string): void {
+  const configPath = getConfigPath();
+  const config = { logPath };
+  
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Failed to save config file:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if log path is configured
+ */
+export function isLogPathConfigured(): boolean {
+  const logPath = getLogPath();
+  return logPath !== DEFAULT_LOG_PATH && logPath !== '' && fs.existsSync(logPath);
+}
 
 function extractBaseId(fullId: string): string {
   return fullId.split('_')[0];
@@ -126,18 +128,20 @@ export function parseLogLine(line: string): ParsedLogEntry | null {
 }
 
 export function readLogFile(): ParsedLogEntry[] {
-  if (!fs.existsSync(LOG_PATH)) {
-    console.error(`❌ Log file not found at: ${LOG_PATH}`);
+  const logPath = getLogPath();
+  
+  if (!logPath || !fs.existsSync(logPath)) {
+    console.error(`❌ Log file not found at: ${logPath || 'not configured'}`);
     return [];
   }
 
-  const stats = fs.statSync(LOG_PATH);
+  const stats = fs.statSync(logPath);
   const fileSize = stats.size;
 
   const MAX_READ_BYTES = 100 * 1024 * 1024; // 100 MB
   const startPosition = fileSize > MAX_READ_BYTES ? fileSize - MAX_READ_BYTES : 0;
 
-  const fd = fs.openSync(LOG_PATH, 'r');
+  const fd = fs.openSync(logPath, 'r');
   const buffer = Buffer.alloc(fileSize - startPosition);
   fs.readSync(fd, buffer, 0, fileSize - startPosition, startPosition);
   fs.closeSync(fd);
@@ -217,28 +221,29 @@ export function parsePriceCheck(lines: string[]): PriceCheckData | null {
   return null;
 }
 
-export function getLogPath(): string {
-  return LOG_PATH;
-}
-
 export function getLogSize(): number {
-  if (!fs.existsSync(LOG_PATH)) return 0;
-  const stats = fs.statSync(LOG_PATH);
+  const logPath = getLogPath();
+  if (!logPath || !fs.existsSync(logPath)) return 0;
+  const stats = fs.statSync(logPath);
   return stats.size;
 }
 
 export function readLogFromPosition(start: number, end: number): string {
+  const logPath = getLogPath();
+  if (!logPath) return '';
+  
   const buffer = Buffer.alloc(end - start);
-  const fd = fs.openSync(LOG_PATH, 'r');
+  const fd = fs.openSync(logPath, 'r');
   fs.readSync(fd, buffer, 0, end - start, start);
   fs.closeSync(fd);
   return buffer.toString('utf-8');
 }
 
 export function ensureLogSizeLimit(maxSizeMB = 500): void {
-  if (!fs.existsSync(LOG_PATH)) return;
+  const logPath = getLogPath();
+  if (!logPath || !fs.existsSync(logPath)) return;
 
-  const stats = fs.statSync(LOG_PATH);
+  const stats = fs.statSync(logPath);
   const maxBytes = maxSizeMB * 1024 * 1024;
 
   if (stats.size <= maxBytes) return;
@@ -248,7 +253,7 @@ export function ensureLogSizeLimit(maxSizeMB = 500): void {
 
   console.warn(`⚠️  Log file is ${Math.round(stats.size / 1024 / 1024)}MB — truncating...`);
 
-  const fd = fs.openSync(LOG_PATH, 'r+');
+  const fd = fs.openSync(logPath, 'r+');
   const buffer = Buffer.alloc(stats.size - start);
   fs.readSync(fd, buffer, 0, stats.size - start, start);
   fs.ftruncateSync(fd, 0);

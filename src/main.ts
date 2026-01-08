@@ -1,9 +1,9 @@
-import { app, BrowserWindow, ipcMain, crashReporter, globalShortcut, Menu, screen, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, crashReporter, globalShortcut, Menu, screen, Tray } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
 import { loadItemDatabase, loadPriceCache, savePriceCache } from './core/database';
-import { readLogFile, parseLogLine, parsePriceCheck, getLogSize, readLogFromPosition } from './core/logParser';
+import { readLogFile, parseLogLine, parsePriceCheck, getLogSize, readLogFromPosition, getLogPath, setLogPath, isLogPathConfigured, initLogParser } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
@@ -313,6 +313,9 @@ app.whenReady().then(() => {
 
   console.log('🔥 Torchlight Tracker - Starting...');
   
+  // Initialize log parser with userData path
+  initLogParser(app.getPath('userData'));
+  
   itemDatabase = loadItemDatabase();
   console.log(`📦 Loaded ${Object.keys(itemDatabase).length} items`);
   
@@ -324,14 +327,23 @@ app.whenReady().then(() => {
   
   inventoryManager = new InventoryManager(itemDatabase, priceCache);
   
-  const logEntries = readLogFile();
-  inventoryManager.buildInventory(logEntries);
-  console.log(`✅ Initial inventory loaded`);
-  
-  lastLogPosition = getLogSize();
-  
   createWindow();
   createTray();
+  
+  // Check if log path is configured, if not, show setup dialog
+  if (!isLogPathConfigured()) {
+    if (mainWindow) {
+      mainWindow.webContents.once('did-finish-load', () => {
+        mainWindow?.webContents.send('show-log-path-setup');
+      });
+    }
+  } else {
+    // Load inventory if path is configured
+    const logEntries = readLogFile();
+    inventoryManager.buildInventory(logEntries);
+    console.log(`✅ Initial inventory loaded`);
+    lastLogPosition = getLogSize();
+  }
 
   // Start main process timers (never throttled)
   console.log('⏱️  Starting main process timers...');
@@ -490,6 +502,46 @@ ipcMain.on('update-dialog-response', (event, response: 'download' | 'restart' | 
     autoUpdater.quitAndInstall(false, true);
   }
   // 'later' response just closes the modal, no action needed
+});
+
+// Log path configuration IPC handlers
+ipcMain.handle('get-log-path', () => {
+  return getLogPath();
+});
+
+ipcMain.handle('is-log-path-configured', () => {
+  return isLogPathConfigured();
+});
+
+ipcMain.handle('select-log-file', async () => {
+  if (!mainWindow) return null;
+  
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select UE_Game.log file',
+    filters: [
+      { name: 'Log Files', extensions: ['log'] },
+      { name: 'All Files', extensions: ['*'] }
+    ],
+    properties: ['openFile']
+  });
+  
+  if (!result.canceled && result.filePaths.length > 0) {
+    const selectedPath = result.filePaths[0];
+    setLogPath(selectedPath);
+    
+    // Reload inventory with new path
+    const logEntries = readLogFile();
+    inventoryManager.buildInventory(logEntries);
+    lastLogPosition = getLogSize();
+    
+    if (mainWindow) {
+      mainWindow.webContents.send('inventory-updated');
+    }
+    
+    return selectedPath;
+  }
+  
+  return null;
 });
 
 // Log file watcher

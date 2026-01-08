@@ -28,6 +28,10 @@ interface ElectronAPI {
   onShowUpdateDialog: (callback: (data: { type: 'available' | 'downloaded'; version: string; currentVersion?: string }) => void) => void;
   onUpdateDownloadedTransition: (callback: (data: { version: string }) => void) => void;
   sendUpdateDialogResponse: (response: 'download' | 'restart' | 'later') => void;
+  getLogPath: () => Promise<string>;
+  isLogPathConfigured: () => Promise<boolean>;
+  selectLogFile: () => Promise<string | null>;
+  onShowLogPathSetup: (callback: () => void) => void;
 }
 
 declare const electronAPI: ElectronAPI;
@@ -1158,7 +1162,39 @@ electronAPI.onUpdateDownloadedTransition((data) => {
   transitionToInstallPrompt(data.version);
 });
 
+// === LOG PATH SETUP MODAL ===
+const setupModal = document.getElementById('setupModal')!;
+const setupBtnSelect = document.getElementById('setupBtnSelect') as HTMLButtonElement;
+
+setupBtnSelect.addEventListener('click', async () => {
+  try {
+    const selectedPath = await electronAPI.selectLogFile();
+    if (selectedPath) {
+      setupModal.classList.remove('active');
+      // Reload inventory with the new path
+      loadInventory();
+    }
+  } catch (error: any) {
+    console.error('Failed to select log file:', error);
+  }
+});
+
+// Listen for first launch setup request
+electronAPI.onShowLogPathSetup(() => {
+  setupModal.classList.add('active');
+});
+
 // === INITIALIZE ===
-initGraph();
-loadInventory(); // This will call initRealtimeTracking() after inventory is loaded
-initRealtimeTimer(); // Initialize from main process timer
+// Check if log path is configured before loading inventory
+electronAPI.isLogPathConfigured().then((configured) => {
+  if (configured) {
+    initGraph();
+    loadInventory(); // This will call initRealtimeTracking() after inventory is loaded
+    initRealtimeTimer(); // Initialize from main process timer
+  } else {
+    // Show setup modal - it will be shown when main process sends the event
+    // But we can also show it here if needed
+    initGraph();
+    initRealtimeTimer();
+  }
+});

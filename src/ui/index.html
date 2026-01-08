@@ -193,6 +193,30 @@
       </div>
     </div>
 
+    <!-- Log Path Setup Modal (First Launch) -->
+    <div class="setup-modal" id="setupModal">
+      <div class="setup-modal-content">
+        <div class="setup-modal-header">
+          <div class="setup-modal-title">Welcome to Fenix</div>
+          <div class="setup-modal-subtitle">Initial Setup Required</div>
+        </div>
+        
+        <div class="setup-modal-body">
+          <div class="setup-modal-message">
+            Please select the <strong>UE_Game.log</strong> file from your Torchlight Infinite installation.
+            <br><br>
+            This file is typically located at:
+            <br>
+            <code>[Steam Library]\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log</code>
+          </div>
+        </div>
+
+        <div class="setup-modal-actions">
+          <button class="setup-btn setup-btn-primary" id="setupBtnSelect">Select Log File</button>
+        </div>
+      </div>
+    </div>
+
     <script src="../renderer.js"></script>
     <script>
       document.querySelectorAll('.segmented input').forEach((input, index) => {

@@ -39,5 +39,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   sendUpdateDialogResponse: (response: 'download' | 'restart' | 'later') => {
     ipcRenderer.send('update-dialog-response', response);
+  },
+  // Log path configuration methods
+  getLogPath: () => ipcRenderer.invoke('get-log-path'),
+  isLogPathConfigured: () => ipcRenderer.invoke('is-log-path-configured'),
+  selectLogFile: () => ipcRenderer.invoke('select-log-file'),
+  onShowLogPathSetup: (callback: () => void) => {
+    ipcRenderer.on('show-log-path-setup', callback);
   }
 });
