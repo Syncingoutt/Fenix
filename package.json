@@ -28,12 +28,21 @@
       "icon": "assets/AppIcon.ico"
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
       "perMachine": false,
-      "createDesktopShortcut": true,
+      "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "Fenix",
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "warningsAsErrors": false,
+      "installerIcon": "assets/AppIcon.ico",
+      "uninstallerIcon": "assets/AppIcon.ico",
+      "installerHeaderIcon": "assets/AppIcon.ico",
+      "deleteAppDataOnUninstall": false,
+      "license": "LICENSE",
+      "packElevateHelper": true
     },
     "publish": {
       "provider": "github",
