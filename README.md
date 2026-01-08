@@ -13,12 +13,12 @@
 2. Install the application (you may be prompted by Windows Defender as the app is not code-signed)<br>
 3. Open Torchlight, go to the "Other" section, and click "Enable Log".
 <br><br>
-<img width="3586" height="1328" alt="image" src="https://github.com/user-attachments/assets/7a75b5b8-90b2-4db1-9584-199047a8f80b" />
+<img width="1000" height="800" alt="image" src="https://github.com/user-attachments/assets/7a75b5b8-90b2-4db1-9584-199047a8f80b" />
 <br><br>
 4. Open the application.<br>
 5. Sort the 3rd and 4th pages of your inventory.
 <br><br>
-<img width="660" height="449" alt="image" src="https://github.com/user-attachments/assets/3578bfca-c971-41d7-8d90-b6f7b9570409" />
+<img width="500" height="400" alt="image" src="https://github.com/user-attachments/assets/3578bfca-c971-41d7-8d90-b6f7b9570409" />
 <br><br>
 6. The keybind to open the interface is Ctrl + Grave(`).<br><br>
 
@@ -31,19 +31,25 @@
 <h2>Tracking modes</h2>
 <h3>Total</h3>
 See the amount of FE you have earned. There is a button to reset it, but it always tracks your inventory, unlike the "Hourly" mode.<br><br>
-<img width="2868" height="1426" alt="image" src="https://github.com/user-attachments/assets/820b3ed2-256d-4696-8b20-12424d6ffcb3" />
+<img width="800" height="700" alt="image" src="https://github.com/user-attachments/assets/820b3ed2-256d-4696-8b20-12424d6ffcb3" />
 <br><br>
 <h3>Hourly</h3>
 <p>Clears the items that are already in your inventory and instead shows only new drops</p><br><br>
-<img width="2868" height="1426" alt="image" src="https://github.com/user-attachments/assets/2eefc29b-0333-43ba-9d39-d714ea3cc441" />
+<img width="800" height="700" alt="image" src="https://github.com/user-attachments/assets/2eefc29b-0333-43ba-9d39-d714ea3cc441" />
+<h4>Hourly sessions</h4>
+  <p>If you use the Hourly mode for multiple hours, you will be able to see each hour individually</p>
+    <img width="500" height="400" alt="image" src="https://github.com/user-attachments/assets/56b72405-b06e-4e4e-8a11-590d6813f143" />
 <br><br>
 <h2>Inventory</h2>
 <p>See all the items that you have obtained or have already obtained based on the mode you have selected</p><br><br>
-<img width="2294" height="1914" alt="image" src="https://github.com/user-attachments/assets/e8743635-0b79-4b31-91c1-62393512d1be" />
+<img width="800" height="700" alt="image" src="https://github.com/user-attachments/assets/e8743635-0b79-4b31-91c1-62393512d1be" />
 <br><br>
 <h3>Automatic price updating</h3>
 <p>When you price check an item, it will automatically reflect in the app.</p>
 <p><i>Note: I do have plans to make a database so that when any user price checks the item, if it's a recent price check, it sends that data syncing up with other users, but currently this works locally.</i></p>
+<h3>Breakdown</h3>
+<p>Here you can see a breakdown of all the items you have collected and the price of that group</p>
+<img width="256" height="440" alt="image" src="https://github.com/user-attachments/assets/1ab4977b-b4e8-4c86-ab45-5ea8d5a679d3" />
 </details>
 
 
@@ -59,7 +65,7 @@ See the amount of FE you have earned. There is a button to reset it, but it alwa
 <summary><h2>Future Updates</h2></summary>
   <ul>
     <li>
-      Breakdown section<br>
+      <s>Breakdown section</s> (IMPLEMENTED)<br>
       <img width="269" height="631" alt="image" src="https://github.com/user-attachments/assets/a3bf96e6-2b38-407c-90a1-56f3b6fb5977" /><br>
     </li>
     <li>
