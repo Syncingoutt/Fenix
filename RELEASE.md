@@ -23,8 +23,15 @@ npm run prod fix    # 2.0.0 → 2.0.1
 
 1. **Development**: Make your changes, commit them with proper messages, and push to `main`
    ```bash
+   # Start with latest changes (recommended)
+   git pull origin main
+   
+   # Make your changes, then:
    git add .
    git commit -m "feat: added new feature"
+   
+   # Pull again before pushing (to integrate any remote changes)
+   git pull origin main
    git push origin main
    ```
 
