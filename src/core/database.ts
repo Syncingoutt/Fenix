@@ -4,6 +4,7 @@ import { app } from 'electron';
 
 export interface ItemData {
   name: string;
+  tradable?: boolean; // Optional for backwards compatibility, defaults to true if not specified
 }
 
 export interface ItemDatabase {

@@ -34,6 +34,12 @@ export class InventoryManager {
 
     for (const entry of instanceMap.values()) {
       const itemData = this.itemDatabase[entry.baseId];
+      
+      // Skip untradable items (default to tradable if not specified for backwards compatibility)
+      if (itemData && itemData.tradable === false) {
+        continue;
+      }
+      
       const itemName = itemData ? itemData.name : `Unknown Item (${entry.baseId})`;
 
       if (this.inventory.has(entry.baseId)) {
@@ -72,11 +78,17 @@ export class InventoryManager {
   }
 
   getInventory(): InventoryItem[] {
-    return Array.from(this.inventory.values()).sort((a, b) => {
-      const nameCompare = a.itemName.localeCompare(b.itemName);
-      if (nameCompare !== 0) return nameCompare;
-      return a.baseId.localeCompare(b.baseId);
-    });
+    return Array.from(this.inventory.values())
+      .filter(item => {
+        // Filter out untradable items (default to tradable if not specified)
+        const itemData = this.itemDatabase[item.baseId];
+        return !itemData || itemData.tradable !== false;
+      })
+      .sort((a, b) => {
+        const nameCompare = a.itemName.localeCompare(b.itemName);
+        if (nameCompare !== 0) return nameCompare;
+        return a.baseId.localeCompare(b.baseId);
+      });
   }
 
   getInventoryMap(): Map<string, InventoryItem> {

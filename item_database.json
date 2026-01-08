@@ -1,404 +1,538 @@
 {
   "5011": {
-    "name": "Elexir of Oblivion"
+    "name": "Elexir of Oblivion",
+    "tradable": true
   },
   "5012": {
-    "name": "Elexir of Oblivion - Bound"
+    "name": "Elexir of Oblivion - Bound",
+    "tradable": false
   },
   "5028": {
-    "name": "Netherrealm Resonance"
+    "name": "Netherrealm Resonance",
+    "tradable": true
   },
   "5029": {
-    "name": "Winding Key"
+    "name": "Winding Key",
+    "tradable": true
   },
   "5039": {
-    "name": "Winding Key - Bound"
+    "name": "Winding Key - Bound",
+    "tradable": false
   },
   "5080": {
-    "name": "Energy Core"
+    "name": "Energy Core",
+    "tradable": true
   },
   "5140": {
-    "name": "Memory Scrap"
+    "name": "Memory Scrap",
+    "tradable": true
   },
   "5141": {
-    "name": "Memory Thread - Normal"
+    "name": "Memory Thread - Normal",
+    "tradable": true
   },
   "5142": {
-    "name": "Memory Thread - Magic"
+    "name": "Memory Thread - Magic",
+    "tradable": true
   },
   "5143": {
-    "name": "Memory Thread - Rare"
+    "name": "Memory Thread - Rare",
+    "tradable": true
   },
   "5144": {
-    "name": "Memory Thread - Epic"
+    "name": "Memory Thread - Epic",
+    "tradable": true
   },
   "5201": {
-    "name": "Divinity Fragment"
+    "name": "Divinity Fragment",
+    "tradable": true
   },
   "5210": {
-    "name": "Divinity Stone"
+    "name": "Divinity Stone",
+    "tradable": true
   },
   "5220": {
-    "name": "Transendence Wedge (Magic)"
+    "name": "Transendence Wedge (Magic)",
+    "tradable": true
   },
   "5230": {
-    "name": "Transendence Wedge (Rare)"
+    "name": "Transendence Wedge (Rare)",
+    "tradable": true
   },
   "5250": {
-    "name": "Transendence Wedge (Legendary)"
+    "name": "Transendence Wedge (Legendary)",
+    "tradable": true
   },
   "5300": {
-    "name": "Pages of Aeterna"
+    "name": "Pages of Aeterna",
+    "tradable": true
   },
   "5310": {
-    "name": "Aeterna Reverberation - Fleeting"
+    "name": "Aeterna Reverberation - Fleeting",
+    "tradable": true
   },
   "5311": {
-    "name": "Aeterna Reverberation - Eternal"
+    "name": "Aeterna Reverberation - Eternal",
+    "tradable": true
   },
   "5700": {
-    "name": "TOWER token - Energy"
+    "name": "TOWER token - Energy",
+    "tradable": true
   },
   "5703": {
-    "name": "TOWER token - Undetermined Fate"
+    "name": "TOWER token - Undetermined Fate",
+    "tradable": true
   },
   "6002": {
-    "name": "Secret of the Glacial Abyss"
+    "name": "Secret of the Glacial Abyss",
+    "tradable": true
   },
   "6003": {
-    "name": "Crow's Fall"
+    "name": "Crow's Fall",
+    "tradable": true
   },
   "6004": {
-    "name": "Maud's Trick"
+    "name": "Maud's Trick",
+    "tradable": true
   },
   "6007": {
-    "name": "Lost Secrets"
+    "name": "Lost Secrets",
+    "tradable": true
   },
   "6026": {
-    "name": "Antonius's Help"
+    "name": "Antonius's Help",
+    "tradable": true
   },
   "6055": {
-    "name": "Antonius' Research"
+    "name": "Antonius' Research",
+    "tradable": true
   },
   "6118": {
-    "name": "Echo of the Gods"
+    "name": "Echo of the Gods",
+    "tradable": true
   },
   "6125": {
-    "name": "Hundredfold Windfall"
+    "name": "Hundredfold Windfall",
+    "tradable": true
   },
   "6153": {
-    "name": "Tomorrow's Direction"
+    "name": "Tomorrow's Direction",
+    "tradable": true
   },
   "6205": {
-    "name": "Uncertain Voyage"
+    "name": "Uncertain Voyage",
+    "tradable": true
   },
   "10010": {
-    "name": "Novel Compass"
+    "name": "Novel Compass",
+    "tradable": true
   },
   "10011": {
-    "name": "Lavish Novel Compass"
+    "name": "Lavish Novel Compass",
+    "tradable": true
   },
   "10022": {
-    "name": "Soldier Compass"
+    "name": "Soldier Compass",
+    "tradable": true
   },
   "10023": {
-    "name": "Strength in Numbers Compass"
+    "name": "Strength in Numbers Compass",
+    "tradable": true
   },
   "10032": {
-    "name": "Veteran Compass"
+    "name": "Veteran Compass",
+    "tradable": true
   },
   "10033": {
-    "name": "Unrivaled Veteran Compass"
+    "name": "Unrivaled Veteran Compass",
+    "tradable": true
   },
   "10042": {
-    "name": "Elite Compass"
+    "name": "Elite Compass",
+    "tradable": true
   },
   "10043": {
-    "name": "Generous Elite Compass"
+    "name": "Generous Elite Compass",
+    "tradable": true
   },
   "10046": {
-    "name": "Boss Compass"
+    "name": "Boss Compass",
+    "tradable": true
   },
   "10050": {
-    "name": "Beacon Compass"
+    "name": "Beacon Compass",
+    "tradable": true
   },
   "10051": {
-    "name": "Progressing beacon Compass"
+    "name": "Progressing beacon Compass",
+    "tradable": true
   },
   "10052": {
-    "name": "Ecliptic Compass"
+    "name": "Ecliptic Compass",
+    "tradable": true
   },
   "10071": {
-    "name": "Militant Compass"
+    "name": "Militant Compass",
+    "tradable": true
   },
   "10072": {
-    "name": "Priceless Militant Compass"
+    "name": "Priceless Militant Compass",
+    "tradable": true
   },
   "10081": {
-    "name": "Ember Compass"
+    "name": "Ember Compass",
+    "tradable": true
   },
   "10082": {
-    "name": "Bounty Ember Compass"
+    "name": "Bounty Ember Compass",
+    "tradable": true
   },
   "10101": {
-    "name": "Flourescent Compass"
+    "name": "Flourescent Compass",
+    "tradable": true
   },
   "10102": {
-    "name": "Colorful Flourescent Compass"
+    "name": "Colorful Flourescent Compass",
+    "tradable": true
   },
   "10120": {
-    "name": "War Compass"
+    "name": "War Compass",
+    "tradable": true
   },
   "10122": {
-    "name": "Valiant War Compass"
+    "name": "Valiant War Compass",
+    "tradable": true
   },
   "10130": {
-    "name": "Might Compass"
+    "name": "Might Compass",
+    "tradable": true
   },
   "10131": {
-    "name": "Flourishing Might Compass"
+    "name": "Flourishing Might Compass",
+    "tradable": true
   },
   "10133": {
-    "name": "Onslaught Might Compass"
+    "name": "Onslaught Might Compass",
+    "tradable": true
   },
   "10140": {
-    "name": "Hunting Compass"
+    "name": "Hunting Compass",
+    "tradable": true
   },
   "10142": {
-    "name": "General Hunting Compass"
+    "name": "General Hunting Compass",
+    "tradable": true
   },
   "10150": {
-    "name": "Mechanical Compass"
+    "name": "Mechanical Compass",
+    "tradable": true
   },
   "10151": {
-    "name": "Brilliant Mechanical Compass"
+    "name": "Brilliant Mechanical Compass",
+    "tradable": true
   },
   "10160": {
-    "name": "Dark Surge Compass"
+    "name": "Dark Surge Compass",
+    "tradable": true
   },
   "10161": {
-    "name": "Bandit Dark Surge Compass"
+    "name": "Bandit Dark Surge Compass",
+    "tradable": true
   },
   "10170": {
-    "name": "Blacksail Compass"
+    "name": "Blacksail Compass",
+    "tradable": true
   },
   "10171": {
-    "name": "Returning Blacksail Compass"
+    "name": "Returning Blacksail Compass",
+    "tradable": true
   },
   "10180": {
-    "name": "Cube Compass"
+    "name": "Cube Compass",
+    "tradable": true
   },
   "10181": {
-    "name": "Cube Compass: Two Extremes"
+    "name": "Cube Compass: Two Extremes",
+    "tradable": true
   },
   "10182": {
-    "name": "Desire Incarnation Cube Compass "
+    "name": "Desire Incarnation Cube Compass ",
+    "tradable": true
   },
   "10190": {
-    "name": "Aeterna Compass"
+    "name": "Aeterna Compass",
+    "tradable": true
   },
   "10191": {
-    "name": "Familial Aeterna Compass"
+    "name": "Familial Aeterna Compass",
+    "tradable": true
   },
   "10200": {
-    "name": "Nightmare Compass"
+    "name": "Nightmare Compass",
+    "tradable": true
   },
   "10210": {
-    "name": "Folkore Compass"
+    "name": "Folkore Compass",
+    "tradable": true
   },
   "10211": {
-    "name": "Uncanny Folklore Compass"
+    "name": "Uncanny Folklore Compass",
+    "tradable": true
   },
   "10220": {
-    "name": "Doll Compass"
+    "name": "Doll Compass",
+    "tradable": true
   },
   "10221": {
-    "name": "Collection Doll Compass"
+    "name": "Collection Doll Compass",
+    "tradable": true
   },
   "10230": {
-    "name": "Frozen Canvas Compass"
+    "name": "Frozen Canvas Compass",
+    "tradable": true
   },
   "10231": {
-    "name": "Frozen Canvas Compass: Abundance"
+    "name": "Frozen Canvas Compass: Abundance",
+    "tradable": true
   },
   "10240": {
-    "name": "Arcana Compass"
+    "name": "Arcana Compass",
+    "tradable": true
   },
   "10241": {
-    "name": "Trump Card Arcana Compass"
+    "name": "Trump Card Arcana Compass",
+    "tradable": true
   },
   "10242": {
-    "name": "The Fated Arcana Compass"
+    "name": "The Fated Arcana Compass",
+    "tradable": true
   },
   "10250": {
-    "name": "Sandlord Compass"
+    "name": "Sandlord Compass",
+    "tradable": true
   },
   "10260": {
-    "name": "Outlaw Compass"
+    "name": "Outlaw Compass",
+    "tradable": true
   },
   "10270": {
-    "name": "Cage Compass"
+    "name": "Cage Compass",
+    "tradable": true
   },
   "12050": {
-    "name": "Beacon Profound Probe"
+    "name": "Beacon Profound Probe",
+    "tradable": true
   },
   "100200": {
-    "name": "Flame Sand"
+    "name": "Flame Sand",
+    "tradable": true
   },
   "100300": {
-    "name": "Flame Elementium"
+    "name": "Flame Elementium",
+    "tradable": true
   },
   "100400": {
-    "name": "Flame Residue"
+    "name": "Flame Residue",
+    "tradable": false
   },
   "101200": {
-    "name": "Flame Sand - Bound"
+    "name": "Flame Sand - Bound",
+    "tradable": false
   },
   "101300": {
-    "name": "Flame Elementium - Bound"
+    "name": "Flame Elementium - Bound",
+    "tradable": false
   },
   "140004": {
-    "name": "Shallow Dream Talking - Weapon "
+    "name": "Shallow Dream Talking - Weapon ",
+    "tradable": true
   },
   "140006": {
-    "name": "Shallow Dream Talking - Trinket "
+    "name": "Shallow Dream Talking - Trinket ",
+    "tradable": true
   },
   "200003": {
-    "name": "Fine Ember"
+    "name": "Fine Ember",
+    "tradable": true
   },
   "200021": {
-    "name": "Truth Fossil"
+    "name": "Truth Fossil",
+    "tradable": true
   },
   "200028": {
-    "name": "Precious Ember"
+    "name": "Precious Ember",
+    "tradable": true
   },
   "200029": {
-    "name": "Matchless Ember"
+    "name": "Matchless Ember",
+    "tradable": true
   },
   "200030": {
-    "name": "Ultimate Ember"
+    "name": "Ultimate Ember",
+    "tradable": true
   },
   "201003": {
-    "name": "Fine Ember - Bound"
+    "name": "Fine Ember - Bound",
+    "tradable": false
   },
   "210000": {
-    "name": "Aemberon Core"
+    "name": "Aemberon Core",
+    "tradable": true
   },
   "210002": {
-    "name": "Corrupted Axis"
+    "name": "Corrupted Axis",
+    "tradable": true
   },
   "300006": {
-    "name": "Sacred Fossil"
+    "name": "Sacred Fossil",
+    "tradable": true
   },
   "330001": {
-    "name": "Snowpaper Fragment"
+    "name": "Snowpaper Fragment",
+    "tradable": true
   },
   "339001": {
-    "name": "Inspiration Essence"
+    "name": "Inspiration Essence",
+    "tradable": true
   },
   "360101": {
-    "name": "Sage Lv.1"
+    "name": "Sage Lv.1",
+    "tradable": true
   },
   "360102": {
-    "name": "Silver mound Lv.2"
+    "name": "Silver mound Lv.2",
+    "tradable": true
   },
   "360201": {
-    "name": "Night-Blooming Cereus Lv. 4"
+    "name": "Night-Blooming Cereus Lv. 4",
+    "tradable": true
   },
   "360403": {
-    "name": "Base Mod"
+    "name": "Base Mod",
+    "tradable": true
   },
   "370101": {
-    "name": "Prism Gauge - Rare"
+    "name": "Prism Gauge - Rare",
+    "tradable": true
   },
   "370201": {
-    "name": "Prism Gauge - Legendary"
+    "name": "Prism Gauge - Legendary",
+    "tradable": true
   },
   "400006": {
-    "name": "Glacial Abyss Beacon (Timemark 7)"
+    "name": "Glacial Abyss Beacon (Timemark 7)",
+    "tradable": true
   },
   "400007": {
-    "name": "Glacial Abyss Beacon (Timemark 8)"
+    "name": "Glacial Abyss Beacon (Timemark 8)",
+    "tradable": true
   },
   "400008": {
-    "name": "Deep Space Beacon"
+    "name": "Deep Space Beacon",
+    "tradable": true
   },
   "400014": {
-    "name": "Blistering Lava Sea Beacon (Timemark 7)"
+    "name": "Blistering Lava Sea Beacon (Timemark 7)",
+    "tradable": true
   },
   "400015": {
-    "name": "Blistering Lava Sea Beacon (Timemark 8)"
+    "name": "Blistering Lava Sea Beacon (Timemark 8)",
+    "tradable": true
   },
   "400021": {
-    "name": "Steel Forge Beacon (Timemark 7)"
+    "name": "Steel Forge Beacon (Timemark 7)",
+    "tradable": true
   },
   "400022": {
-    "name": "Steel Forge Beacon (Timemark 8)"
+    "name": "Steel Forge Beacon (Timemark 8)",
+    "tradable": true
   },
   "400027": {
-    "name": "Thunder Wastes Beacon (Timemark 7)"
+    "name": "Thunder Wastes Beacon (Timemark 7)",
+    "tradable": true
   },
   "400028": {
-    "name": "Thunder Wastes Beacon (Timemark 8)"
+    "name": "Thunder Wastes Beacon (Timemark 8)",
+    "tradable": true
   },
   "400032": {
-    "name": "Voidlands Beacon (Timemark 7)"
+    "name": "Voidlands Beacon (Timemark 7)",
+    "tradable": true
   },
   "400033": {
-    "name": "Voidlands Beacon (Timemark 8)"
+    "name": "Voidlands Beacon (Timemark 8)",
+    "tradable": true
   },
   "410101": {
-    "name": "Edict: Dart"
+    "name": "Edict: Dart",
+    "tradable": true
   },
   "410102": {
-    "name": "Edict: Dive"
+    "name": "Edict: Dive",
+    "tradable": true
   },
   "410103": {
-    "name": "Edict: Ruin"
+    "name": "Edict: Ruin",
+    "tradable": true
   },
   "410301": {
-    "name": "Desire Core - Record"
+    "name": "Desire Core - Record",
+    "tradable": true
   },
   "410500": {
-    "name": "Shallow Dream Talking - Armor "
+    "name": "Shallow Dream Talking - Armor ",
+    "tradable": true
   },
   "410501": {
-    "name": "Queen's Grace - Slaughter"
+    "name": "Queen's Grace - Slaughter",
+    "tradable": true
   },
   "430000": {
-    "name": "The Beginning"
+    "name": "The Beginning",
+    "tradable": true
   },
   "430001": {
-    "name": "The End"
+    "name": "The End",
+    "tradable": true
   },
   "430002": {
-    "name": "Beginning of the End"
+    "name": "Beginning of the End",
+    "tradable": true
   },
   "440004": {
-    "name": "Divinity Emblem - Hunting"
+    "name": "Divinity Emblem - Hunting",
+    "tradable": true
   },
   "990005": {
-    "name": "Mist Essence"
+    "name": "Mist Essence",
+    "tradable": true
   },
   "990007": {
-    "name": "Resident's eye"
+    "name": "Resident's eye",
+    "tradable": true
   },
   "3000001": {
-    "name": "Proof of the Brave I"
+    "name": "Proof of the Brave I",
+    "tradable": true
   },
   "3000002": {
-    "name": "Proof of the Brave II"
+    "name": "Proof of the Brave II",
+    "tradable": true
   },
   "3000003": {
-    "name": "Proof of the Brave III"
+    "name": "Proof of the Brave III",
+    "tradable": true
   },
   "3000004": {
-    "name": "Proof of the Brave IV"
+    "name": "Proof of the Brave IV",
+    "tradable": true
   },
   "3000005": {
-    "name": "Proof of the Brave V"
+    "name": "Proof of the Brave V",
+    "tradable": true
   },
   "10001 ": {
-    "name": "Sinful Plunder Compass"
+    "name": "Sinful Plunder Compass",
+    "tradable": true
   }
 }
