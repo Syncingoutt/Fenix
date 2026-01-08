@@ -37,6 +37,7 @@ let tray: Tray | null = null;
 let inventoryManager: InventoryManager;
 let itemDatabase: ReturnType<typeof loadItemDatabase>;
 let lastLogPosition = 0;
+let lastSendBaseId: string | null = null; // Track the most recent SEND message's baseId across log reads
 const WATCH_INTERVAL = 500;
 
 // Timer state managed in main process (never throttled)
@@ -524,17 +525,34 @@ function watchLogFile() {
     
     let priceCheckBuffer: string[] = [];
     let inPriceCheck = false;
+    let inSendMessage = false;
+    let sendMessageBuffer: string[] = [];
     let inventoryChanged = false;
     let priceUpdated = false;
 
     let currentPriceCheckBaseId: string | null = null;
 
     for (const line of newLines) {
-      if ((line.includes('+itemBaseId') || line.includes('+refer')) && line.includes('[')) {
-        const match = line.match(/\[(\d+)\]/);
-        if (match) {
-          currentPriceCheckBaseId = match[1];
-          console.log(`🔍 Price check initiated for baseId: ${currentPriceCheckBaseId}`);
+      // Track SEND messages to extract baseId
+      if (line.includes('----Socket SendMessage STT----XchgSearchPrice----')) {
+        inSendMessage = true;
+        sendMessageBuffer = [];
+        lastSendBaseId = null; // Reset when starting a new SEND message
+      } else if (inSendMessage) {
+        sendMessageBuffer.push(line);
+        
+        // Extract baseId from SEND message
+        if ((line.includes('+itemBaseId') || line.includes('+refer')) && line.includes('[')) {
+          const match = line.match(/\+refer\s*\[(\d+)\]/);
+          if (match) {
+            lastSendBaseId = match[1];
+            console.log(`🔍 Price check initiated for baseId: ${lastSendBaseId}`);
+          }
+        }
+        
+        if (line.includes('----Socket SendMessage End----')) {
+          inSendMessage = false;
+          sendMessageBuffer = [];
         }
       }
 
@@ -542,6 +560,43 @@ function watchLogFile() {
         inPriceCheck = true;
         priceCheckBuffer = [];
         console.log('📊 Receiving price data...');
+        // Use the most recent SEND message's baseId
+        currentPriceCheckBaseId = lastSendBaseId;
+        // If not found in lastSendBaseId, try to extract from the send message buffer
+        if (!currentPriceCheckBaseId && sendMessageBuffer.length > 0) {
+          for (const bufLine of sendMessageBuffer) {
+            if ((bufLine.includes('+itemBaseId') || bufLine.includes('+refer')) && bufLine.includes('[')) {
+              const match = bufLine.match(/\+refer\s*\[(\d+)\]/);
+              if (match) {
+                currentPriceCheckBaseId = match[1];
+                console.log(`🔍 Price check baseId extracted from send message buffer: ${currentPriceCheckBaseId}`);
+                break;
+              }
+            }
+          }
+        }
+        // If still not found, look backwards in the new lines for the most recent SEND message
+        if (!currentPriceCheckBaseId) {
+          for (let i = newLines.indexOf(line) - 1; i >= 0 && i >= newLines.indexOf(line) - 100; i--) {
+            const prevLine = newLines[i];
+            if (prevLine.includes('----Socket SendMessage STT----XchgSearchPrice----')) {
+              // Found a SEND message, look for +refer in subsequent lines
+              for (let j = i + 1; j < newLines.length && j < i + 20; j++) {
+                const sendLine = newLines[j];
+                if (sendLine.includes('----Socket SendMessage End----')) break;
+                if ((sendLine.includes('+itemBaseId') || sendLine.includes('+refer')) && sendLine.includes('[')) {
+                  const match = sendLine.match(/\+refer\s*\[(\d+)\]/);
+                  if (match) {
+                    currentPriceCheckBaseId = match[1];
+                    console.log(`🔍 Price check baseId found in preceding send message: ${currentPriceCheckBaseId}`);
+                    break;
+                  }
+                }
+              }
+              if (currentPriceCheckBaseId) break;
+            }
+          }
+        }
       } else if (inPriceCheck) {
         priceCheckBuffer.push(line);
         
@@ -562,17 +617,30 @@ function watchLogFile() {
             }
           }
 
-          const priceResult = processPriceCheckData(currentPriceCheckBaseId!, prices);
-          
-          if (priceResult) {
-            inventoryManager.updatePrice(priceResult.baseId, priceResult.avgPrice);
-            savePriceCache(inventoryManager.getPriceCacheAsObject());
-            const itemName = inventoryManager.getInventoryMap().get(priceResult.baseId)?.itemName || priceResult.baseId;
-            console.log(`💰 Price updated: ${itemName} = ${priceResult.avgPrice.toFixed(2)} (from ${prices.length} listings)`);
+          if (currentPriceCheckBaseId) {
+            const priceResult = processPriceCheckData(currentPriceCheckBaseId, prices);
             
-            priceUpdated = true;
+            if (priceResult) {
+              inventoryManager.updatePrice(priceResult.baseId, priceResult.avgPrice);
+              savePriceCache(inventoryManager.getPriceCacheAsObject());
+              // Try to get item name from database if not in inventory
+              const inventoryItem = inventoryManager.getInventoryMap().get(priceResult.baseId);
+              let itemName: string;
+              if (inventoryItem?.itemName) {
+                itemName = inventoryItem.itemName;
+              } else {
+                // Fallback to database lookup
+                const itemData = itemDatabase[priceResult.baseId];
+                itemName = itemData?.name || priceResult.baseId;
+              }
+              console.log(`💰 Price updated: ${itemName} = ${priceResult.avgPrice.toFixed(2)} (from ${prices.length} listings)`);
+              
+              priceUpdated = true;
+            } else {
+              console.log(`⚠️  Parse issue - BaseID: ${currentPriceCheckBaseId}, Prices: ${prices.length} (no valid prices found)`);
+            }
           } else {
-            console.log(`⚠️  Parse issue - BaseID: ${currentPriceCheckBaseId}, Prices: ${prices.length} (need at least 50)`);
+            console.log(`⚠️  No baseId found for price check with ${prices.length} prices`);
           }
 
           inPriceCheck = false;
