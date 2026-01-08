@@ -6,6 +6,23 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css?family=Manrope" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      // Set responsive scale based on 1920x1080 baseline
+      // Use 1rem = 16px as base, so scale will multiply values correctly
+      function updateScale() {
+        const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+        // Clamp scale to reasonable bounds for layout elements
+        const clampedScale = Math.max(0.6, Math.min(1, scale));
+        // Set scale as a percentage multiplier (1 = 100% = 1920x1080 baseline)
+        document.documentElement.style.setProperty('--scale', clampedScale);
+        // Text scales more aggressively - allow it to scale down more for smaller screens
+        // Text can scale down to 65% for better fit on smaller screens
+        const textScale = Math.max(0.65, scale);
+        document.documentElement.style.setProperty('--text-scale', textScale);
+      }
+      updateScale();
+      window.addEventListener('resize', updateScale);
+    </script>
   </head>
 
   <body>
@@ -300,13 +317,22 @@
 
     <script src="../renderer.js"></script>
     <script>
+      function updateSegmentedTransform() {
+        const activeBg = document.querySelector('.segmented-active-bg');
+        const inputs = document.querySelectorAll('.segmented input');
+        const checkedIndex = Array.from(inputs).findIndex(input => input.checked);
+        if (activeBg && checkedIndex >= 0) {
+          const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+          activeBg.style.transform = `translateX(${checkedIndex * 125 * scale}px)`;
+        }
+      }
+      
       document.querySelectorAll('.segmented input').forEach((input, index) => {
-  input.addEventListener('change', () => {
-    document.querySelector('.segmented-active-bg').style.transform =
-      `translateX(${index * 125}px)`;
-  });
-});
-
+        input.addEventListener('change', updateSegmentedTransform);
+      });
+      
+      window.addEventListener('resize', updateSegmentedTransform);
+      updateSegmentedTransform(); // Initialize on load
     </script>
   </body>
 </html>

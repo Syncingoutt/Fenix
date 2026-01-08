@@ -623,14 +623,14 @@ function captureHourlyBucket() {
   currentHourStartValue = currentValue;
   hourlyHistory = [{ time: Date.now(), value: currentValue }];
   
-  // Show notification
-  const box = document.querySelector('.wealth-box');
-  if (box) {
+  // Show notification (positioned relative to stats container)
+  const statsContainer = document.querySelector('.stats-container');
+  if (statsContainer) {
     const anim = document.createElement('div');
     anim.className = 'earnings-animation';
     anim.textContent = `Hour ${hourNumber} Complete! +${bucket.earnings.toFixed(2)} FE`;
     anim.style.color = '#10b981';
-    box.appendChild(anim);
+    statsContainer.appendChild(anim);
     setTimeout(() => anim.remove(), 2000);
   }
 }
