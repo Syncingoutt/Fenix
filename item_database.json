@@ -58,6 +58,7 @@
 
   "990005": { "name": "Mist Essence", "tradable": true, "group": "mist" },
   "990007": { "name": "Resident's eye", "tradable": true, "group": "mist" },
+  "990004": { "name": "Mistville Intel", "tradable": false, "group": "mist" },
 
   "330001": { "name": "Snowpaper Fragment", "tradable": true, "group": "canvas" },
   "339001": { "name": "Inspiration Essence", "tradable": true, "group": "canvas" },
