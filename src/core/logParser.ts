@@ -253,6 +253,7 @@ export function readLogFile(): ParsedLogEntry[] {
   }
 
   // If we found a ResetItemsLayout event, capture BagMgr@:InitBagData entries for both pages
+  // AND also capture any ItemChange entries (like PickItems) that come after
   if (lastResetItemsLayoutStart !== -1 && lastResetItemsLayoutEnd !== -1) {
     const entries: ParsedLogEntry[] = [];
     
@@ -275,17 +276,62 @@ export function readLogFile(): ParsedLogEntry[] {
       }
     }
     
-    // If we found InitBagData entries, use them (even if only one page is present)
-    // These represent the complete state after sorting
+    // ALSO collect all ItemChange entries after the ResetItemsLayout end
+    // This includes PickItems events and other item updates that happen after sorting
+    for (let i = lastResetItemsLayoutEnd; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Stop if we hit another ResetItemsLayout start (new sort operation)
+      if (line.includes('ItemChange@ ProtoName=ResetItemsLayout start')) {
+        break;
+      }
+      
+      // Parse ItemChange entries (Add, Update, Remove) that come after the sort
+      if (line.includes('ItemChange@') && line.includes('Id=')) {
+        const parsed = parseLogLine(line);
+        if (parsed) {
+          // First, check if we already have this exact fullId (for ItemChange entries)
+          // This handles cases where the same item instance appears multiple times - keep the latest
+          const duplicateIndex = entries.findIndex(e => e.fullId === parsed.fullId);
+          if (duplicateIndex >= 0) {
+            // Replace with newer entry (same fullId, but might have updated quantity)
+            entries[duplicateIndex] = parsed;
+          } else {
+            // If this ItemChange entry corresponds to a slot we already have (from InitBagData or another ItemChange),
+            // prefer the ItemChange entry (it's more recent and accurate)
+            // Match by baseId + pageId + slotId to identify the same physical item stack
+            // This handles cases where InitBagData shows quantity 600, then ItemChange@ Update shows quantity 664
+            // Also handles multiple ItemChange updates for the same slot (replace older with newer)
+            if (parsed.slotId !== null) {
+              const existingIndex = entries.findIndex(e => 
+                e.baseId === parsed.baseId &&
+                e.pageId === parsed.pageId && 
+                e.slotId === parsed.slotId && 
+                e.slotId !== null
+              );
+              if (existingIndex >= 0) {
+                // Replace existing entry (InitBagData or older ItemChange) with more recent ItemChange entry
+                // The ItemChange entry has the updated quantity (or represents a new state)
+                entries[existingIndex] = parsed;
+              } else {
+                // This is a new item instance (not in InitBagData, not in same slot, not a duplicate ItemChange)
+                entries.push(parsed);
+              }
+            } else {
+              // ItemChange entry without slotId - add it if not already present (rare case)
+              entries.push(parsed);
+            }
+          }
+        }
+      }
+    }
+    
+    // If we found entries, return them
+    // These represent the complete state after sorting plus any updates (like PickItems)
     if (entries.length > 0) {
-      const hasPage102 = entries.some(e => e.pageId === 102);
-      const hasPage103 = entries.some(e => e.pageId === 103);
-      const pagesList = [];
-      if (hasPage102) pagesList.push('102');
-      if (hasPage103) pagesList.push('103');
       return entries;
     }
-    // If no InitBagData entries found, fall through to normal processing
+    // If no entries found, fall through to normal processing
   }
 
   // Fall back to normal processing (find last reset for each page)
