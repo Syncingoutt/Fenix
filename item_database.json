@@ -24,10 +24,10 @@
   "3000002": { "name": "Proof of the Brave II", "tradable": true, "group": "currency" },
   "3000003": { "name": "Proof of the Brave III", "tradable": true, "group": "currency" },
   "3000004": { "name": "Proof of the Brave IV", "tradable": true, "group": "currency" },
-  "210002": { "name": "Corrupted Axis", "tradable": true, "group": "currency" },
   "5030": { "name": "Twin Reflection", "tradable": true, "group": "currency" },
   "5040": { "name": "Deep Space Resonance", "tradable": true, "group": "currency" },
-  "300005": { "name": "Inheritance Axis", "tradable": true, "group": "currency" },  
+  "300005": { "name": "Inheritance Axis", "tradable": true, "group": "currency" },
+  "5031": { "name": "Sprout of Legends", "tradable": true, "group": "currency" },
 
   "200003": { "name": "Fine Ember", "tradable": true, "group": "ember" },
   "200028": { "name": "Precious Ember", "tradable": true, "group": "ember" },
@@ -126,6 +126,7 @@
 
   "330001": { "name": "Snowpaper Fragment", "tradable": true, "group": "canvas" },
   "339001": { "name": "Inspiration Essence", "tradable": true, "group": "canvas" },
+  "383000": { "name": "Grandiose Conception", "tradable": true, "group": "canvas" },
 
   "360101": { "name": "Sage Lv.1", "tradable": true, "group": "sandlord" },
   "360102": { "name": "Silver mound Lv.2", "tradable": true, "group": "sandlord" },
@@ -139,6 +140,7 @@
 
   "370101": { "name": "Prism Gauge - Rare", "tradable": true, "group": "overrealm" },
   "370201": { "name": "Prism Gauge - Legendary", "tradable": true, "group": "overrealm" },
+  "370701": { "name": "Prism Repairer", "tradable": true, "group": "overrealm" },
 
   "400006": { "name": "Glacial Abyss Beacon (Timemark 7)", "tradable": true, "group": "beacon" },
   "400007": { "name": "Glacial Abyss Beacon (Timemark 8)", "tradable": true, "group": "beacon" },
@@ -167,6 +169,10 @@
   "410503": { "name": "Queen's Grace - Lust", "tradable": true, "group": "dream" },
 
   "210000": { "name": "Aemberon Core", "tradable": true, "group": "surge" },
+  "210002": { "name": "Corrupted Axis", "tradable": true, "group": "surge" },
+  "210001": { "name": "Familiar Nexus", "tradable": true, "group": "surge" },
+  "210003": { "name": "Glorious Axis", "tradable": true, "group": "surge" },
+  "380102": { "name": "Mutagenic Slurry", "tradable": true, "group": "surge" },
   "410101": { "name": "Edict: Dart", "tradable": true, "group": "surge" },
   "410102": { "name": "Edict: Dive", "tradable": true, "group": "surge" },
   "410103": { "name": "Edict: Ruin", "tradable": true, "group": "surge" },
@@ -245,6 +251,16 @@
   "12031": { "name": "Fluorescent Deep Space Probe", "tradable": true, "group": "compass" },
   "12040": { "name": "Compass Profound Probe", "tradable": true, "group": "compass" },
   "12041": { "name": "Compass Deep Space Probe", "tradable": true, "group": "compass" },
+  "10053": { "name": "Vast Ecliptic Astrolabe", "tradable": true, "group": "compass" },
+  "10054": { "name": "Ascendant Ecliptic Astrolabe", "tradable": true, "group": "compass" },
+  "10272": { "name": "Golden Cage Astrolabe", "tradable": true, "group": "compass" },
+  "10280": { "name": "Overrealm Compass", "tradable": true, "group": "compass" },
+  "10281": { "name": "Shadow Overrealm Compass", "tradable": true, "group": "compass" },
+  "10282": { "name": "Containment Overrealm Compass", "tradable": true, "group": "compass" },
+  "12101": { "name": "Might Deep Space Probe", "tradable": true, "group": "compass" },
+  "12111": { "name": "Machine Deep Space Probe", "tradable": true, "group": "compass" },
+  "12121": { "name": "Doll Deep Space Probe", "tradable": true, "group": "compass" },
+  "12131": { "name": "Outlaw Deep Space Probe", "tradable": true, "group": "compass" },
 
   "338001": { "name": "Wandering Star", "tradable": true, "group": "arcana" },
   "338002": { "name": "Star Net", "tradable": true, "group": "arcana" }
