@@ -25,7 +25,6 @@ npm run prod fix    # 2.0.0 → 2.0.1
    - git pull origin main
    - git add .
    - git commit -m "feat: added new feature"
-   - git pull origin main
    - git push origin main
 
 2. **Trigger Release**: When ready, run `npm run prod [major|minor|fix]` from the `main` branch
