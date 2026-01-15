@@ -24,6 +24,7 @@
   "3000002": { "name": "Proof of the Brave II", "tradable": true, "group": "currency" },
   "3000003": { "name": "Proof of the Brave III", "tradable": true, "group": "currency" },
   "3000004": { "name": "Proof of the Brave IV", "tradable": true, "group": "currency" },
+  "3000005": { "name": "Proof of the Brave V", "tradable": true, "group": "currency" },
   "5030": { "name": "Twin Reflection", "tradable": true, "group": "currency" },
   "5040": { "name": "Deep Space Resonance", "tradable": true, "group": "currency" },
   "300005": { "name": "Inheritance Axis", "tradable": true, "group": "currency" },
