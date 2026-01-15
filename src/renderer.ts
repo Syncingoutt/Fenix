@@ -269,6 +269,16 @@ function updateStats(items: InventoryItem[]) {
   renderBreakdown();
 }
 
+// === HELPER: Format Group Name ===
+function formatGroupName(group: string): string {
+  if (group === 'none') return 'Uncategorized';
+  // Replace underscores with spaces and capitalize each word
+  return group
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 // === RENDER BREAKDOWN ===
 function renderBreakdown() {
   const breakdownEl = document.getElementById('breakdown');
@@ -308,10 +318,11 @@ function renderBreakdown() {
 
   // Render in 3-column grid
   breakdownEl.innerHTML = groups.map(({ group, total }) => {
+    const formattedGroupName = formatGroupName(group);
     return `
-      <div class="breakdown-group">
-        <img src="../../assets/${group}.webp" alt="${group}" class="breakdown-icon" onerror="this.style.display='none'">
-        <span class="breakdown-group-value">${total.toFixed(0)} FE</span>
+      <div class="breakdown-group" title="${formattedGroupName}">
+        <img src="../../assets/${group}.webp" alt="${formattedGroupName}" class="breakdown-icon" title="${formattedGroupName}" onerror="this.style.display='none'">
+        <span class="breakdown-group-value" title="${formattedGroupName}">${total.toFixed(0)} FE</span>
       </div>
     `;
   }).join('');
