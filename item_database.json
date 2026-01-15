@@ -172,7 +172,6 @@
   "210002": { "name": "Corrupted Axis", "tradable": true, "group": "surge" },
   "210001": { "name": "Familiar Nexus", "tradable": true, "group": "surge" },
   "210003": { "name": "Glorious Axis", "tradable": true, "group": "surge" },
-  "380102": { "name": "Mutagenic Slurry", "tradable": true, "group": "surge" },
   "410101": { "name": "Edict: Dart", "tradable": true, "group": "surge" },
   "410102": { "name": "Edict: Dive", "tradable": true, "group": "surge" },
   "410103": { "name": "Edict: Ruin", "tradable": true, "group": "surge" },
@@ -263,5 +262,18 @@
   "12131": { "name": "Outlaw Deep Space Probe", "tradable": true, "group": "compass" },
 
   "338001": { "name": "Wandering Star", "tradable": true, "group": "arcana" },
-  "338002": { "name": "Star Net", "tradable": true, "group": "arcana" }
+  "338002": { "name": "Star Net", "tradable": true, "group": "arcana" },
+
+  "380102": { "name": "Mutagenic Slurry", "tradable": true, "group": "vorax" },
+  "10290": { "name": "Pig Iron Scalpel", "tradable": true, "group": "vorax" },
+  "10291": { "name": "Sterling Silver Scalpel", "tradable": true, "group": "vorax" },
+  "10292": { "name": "Titanium-Alloy Scalpel", "tradable": true, "group": "vorax" },
+  "380104": { "name": "Imprinting Iron", "tradable": true, "group": "vorax" },
+  "380105": { "name": "Sullied Suture", "tradable": true, "group": "vorax" },
+  "380106": { "name": "Tenacious Suture", "tradable": true, "group": "vorax" },
+  "380107": { "name": "Exquisite Suture", "tradable": true, "group": "vorax" },
+  "380108": { "name": "Core Organ", "tradable": true, "group": "vorax" },
+  "384000": { "name": "Crude Magnetic Pointer", "tradable": true, "group": "vorax" },
+  "384001": { "name": "Fine Magnetic Pointer", "tradable": true, "group": "vorax" },
+  "384002": { "name": "Perfect Magnetic Pointer", "tradable": true, "group": "vorax" }
 }
