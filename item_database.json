@@ -36,7 +36,6 @@
   "200030": { "name": "Ultimate Ember", "tradable": true, "group": "ember" },
   "201003": { "name": "Fine Ember - Bound", "tradable": false, "group": "ember" },
 
-  "5140": { "name": "Memory Scrap", "tradable": true, "group": "cube" },
   "5201": { "name": "Divinity Fragment", "tradable": true, "group": "cube" },
   "5210": { "name": "Divinity Stone", "tradable": true, "group": "cube" },
   "5220": { "name": "Transendence Wedge (Magic)", "tradable": true, "group": "cube" },
@@ -155,6 +154,7 @@
   "400032": { "name": "Voidlands Beacon (Timemark 7)", "tradable": true, "group": "beacon" },
   "400033": { "name": "Voidlands Beacon (Timemark 8)", "tradable": true, "group": "beacon" },
 
+  "5140": { "name": "Memory Scrap", "tradable": true, "group": "blacksail" },
   "5142": { "name": "Memory Thread - Magic", "tradable": true, "group": "blacksail" },
   "5143": { "name": "Memory Thread - Rare", "tradable": true, "group": "blacksail" },
   "5144": { "name": "Memory Thread - Epic", "tradable": true, "group": "blacksail" },

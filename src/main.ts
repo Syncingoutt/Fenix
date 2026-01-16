@@ -27,11 +27,6 @@ if (!gotTheLock) {
   });
 }
 
-app.whenReady().then(() => {
-  ensureLogSizeLimit(500);
-  setInterval(() => ensureLogSizeLimit(500), 60 * 60 * 1000);
-});
-
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let inventoryManager: InventoryManager;
@@ -331,6 +326,10 @@ app.whenReady().then(() => {
   
   // Initialize log parser with userData path
   initLogParser(app.getPath('userData'));
+  
+  // Now that log parser is initialized, we can safely check log size limits
+  ensureLogSizeLimit(500);
+  setInterval(() => ensureLogSizeLimit(500), 60 * 60 * 1000);
   
   itemDatabase = loadItemDatabase();
   console.log(`📦 Loaded ${Object.keys(itemDatabase).length} items`);
@@ -693,6 +692,19 @@ ipcMain.handle('test-keybind', (event, keybind: string) => {
 // Log file watcher
 function watchLogFile() {
   const currentSize = getLogSize();
+
+  // Detect log file truncation (when ensureLogSizeLimit runs)
+  if (currentSize < lastLogPosition) {
+    console.log(`⚠️ Log file truncated detected (was ${lastLogPosition}, now ${currentSize}). Resetting tracking position.`);
+    // Reset to start of truncated file - we'll rebuild inventory from the remaining content
+    lastLogPosition = 0;
+    // Rebuild inventory from the truncated file to ensure we have current state
+    const logEntries = readLogFile();
+    inventoryManager.buildInventory(logEntries);
+    if (mainWindow) {
+      mainWindow.webContents.send('inventory-updated');
+    }
+  }
 
   if (currentSize > lastLogPosition) {
     const newContent = readLogFromPosition(lastLogPosition, currentSize);

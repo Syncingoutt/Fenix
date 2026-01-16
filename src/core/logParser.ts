@@ -257,11 +257,16 @@ export function readLogFile(): ParsedLogEntry[] {
   if (lastResetItemsLayoutStart !== -1 && lastResetItemsLayoutEnd !== -1) {
     const entries: ParsedLogEntry[] = [];
     
-    // Look for InitBagData entries after the ResetItemsLayout end, within a reasonable window
-    // (we'll check up to 100 lines after the end, or until we hit another ResetItemsLayout start)
-    const searchEnd = Math.min(lastResetItemsLayoutEnd + 100, lines.length);
+    // Look for InitBagData entries after the ResetItemsLayout end
+    // Search until we hit another ResetItemsLayout start, or reach end of file
+    // Use a larger initial window (500 lines) to ensure we capture all InitBagData entries
+    // for pages 102 and 103, but continue searching if needed
+    const initialSearchEnd = Math.min(lastResetItemsLayoutEnd + 500, lines.length);
+    let foundInitBagData102 = false;
+    let foundInitBagData103 = false;
     
-    for (let i = lastResetItemsLayoutEnd; i < searchEnd; i++) {
+    // First pass: collect InitBagData entries within initial window
+    for (let i = lastResetItemsLayoutEnd; i < initialSearchEnd; i++) {
       const line = lines[i];
       
       // Stop if we hit another ResetItemsLayout start (new sort operation)
@@ -272,7 +277,76 @@ export function readLogFile(): ParsedLogEntry[] {
       // Parse InitBagData entries for PageId 102 and 103
       const parsed = parseInitBagDataLine(line);
       if (parsed) {
-        entries.push(parsed);
+        // Check if we already have this slot (avoid duplicates)
+        const existingIndex = entries.findIndex(e => 
+          e.pageId === parsed.pageId && 
+          e.slotId === parsed.slotId && 
+          e.slotId !== null && 
+          parsed.slotId !== null
+        );
+        
+        if (existingIndex >= 0) {
+          // Replace with newer entry (keep the latest)
+          entries[existingIndex] = parsed;
+        } else {
+          entries.push(parsed);
+        }
+        
+        if (parsed.pageId === 102) foundInitBagData102 = true;
+        if (parsed.pageId === 103) foundInitBagData103 = true;
+      }
+    }
+    
+    // If we didn't find InitBagData for both pages in initial window, continue searching
+    // This handles cases where there are many items or other log entries between InitBagData lines
+    if (!foundInitBagData102 || !foundInitBagData103) {
+      for (let i = initialSearchEnd; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Stop if we hit another ResetItemsLayout start (new sort operation)
+        if (line.includes('ItemChange@ ProtoName=ResetItemsLayout start')) {
+          break;
+        }
+        
+        // Parse InitBagData entries for PageId 102 and 103
+        const parsed = parseInitBagDataLine(line);
+        if (parsed) {
+          // Check if we already have this slot (avoid duplicates)
+          const existingIndex = entries.findIndex(e => 
+            e.pageId === parsed.pageId && 
+            e.slotId === parsed.slotId && 
+            e.slotId !== null && 
+            parsed.slotId !== null
+          );
+          
+          if (existingIndex >= 0) {
+            // Replace with newer entry (keep the latest)
+            entries[existingIndex] = parsed;
+          } else {
+            entries.push(parsed);
+          }
+          
+          if (parsed.pageId === 102) foundInitBagData102 = true;
+          if (parsed.pageId === 103) foundInitBagData103 = true;
+        }
+        
+        // Stop if we've found InitBagData for both pages and no more relevant entries likely
+        // Continue a bit more to catch any stragglers (check 50 more lines after finding both)
+        if (foundInitBagData102 && foundInitBagData103) {
+          let checkMore = false;
+          for (let j = i + 1; j < Math.min(i + 50, lines.length); j++) {
+            if (lines[j].includes('BagMgr@:InitBagData')) {
+              checkMore = true;
+              break;
+            }
+            if (lines[j].includes('ItemChange@ ProtoName=ResetItemsLayout start')) {
+              break;
+            }
+          }
+          if (!checkMore) {
+            break;
+          }
+        }
       }
     }
     
