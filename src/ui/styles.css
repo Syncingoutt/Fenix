@@ -1778,3 +1778,219 @@ img:not(.header-logo-pic) {
 .settings-checkbox-wrapper input[type="checkbox"]:checked ~ .settings-checkbox::after {
   transform: translateX(calc(20px * var(--scale)));
 }
+
+/* ============================================
+   COMPASS/BEACON PROMPT & SELECTION MODALS
+   ============================================ */
+
+.compass-beacon-prompt-modal,
+.compass-beacon-selection-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 1004;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.compass-beacon-prompt-modal.active,
+.compass-beacon-selection-modal.active {
+  display: flex;
+}
+
+.compass-beacon-prompt-content,
+.compass-beacon-selection-content {
+  background: var(--bg-shade);
+  border: calc(2px * var(--scale)) solid var(--primary);
+  border-radius: calc(16px * var(--scale));
+  padding: calc(40px * var(--scale));
+  max-width: calc(600px * var(--scale));
+  width: 90%;
+  animation: slideUp 0.4s ease-out;
+  position: relative;
+}
+
+.compass-beacon-prompt-header,
+.compass-beacon-selection-header {
+  text-align: center;
+  margin-bottom: calc(24px * var(--scale));
+  padding-bottom: calc(20px * var(--scale));
+  border-bottom: calc(2px * var(--scale)) solid var(--border);
+}
+
+.compass-beacon-prompt-title,
+.compass-beacon-selection-title {
+  font-size: calc(28px * var(--text-scale));
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: calc(8px * var(--scale));
+}
+
+.compass-beacon-selection-subtitle {
+  font-size: calc(14px * var(--text-scale));
+  color: var(--border);
+  font-weight: 500;
+  margin-top: calc(8px * var(--scale));
+}
+
+.compass-beacon-prompt-body,
+.compass-beacon-selection-body {
+  margin-bottom: calc(32px * var(--scale));
+}
+
+.compass-beacon-prompt-message {
+  font-size: calc(16px * var(--text-scale));
+  color: var(--text);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.compass-beacon-search-container {
+  margin-bottom: calc(20px * var(--scale));
+}
+
+.compass-beacon-search {
+  width: 100%;
+  padding: calc(12px * var(--scale)) calc(16px * var(--scale));
+  background: var(--bg);
+  border: calc(1px * var(--scale)) solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  font-family: "Manrope", sans-serif;
+  font-size: calc(14px * var(--text-scale));
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+
+.compass-beacon-search:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.compass-beacon-search::placeholder {
+  color: var(--border);
+}
+
+.compass-beacon-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--scale));
+  max-height: calc(400px * var(--scale));
+  overflow-y: auto;
+  padding-right: calc(8px * var(--scale));
+}
+
+.compass-beacon-checkboxes::-webkit-scrollbar {
+  width: calc(6px * var(--scale));
+}
+
+.compass-beacon-checkboxes::-webkit-scrollbar-track {
+  background: var(--bg);
+  border-radius: calc(3px * var(--scale));
+}
+
+.compass-beacon-checkboxes::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: calc(3px * var(--scale));
+}
+
+.compass-beacon-checkboxes::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+.compass-beacon-checkbox-item {
+  padding: calc(8px * var(--scale)) calc(12px * var(--scale));
+  border-radius: calc(6px * var(--scale));
+  transition: background 0.2s;
+}
+
+.compass-beacon-checkbox-item:hover {
+  background: rgba(126, 126, 126, 0.1);
+}
+
+.compass-beacon-checkbox-item label {
+  display: flex;
+  align-items: center;
+  gap: calc(12px * var(--scale));
+  cursor: pointer;
+  user-select: none;
+}
+
+.compass-beacon-checkbox-item input[type="checkbox"] {
+  width: calc(20px * var(--scale));
+  height: calc(20px * var(--scale));
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--scale));
+  flex: 1;
+  font-size: calc(14px * var(--text-scale));
+  color: var(--text);
+}
+
+.checkbox-icon {
+  width: calc(24px * var(--scale));
+  height: calc(24px * var(--scale));
+  object-fit: contain;
+}
+
+.checkbox-quantity {
+  color: var(--border);
+  font-size: calc(12px * var(--text-scale));
+  margin-left: auto;
+}
+
+.compass-beacon-prompt-actions,
+.compass-beacon-selection-actions {
+  display: flex;
+  gap: calc(12px * var(--scale));
+  justify-content: center;
+}
+
+.compass-beacon-btn {
+  padding: calc(12px * var(--scale)) calc(32px * var(--scale));
+  border: none;
+  border-radius: calc(8px * var(--scale));
+  font-family: "Manrope", sans-serif;
+  font-size: calc(16px * var(--text-scale));
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: calc(120px * var(--scale));
+}
+
+.compass-beacon-btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.compass-beacon-btn-primary:hover {
+  background: #c24f09;
+  transform: translateY(calc(-2px * var(--scale)));
+  box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(222, 92, 11, 0.3);
+}
+
+.compass-beacon-btn-primary:active {
+  transform: translateY(0);
+}
+
+.compass-beacon-btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.compass-beacon-btn-secondary:hover {
+  background: rgba(126, 126, 126, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+}

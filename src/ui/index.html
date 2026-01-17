@@ -249,6 +249,48 @@
       </div>
     </div>
 
+    <!-- Compass/Beacon Prompt Modal -->
+    <div class="compass-beacon-prompt-modal" id="compassBeaconPromptModal">
+      <div class="compass-beacon-prompt-content">
+        <div class="compass-beacon-prompt-header">
+          <div class="compass-beacon-prompt-title">Include Compasses & Beacons?</div>
+        </div>
+        <div class="compass-beacon-prompt-body">
+          <div class="compass-beacon-prompt-message">
+            Do you want to include compasses and beacons in your hourly tracking?
+            <br><br>
+            If yes, you'll be able to select which ones to include in the calculation.
+          </div>
+        </div>
+        <div class="compass-beacon-prompt-actions">
+          <button class="compass-beacon-btn compass-beacon-btn-secondary" id="compassBeaconPromptNo">No</button>
+          <button class="compass-beacon-btn compass-beacon-btn-primary" id="compassBeaconPromptYes">Yes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compass/Beacon Selection Modal -->
+    <div class="compass-beacon-selection-modal" id="compassBeaconSelectionModal">
+      <div class="compass-beacon-selection-content">
+        <div class="compass-beacon-selection-header">
+          <div class="compass-beacon-selection-title">Select Compasses & Beacons</div>
+          <div class="compass-beacon-selection-subtitle">Selected items will be included in the hourly calculation</div>
+        </div>
+        <div class="compass-beacon-selection-body">
+          <div class="compass-beacon-search-container">
+            <input type="text" id="compassBeaconSearch" class="compass-beacon-search" placeholder="Search compasses and beacons...">
+          </div>
+          <div class="compass-beacon-checkboxes" id="compassBeaconCheckboxes">
+            <!-- Will be populated by JavaScript -->
+          </div>
+        </div>
+        <div class="compass-beacon-selection-actions">
+          <button class="compass-beacon-btn compass-beacon-btn-secondary" id="compassBeaconSelectionCancel">Cancel</button>
+          <button class="compass-beacon-btn compass-beacon-btn-primary" id="compassBeaconSelectionConfirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Settings Modal -->
     <div class="settings-modal" id="settingsModal">
       <div class="settings-modal-content">

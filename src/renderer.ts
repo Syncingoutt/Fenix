@@ -71,6 +71,8 @@ let hourlyStartTime = 0;
 let hourlyElapsedSeconds = 0;
 let isHourlyActive = false;
 let hourlyPaused = false;
+// Items to include in hourly calculation (compasses/beacons selected by user)
+let includedItems: Set<string> = new Set(); // baseId -> included
 
 // Hourly buckets - store data for each completed hour
 interface HourlyBucket {
@@ -148,17 +150,27 @@ async function loadInventory() {
 // === GET ITEMS TO DISPLAY (based on mode) ===
 function getDisplayItems(): InventoryItem[] {
   if (wealthMode === 'hourly' && isHourlyActive) {
-    // In hourly mode, only show items gained since start
+    // In hourly mode, show items gained since start
+    // Included items (selected compasses/beacons) show with their full quantity
     return currentItems.map(item => {
       const currentQty = item.totalQuantity;
       const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
-      const gainedQty = currentQty - startQty;
       
+      // If item is included (selected compass/beacon), show full quantity
+      if (includedItems.has(item.baseId)) {
+        return {
+          ...item,
+          totalQuantity: currentQty
+        };
+      }
+      
+      // Normal items: show gained quantity
+      const gainedQty = currentQty - startQty;
       return {
         ...item,
         totalQuantity: gainedQty
       };
-    }).filter(item => item.totalQuantity > 0); // Only show items with gains
+    }).filter(item => item.totalQuantity > 0); // Only show items with quantity > 0
   }
   
   // In realtime mode or when hourly isn't active, show all items
@@ -390,12 +402,19 @@ function getHourlyWealthGain(): number {
     
     const currentQty = item.totalQuantity;
     const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
-    const gainedQty = currentQty - startQty;
     
-    if (gainedQty > 0) {
-      const itemValue = gainedQty * item.price;
-      // Apply tax to gained value
+    // If item is included (selected compass/beacon), include its full current value in calculation
+    if (includedItems.has(item.baseId)) {
+      const itemValue = currentQty * item.price;
       gainedValue += applyTax(itemValue, item.baseId);
+    } else {
+      // Normal items: only count gained quantity
+      const gainedQty = currentQty - startQty;
+      if (gainedQty > 0) {
+        const itemValue = gainedQty * item.price;
+        // Apply tax to gained value
+        gainedValue += applyTax(itemValue, item.baseId);
+      }
     }
   }
   
@@ -604,14 +623,31 @@ function updateHourlyWealth() {
   }
 }
 
-// === HOURLY: Start ===
+// === HOURLY: Start (with prompt) ===
 function startHourlyTracking() {
+  // Show prompt asking if user wants to include compasses/beacons
+  showCompassBeaconPrompt();
+}
+
+// === HOURLY: Actually start tracking ===
+function actuallyStartHourlyTracking() {
   console.log('🕐 Starting hourly tracking...');
 
   // Take snapshot of current inventory
+  // For compasses/beacons: by default they don't count (startQty = currentQty)
+  // If included (selected by user), they count normally (startQty = currentQty, can show gains/losses)
   hourlyStartSnapshot.clear();
   for (const item of currentItems) {
-    hourlyStartSnapshot.set(item.baseId, item.totalQuantity);
+    const itemData = itemDatabase[item.baseId];
+    const isCompassOrBeacon = itemData && (itemData.group === 'compass' || itemData.group === 'beacon');
+    
+    if (isCompassOrBeacon && !includedItems.has(item.baseId)) {
+      // Compasses/beacons not selected: set start quantity = current quantity so they don't count as gained
+      hourlyStartSnapshot.set(item.baseId, item.totalQuantity);
+    } else {
+      // Normal items or included compasses/beacons: snapshot their current quantity normally
+      hourlyStartSnapshot.set(item.baseId, item.totalQuantity);
+    }
   }
 
   hourlyStartTime = Date.now();
@@ -846,9 +882,123 @@ function closeBreakdownModal() {
   hourlyStartSnapshot.clear();
   hourlyHistory = [];
   currentHourStartValue = 0;
+  includedItems.clear();
   
   // Re-render to show all items again
   renderInventory();
+}
+
+// === COMPASS/BEACON SELECTION ===
+function showCompassBeaconPrompt() {
+  const modal = document.getElementById('compassBeaconPromptModal')!;
+  modal.classList.add('active');
+}
+
+function hideCompassBeaconPrompt() {
+  const modal = document.getElementById('compassBeaconPromptModal')!;
+  modal.classList.remove('active');
+}
+
+function showCompassBeaconSelection() {
+  const modal = document.getElementById('compassBeaconSelectionModal')!;
+  const container = document.getElementById('compassBeaconCheckboxes')!;
+  const searchInput = document.getElementById('compassBeaconSearch') as HTMLInputElement;
+  
+  // Clear previous selections
+  container.innerHTML = '';
+  includedItems.clear();
+  if (searchInput) {
+    searchInput.value = '';
+  }
+  
+  // Get all compasses and beacons from current inventory
+  const items: InventoryItem[] = [];
+  
+  for (const item of currentItems) {
+    const itemData = itemDatabase[item.baseId];
+    if (itemData) {
+      if (itemData.group === 'compass' || itemData.group === 'beacon') {
+        items.push(item);
+      }
+    }
+  }
+  
+  // Sort by name
+  items.sort((a, b) => a.itemName.localeCompare(b.itemName));
+  
+  // Store items for filtering
+  let allItems = items;
+  
+  // Function to render items based on search
+  function renderItems(filteredItems: InventoryItem[]) {
+    container.innerHTML = '';
+    
+    if (filteredItems.length === 0) {
+      container.innerHTML = '<div style="text-align: center; color: var(--border); padding: 20px;">No items found</div>';
+      return;
+    }
+    
+    filteredItems.forEach(item => {
+      const itemData = itemDatabase[item.baseId];
+      const checkbox = document.createElement('div');
+      checkbox.className = 'compass-beacon-checkbox-item';
+      checkbox.innerHTML = `
+        <label>
+          <input type="checkbox" data-baseid="${item.baseId}" data-type="${itemData?.group || ''}">
+          <span class="checkbox-label">
+            <img src="../../assets/${item.baseId}.webp" alt="${item.itemName}" class="checkbox-icon" onerror="this.style.display='none'">
+            <span>${item.itemName}</span>
+            <span class="checkbox-quantity">(${item.totalQuantity})</span>
+          </span>
+        </label>
+      `;
+      container.appendChild(checkbox);
+    });
+  }
+  
+  // Initial render
+  renderItems(allItems);
+  
+  // Add search functionality
+  if (searchInput) {
+    searchInput.oninput = (e) => {
+      const query = (e.target as HTMLInputElement).value.toLowerCase().trim();
+      if (query === '') {
+        renderItems(allItems);
+      } else {
+        const filtered = allItems.filter(item => 
+          item.itemName.toLowerCase().includes(query)
+        );
+        renderItems(filtered);
+      }
+    };
+  }
+  
+  // Show modal
+  modal.classList.add('active');
+}
+
+function hideCompassBeaconSelection() {
+  const modal = document.getElementById('compassBeaconSelectionModal')!;
+  modal.classList.remove('active');
+}
+
+function handleCompassBeaconSelectionConfirm() {
+  // Collect all checked items (these are the compasses/beacons to include in calculation)
+  includedItems.clear();
+  const checkboxes = document.querySelectorAll('#compassBeaconSelectionModal input[type="checkbox"]:checked');
+  checkboxes.forEach(checkbox => {
+    const baseId = (checkbox as HTMLInputElement).dataset.baseid;
+    if (baseId) {
+      includedItems.add(baseId);
+    }
+  });
+  
+  console.log(`✅ Including ${includedItems.size} compasses/beacons in hourly calculation`);
+  
+  // Hide selection modal and start tracking
+  hideCompassBeaconSelection();
+  actuallyStartHourlyTracking();
 }
 
 // === REALTIME: Timer (always running in main process) ===
@@ -944,6 +1094,41 @@ stopHourlyBtn.addEventListener('click', () => stopHourlyTracking(false));
 pauseHourlyBtn.addEventListener('click', pauseHourlyTracking);
 resumeHourlyBtn.addEventListener('click', resumeHourlyTracking);
 resetRealtimeBtn.addEventListener('click', resetRealtimeTracking);
+
+// Compass/Beacon prompt modal event listeners
+document.getElementById('compassBeaconPromptNo')?.addEventListener('click', () => {
+  includedItems.clear();
+  hideCompassBeaconPrompt();
+  actuallyStartHourlyTracking();
+});
+
+document.getElementById('compassBeaconPromptYes')?.addEventListener('click', () => {
+  hideCompassBeaconPrompt();
+  showCompassBeaconSelection();
+});
+
+// Compass/Beacon selection modal event listeners
+document.getElementById('compassBeaconSelectionCancel')?.addEventListener('click', () => {
+  includedItems.clear();
+  hideCompassBeaconSelection();
+});
+
+document.getElementById('compassBeaconSelectionConfirm')?.addEventListener('click', handleCompassBeaconSelectionConfirm);
+
+// Close modals when clicking outside
+document.getElementById('compassBeaconPromptModal')?.addEventListener('click', (e) => {
+  if (e.target === document.getElementById('compassBeaconPromptModal')) {
+    includedItems.clear();
+    hideCompassBeaconPrompt();
+  }
+});
+
+document.getElementById('compassBeaconSelectionModal')?.addEventListener('click', (e) => {
+  if (e.target === document.getElementById('compassBeaconSelectionModal')) {
+    includedItems.clear();
+    hideCompassBeaconSelection();
+  }
+});
 
 // Breakdown modal close button
 document.getElementById('closeBreakdown')?.addEventListener('click', closeBreakdownModal);
@@ -1262,7 +1447,7 @@ electronAPI.onWindowModeChanged((data) => {
 
 // Initialize title bar visibility on load
 electronAPI.getSettings().then(settings => {
-  updateTitleBarVisibility(settings.fullscreenMode !== false); // Default to true if undefined
+  updateTitleBarVisibility(settings.fullscreenMode === true); // Default to false if undefined
 });
 
 // Title bar button handlers
@@ -1308,7 +1493,7 @@ openSettingsBtn.addEventListener('click', async () => {
   // Load current settings
   currentSettings = await electronAPI.getSettings();
   pendingKeybind = currentSettings.keybind || 'CommandOrControl+`';
-  pendingFullscreenMode = currentSettings.fullscreenMode !== undefined ? currentSettings.fullscreenMode : true;
+  pendingFullscreenMode = currentSettings.fullscreenMode !== undefined ? currentSettings.fullscreenMode : false;
   pendingIncludeTax = currentSettings.includeTax !== undefined ? currentSettings.includeTax : false;
   includeTax = pendingIncludeTax;
   

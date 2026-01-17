@@ -35,7 +35,7 @@ let lastLogPosition = 0;
 let lastSendBaseId: string | null = null; // Track the most recent SEND message's baseId across log reads
 const WATCH_INTERVAL = 500;
 let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
-let fullscreenMode: boolean = true; // Default to fullscreen overlay mode
+let fullscreenMode: boolean = false; // Default to windowed mode
 
 // Timer state managed in main process (never throttled)
 interface TimerState {
