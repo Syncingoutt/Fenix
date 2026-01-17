@@ -691,6 +691,11 @@ ipcMain.handle('test-keybind', (event, keybind: string) => {
 
 // Log file watcher
 function watchLogFile() {
+  // Check log size limit frequently (every 500ms) to prevent file from growing too large
+  // The function will return early if size is OK, so this is efficient
+  ensureLogSizeLimit(500);
+
+  // Get current size after potential truncation
   const currentSize = getLogSize();
 
   // Detect log file truncation (when ensureLogSizeLimit runs)
