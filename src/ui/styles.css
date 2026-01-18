@@ -599,7 +599,7 @@ img:not(.header-logo-pic) {
 }
 
 .breakdown-content {
-  padding: calc(1.5rem * var(--scale));
+  padding: calc(1rem * var(--scale));
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: calc(12px * var(--scale));
@@ -611,6 +611,19 @@ img:not(.header-logo-pic) {
   display: flex;
   align-items: center;
   gap: calc(8px * var(--scale));
+  cursor: pointer;
+  padding: calc(4px * var(--scale)) calc(8px * var(--scale));
+  border-radius: calc(4px * var(--scale));
+  transition: background-color 0.15s;
+}
+
+.breakdown-group:hover {
+  background-color: var(--bg-shade);
+}
+
+.breakdown-group.selected {
+  background-color: var(--bg-shade);
+  outline: 1px solid var(--border);
 }
 
 .breakdown-icon {

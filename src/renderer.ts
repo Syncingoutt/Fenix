@@ -53,6 +53,7 @@ let itemDatabase: Record<string, { name: string; tradable?: boolean; group?: str
 let currentSortBy: 'priceUnit' | 'priceTotal' = 'priceTotal';
 let currentSortOrder: 'asc' | 'desc' = 'desc';
 let searchQuery: string = '';
+let selectedGroupFilter: string | null = null;
 
 // Tax preference
 let includeTax: boolean = false;
@@ -188,6 +189,15 @@ function getSortedAndFilteredItems(): InventoryItem[] {
     // Search filter
     if (searchQuery && !item.itemName.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
+    }
+    
+    // Group filter
+    if (selectedGroupFilter !== null) {
+      const itemData = itemDatabase[item.baseId];
+      const itemGroup = itemData?.group || 'none';
+      if (itemGroup !== selectedGroupFilter) {
+        return false;
+      }
     }
     
     // Price filter
@@ -331,13 +341,32 @@ function renderBreakdown() {
   // Render in 3-column grid
   breakdownEl.innerHTML = groups.map(({ group, total }) => {
     const formattedGroupName = formatGroupName(group);
+    const isSelected = selectedGroupFilter === group;
     return `
-      <div class="breakdown-group" title="${formattedGroupName}">
+      <div class="breakdown-group ${isSelected ? 'selected' : ''}" data-group="${group}" title="${formattedGroupName}">
         <img src="../../assets/${group}.webp" alt="${formattedGroupName}" class="breakdown-icon" title="${formattedGroupName}" onerror="this.style.display='none'">
         <span class="breakdown-group-value" title="${formattedGroupName}">${total.toFixed(0)} FE</span>
       </div>
     `;
   }).join('');
+  
+  // Add click handlers to breakdown groups
+  breakdownEl.querySelectorAll('.breakdown-group').forEach(groupEl => {
+    groupEl.addEventListener('click', () => {
+      const group = (groupEl as HTMLElement).dataset.group;
+      if (group) {
+        // Toggle filter: if already selected, clear it; otherwise, set it
+        if (selectedGroupFilter === group) {
+          selectedGroupFilter = null;
+        } else {
+          selectedGroupFilter = group;
+        }
+        // Re-render to update selected state and filtered items
+        renderBreakdown();
+        renderInventory();
+      }
+    });
+  });
 }
 
 // === SORT INDICATORS ===
