@@ -171,6 +171,18 @@
           </div>
         
           <div class="breakdown-section">
+            <div class="price-filter-container">
+              <div class="price-filter-section">
+                <div class="price-filter-row">
+                  <label class="price-filter-label" for="minPriceInput">Min:</label>
+                  <input type="number" id="minPriceInput" class="price-filter-input" placeholder="0" step="1" min="0">
+                </div>
+                <div class="price-filter-row">
+                  <label class="price-filter-label" for="maxPriceInput">Max:</label>
+                  <input type="number" id="maxPriceInput" class="price-filter-input" placeholder="∞" step="1" min="0">
+                </div>
+              </div>
+            </div>
             <div class="breakdown-container">
               <div class="breakdown-header">Breakdown (FE)</div>
               <div id="breakdown" class="breakdown-content"></div>

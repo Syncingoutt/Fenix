@@ -598,6 +598,57 @@ img:not(.header-logo-pic) {
   border-bottom: 1px solid var(--border);
 }
 
+.price-filter-container {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  max-width: calc(258px * var(--scale));
+  margin-top: calc(-41px * var(--scale));
+  border-radius: calc(8px * var(--scale));
+}
+
+.price-filter-section {
+  padding: calc(0.48rem * var(--scale)) calc(0.8rem * var(--scale));
+  background-color: var(--bg-shade);
+  display: flex;
+  flex-direction: row;
+  gap: calc(12px * var(--scale));
+}
+
+.price-filter-row {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--scale));
+}
+
+.price-filter-label {
+  font-size: calc(13px * var(--text-scale));
+  color: var(--text);
+  font-weight: 500;
+  min-width: calc(35px * var(--scale));
+  text-align: right;
+}
+
+.price-filter-input {
+  width: calc(60px * var(--scale));
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: calc(6px * var(--scale)) calc(8px * var(--scale));
+  font-size: calc(13px * var(--text-scale));
+  border-radius: calc(4px * var(--scale));
+  transition: border-color 0.15s;
+}
+
+.price-filter-input:focus {
+  outline: none;
+  border-color: #DE5C0B;
+}
+
+.price-filter-input::placeholder {
+  color: var(--border);
+}
+
 .breakdown-content {
   padding: calc(1rem * var(--scale));
   display: grid;
@@ -668,7 +719,7 @@ img:not(.header-logo-pic) {
 
 .search-container {
   position: relative;
-  margin-top: calc(18px * var(--scale));
+  margin-top: calc(30px * var(--scale));
   margin-bottom: calc(-4px * var(--scale));
   width: calc(1100px * var(--scale));
 }

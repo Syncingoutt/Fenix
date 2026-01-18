@@ -54,6 +54,8 @@ let currentSortBy: 'priceUnit' | 'priceTotal' = 'priceTotal';
 let currentSortOrder: 'asc' | 'desc' = 'desc';
 let searchQuery: string = '';
 let selectedGroupFilter: string | null = null;
+let minPriceFilter: number | null = null;
+let maxPriceFilter: number | null = null;
 
 // Tax preference
 let includeTax: boolean = false;
@@ -180,9 +182,6 @@ function getDisplayItems(): InventoryItem[] {
 
 // === FILTER & SORT ===
 function getSortedAndFilteredItems(): InventoryItem[] {
-  const minPriceInput = document.getElementById('minPrice') as HTMLInputElement | null;
-  const minPrice = parseFloat(minPriceInput?.value || '0') || 0;
-
   const itemsToDisplay = getDisplayItems();
 
   let filtered = itemsToDisplay.filter(item => {
@@ -200,11 +199,28 @@ function getSortedAndFilteredItems(): InventoryItem[] {
       }
     }
     
-    // Price filter
-    if (item.price === null) return minPrice === 0;
+    // Price filter (min/max based on total price)
+    if (item.price === null) {
+      // Items without price are excluded if min price is set
+      if (minPriceFilter !== null && minPriceFilter > 0) return false;
+      // Items without price pass max filter (they don't have a value to compare)
+      return true;
+    }
+    
     const totalValue = item.price * item.totalQuantity;
     const totalValueAfterTax = applyTax(totalValue, item.baseId);
-    return totalValueAfterTax >= minPrice;
+    
+    // Min price filter
+    if (minPriceFilter !== null && totalValueAfterTax < minPriceFilter) {
+      return false;
+    }
+    
+    // Max price filter
+    if (maxPriceFilter !== null && totalValueAfterTax > maxPriceFilter) {
+      return false;
+    }
+    
+    return true;
   });
 
   filtered.sort((a, b) => {
@@ -317,6 +333,9 @@ function renderBreakdown() {
     // Skip items with 0 or negative quantity (only show gains in hourly mode)
     if (item.totalQuantity <= 0) continue;
     
+    // Skip items that don't pass price filters
+    if (!passesPriceFilters(item)) continue;
+    
     const itemData = itemDatabase[item.baseId];
     if (!itemData || itemData.tradable === false) continue;
     
@@ -410,9 +429,39 @@ function applyTax(value: number, baseId: string | null = null): number {
   return taxedValue;
 }
 
+// === HELPER: Check if item passes price filters ===
+function passesPriceFilters(item: InventoryItem): boolean {
+  if (item.price === null) {
+    // Items without price are excluded if min price is set
+    if (minPriceFilter !== null && minPriceFilter > 0) return false;
+    // Items without price pass max filter
+    return true;
+  }
+  
+  const totalValue = item.price * item.totalQuantity;
+  const totalValueAfterTax = applyTax(totalValue, item.baseId);
+  
+  // Min price filter
+  if (minPriceFilter !== null && totalValueAfterTax < minPriceFilter) {
+    return false;
+  }
+  
+  // Max price filter
+  if (maxPriceFilter !== null && totalValueAfterTax > maxPriceFilter) {
+    return false;
+  }
+  
+  return true;
+}
+
 // === CURRENT TOTAL VALUE ===
 function getCurrentTotalValue(): number {
   return currentItems.reduce((sum, item) => {
+    // Skip items that don't pass price filters
+    if (!passesPriceFilters(item)) {
+      return sum;
+    }
+    
     if (item.price !== null) {
       const totalValue = item.totalQuantity * item.price;
       // Apply tax to total (but not to base price)
@@ -432,18 +481,41 @@ function getHourlyWealthGain(): number {
     const currentQty = item.totalQuantity;
     const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
     
-    // If item is included (selected compass/beacon), include its full current value in calculation
+    let itemValueToCheck: number;
+    
+    // If item is included (selected compass/beacon), check full current value against filters
     if (includedItems.has(item.baseId)) {
-      const itemValue = currentQty * item.price;
-      gainedValue += applyTax(itemValue, item.baseId);
-    } else {
-      // Normal items: only count gained quantity
-      const gainedQty = currentQty - startQty;
-      if (gainedQty > 0) {
-        const itemValue = gainedQty * item.price;
-        // Apply tax to gained value
-        gainedValue += applyTax(itemValue, item.baseId);
+      itemValueToCheck = currentQty * item.price;
+      const itemValueAfterTax = applyTax(itemValueToCheck, item.baseId);
+      
+      // Check if full value passes price filters
+      if (minPriceFilter !== null && itemValueAfterTax < minPriceFilter) {
+        continue;
       }
+      if (maxPriceFilter !== null && itemValueAfterTax > maxPriceFilter) {
+        continue;
+      }
+      
+      // Include full current value in calculation
+      gainedValue += itemValueAfterTax;
+    } else {
+      // Normal items: check gained value against filters
+      const gainedQty = currentQty - startQty;
+      if (gainedQty <= 0) continue; // No gain, skip
+      
+      itemValueToCheck = gainedQty * item.price;
+      const itemValueAfterTax = applyTax(itemValueToCheck, item.baseId);
+      
+      // Check if gained value passes price filters
+      if (minPriceFilter !== null && itemValueAfterTax < minPriceFilter) {
+        continue;
+      }
+      if (maxPriceFilter !== null && itemValueAfterTax > maxPriceFilter) {
+        continue;
+      }
+      
+      // Count gained value
+      gainedValue += itemValueAfterTax;
     }
   }
   
@@ -1167,7 +1239,37 @@ electronAPI.onInventoryUpdate(() => {
   loadInventory(); // Reload inventory data, but don't control timers
 });
 
-document.getElementById('minPrice')?.addEventListener('input', renderInventory);
+// Price filter functionality
+const minPriceInput = document.getElementById('minPriceInput') as HTMLInputElement;
+const maxPriceInput = document.getElementById('maxPriceInput') as HTMLInputElement;
+
+function updatePriceFilters() {
+  const minValue = minPriceInput?.value.trim();
+  const maxValue = maxPriceInput?.value.trim();
+  
+  minPriceFilter = minValue && minValue !== '' ? parseFloat(minValue) : null;
+  maxPriceFilter = maxValue && maxValue !== '' ? parseFloat(maxValue) : null;
+  
+  // Validate: min should be less than max if both are set
+  if (minPriceFilter !== null && maxPriceFilter !== null && minPriceFilter > maxPriceFilter) {
+    // Invalid range, don't update filters
+    return;
+  }
+  
+  // Update inventory display
+  renderInventory();
+  // Update wealth calculations (Total and Per hour)
+  if (wealthMode === 'realtime') {
+    updateRealtimeWealth();
+  } else if (wealthMode === 'hourly' && isHourlyActive) {
+    updateHourlyWealth();
+  }
+  // Update breakdown to reflect filtered items
+  renderBreakdown();
+}
+
+minPriceInput?.addEventListener('input', updatePriceFilters);
+maxPriceInput?.addEventListener('input', updatePriceFilters);
 
 document.querySelectorAll('[data-sort]').forEach(el => {
   el.addEventListener('click', () => {
