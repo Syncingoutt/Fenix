@@ -116,15 +116,17 @@ function createWindow() {
     }
   });
 
-  mainWindow.setMenu(null);
-  mainWindow.hide();
+  // mainWindow.setMenu(null);
   
   if (fullscreenMode) {
+    mainWindow.hide(); // Only hide in fullscreen mode
     mainWindow.setBounds({ x: x, y: y, width: width, height: height });
     mainWindow.setSkipTaskbar(true);
   } else {
+    // In windowed mode, show the window and add it to taskbar
     mainWindow.center();
     mainWindow.setSkipTaskbar(false);
+    // Don't hide - let it appear on taskbar
   }
   
   mainWindow.webContents.session.clearCache();
@@ -320,7 +322,7 @@ if (app.isPackaged) {
 }
 
 app.whenReady().then(() => {
-  Menu.setApplicationMenu(null);
+  // Menu.setApplicationMenu(null);
 
   console.log('🔥 Torchlight Tracker - Starting...');
   
@@ -428,7 +430,8 @@ function registerKeybind(keybind: string): boolean {
   globalShortcut.unregisterAll();
   
   const ret = globalShortcut.register(keybind, () => {
-    if (mainWindow) {
+    if (mainWindow && fullscreenMode) {
+      // Keybind only works in fullscreen mode
       if (mainWindow.isVisible()) {
         mainWindow.hide();
       } else {

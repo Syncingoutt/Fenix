@@ -74,8 +74,14 @@ let hourlyStartTime = 0;
 let hourlyElapsedSeconds = 0;
 let isHourlyActive = false;
 let hourlyPaused = false;
-// Items to include in hourly calculation (compasses/beacons selected by user)
-let includedItems: Set<string> = new Set(); // baseId -> included
+// Compasses/beacons to track usage for (selected by user)
+let includedItems: Set<string> = new Set(); // baseId -> track usage for this item
+// Track previous quantity of compasses/beacons to detect consumption
+let previousQuantities: Map<string, number> = new Map(); // baseId -> previous quantity
+// Track usage per hour for compasses/beacons (resets each hour)
+let hourlyUsage: Map<string, number> = new Map(); // baseId -> quantity used this hour
+// Track purchases per hour for compasses/beacons (resets each hour)
+let hourlyPurchases: Map<string, number> = new Map(); // baseId -> quantity purchased this hour
 
 // Hourly buckets - store data for each completed hour
 interface HourlyBucket {
@@ -145,6 +151,14 @@ async function loadInventory() {
     isRealtimeInitialized = true;
   }
   
+  // Track compass/beacon consumption if hourly mode is active
+  if (isHourlyActive && !hourlyPaused) {
+    trackCompassBeaconUsage();
+  }
+  
+  // Update previous quantities for tracking
+  updatePreviousQuantities();
+  
   renderInventory();
   updateStats(currentItems);
   renderBreakdown();
@@ -154,26 +168,28 @@ async function loadInventory() {
 function getDisplayItems(): InventoryItem[] {
   if (wealthMode === 'hourly' && isHourlyActive) {
     // In hourly mode, show items gained since start
-    // Included items (selected compasses/beacons) show with their full quantity
-    return currentItems.map(item => {
-      const currentQty = item.totalQuantity;
-      const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
-      
-      // If item is included (selected compass/beacon), show full quantity
-      if (includedItems.has(item.baseId)) {
+    // Exclude ONLY the compasses/beacons that the user selected (includedItems)
+    // Other compasses/beacons that weren't selected will still show in the item list
+    // Always show Flame Elementium (FE) even if gainedQty is 0 or negative
+    return currentItems
+      .filter(item => !includedItems.has(item.baseId)) // Exclude only selected compasses/beacons
+      .map(item => {
+        const currentQty = item.totalQuantity;
+        const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
+        
+        // Show gained quantity
+        const gainedQty = currentQty - startQty;
         return {
           ...item,
-          totalQuantity: currentQty
+          totalQuantity: gainedQty
         };
-      }
-      
-      // Normal items: show gained quantity
-      const gainedQty = currentQty - startQty;
-      return {
-        ...item,
-        totalQuantity: gainedQty
-      };
-    }).filter(item => item.totalQuantity > 0); // Only show items with quantity > 0
+      })
+      .filter(item => {
+        // Always show Flame Elementium (FE) even if gainedQty is 0 or negative
+        if (item.baseId === '100300') return true;
+        // For other items, only show if quantity > 0
+        return item.totalQuantity > 0;
+      });
   }
   
   // In realtime mode or when hourly isn't active, show all items
@@ -248,8 +264,123 @@ function getPageLabel(item: InventoryItem): string {
   return `${pagePrefix}:${slotNumber}`;
 }
 
+// === RENDER USAGE SECTION ===
+function renderUsageSection() {
+  const usageSection = document.getElementById('usageSection');
+  const usageContent = document.getElementById('usageContent');
+  
+  if (!usageSection || !usageContent) return;
+  
+    // Only show in hourly mode when active and items are being tracked
+    if (wealthMode === 'hourly' && isHourlyActive && includedItems.size > 0) {
+      usageSection.style.display = 'block';
+      
+      const usageItems: Array<{ baseId: string; itemName: string; netUsage: number; price: number }> = [];
+      
+      for (const baseId of includedItems) {
+        // Always get the latest item data and price from currentItems (prices can be updated during session)
+        const item = currentItems.find(i => i.baseId === baseId);
+        const currentQty = item ? item.totalQuantity : 0;
+        const startQty = hourlyStartSnapshot.get(baseId) || 0;
+        
+        // Calculate net usage for display: (startQty - currentQty)
+        // Positive means used, negative means bought
+        const netUsage = startQty - currentQty;
+        
+        if (!item) {
+          // If item not in inventory, try to get from database
+          const itemData = itemDatabase[baseId];
+          if (itemData) {
+            usageItems.push({
+              baseId,
+              itemName: itemData.name,
+              netUsage,
+              price: 0 // No price if not in inventory
+            });
+          }
+          continue;
+        }
+        
+        // Always include tracked items, even if netUsage is 0
+        // Use current price (may have been updated during session)
+        usageItems.push({
+          baseId,
+          itemName: item.itemName,
+          netUsage,
+          price: item.price || 0 // Always use current price, not cached
+        });
+      }
+      
+      if (usageItems.length === 0) {
+        usageSection.style.display = 'none';
+        return;
+      }
+    
+    // Sort by total cost (highest absolute value first)
+    // Selected compasses/beacons: use raw price without tax for sorting
+    usageItems.sort((a, b) => {
+      const totalA = a.price > 0 ? Math.abs(a.netUsage * a.price) : 0;
+      const totalB = b.price > 0 ? Math.abs(b.netUsage * b.price) : 0;
+      return totalB - totalA;
+    });
+    
+    let totalUsageCost = 0;
+    
+    usageContent.innerHTML = usageItems.map(({ baseId, itemName, netUsage, price }) => {
+      // Selected compasses/beacons: do NOT apply tax (use raw price)
+      const unitPrice = price > 0 ? price : 0;
+      const totalPrice = price > 0 ? Math.abs(netUsage) * price : 0;
+      
+      // Calculate contribution to total (negative if used more, positive if gained more)
+      if (netUsage > 0) {
+        // Used more: subtract from total
+        totalUsageCost -= totalPrice; // No tax
+      } else if (netUsage < 0) {
+        // Gained more: add to total
+        totalUsageCost += totalPrice; // No tax
+      }
+      
+      const quantityPrefix = netUsage > 0 ? '-' : netUsage < 0 ? '+' : '';
+      const quantityDisplay = netUsage !== 0 ? `${quantityPrefix}${Math.abs(netUsage)}` : '0';
+      const totalPrefix = netUsage > 0 ? '-' : netUsage < 0 ? '+' : '';
+      const totalDisplay = price > 0 && netUsage !== 0 ? `${totalPrefix}${totalPrice.toFixed(2)} FE` : '- FE';
+      
+      return `
+        <div class="item-row">
+          <div class="item-name">
+            <img src="../../assets/${baseId}.webp" 
+                 alt="${itemName}" 
+                 class="item-icon"
+                 onerror="this.style.display='none'">
+            <div class="item-name-content">
+              <div>${itemName}</div>
+            </div>
+          </div>
+          <div class="item-quantity">${quantityDisplay}</div>
+          <div class="item-price">
+            <div class="price-single ${price === 0 ? 'no-price' : ''}">
+              ${price > 0 ? unitPrice.toFixed(2) : 'Not Set'}
+            </div>
+            ${price > 0 && netUsage !== 0 ? `<div class="price-total">${totalDisplay}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('') + (usageItems.length > 0 && totalUsageCost !== 0 ? `
+      <div class="usage-footer">
+        <div class="usage-footer-label">Net Impact:</div>
+        <div class="usage-footer-total">${totalUsageCost > 0 ? '+' : ''}${totalUsageCost.toFixed(2)} FE</div>
+      </div>
+    ` : '');
+  } else {
+    usageSection.style.display = 'none';
+  }
+}
+
 // === RENDER INVENTORY ===
 function renderInventory() {
+  // Render usage section first
+  renderUsageSection();
+  
   const container = document.getElementById('inventory');
   if (!container) return;
 
@@ -307,6 +438,48 @@ function updateStats(items: InventoryItem[]) {
   renderBreakdown();
 }
 
+// === TRACK COMPASS/BEACON USAGE ===
+function trackCompassBeaconUsage() {
+  // Track usage and purchases separately for selected compasses/beacons
+  for (const baseId of includedItems) {
+    const currentItem = currentItems.find(item => item.baseId === baseId);
+    const currentQty = currentItem ? currentItem.totalQuantity : 0;
+    const previousQty = previousQuantities.get(baseId) ?? (hourlyStartSnapshot.get(baseId) ?? currentQty);
+    const startQty = hourlyStartSnapshot.get(baseId) ?? currentQty;
+    
+    // Track usage: quantity decreased (used)
+    if (currentQty < previousQty) {
+      const used = previousQty - currentQty;
+      const currentUsage = hourlyUsage.get(baseId) || 0;
+      hourlyUsage.set(baseId, currentUsage + used);
+      console.log(`📦 Tracked usage: ${currentItem?.itemName || baseId} used ${used} (total this hour: ${currentUsage + used})`);
+    }
+    
+    // Track purchases: quantity increased (bought)
+    if (currentQty > previousQty) {
+      const bought = currentQty - previousQty;
+      const currentPurchases = hourlyPurchases.get(baseId) || 0;
+      hourlyPurchases.set(baseId, currentPurchases + bought);
+      console.log(`💰 Tracked purchase: ${currentItem?.itemName || baseId} bought ${bought} (total this hour: ${currentPurchases + bought})`);
+    }
+    
+    // Calculate net usage for display: (startQty - currentQty)
+    // Negative means used more, positive means gained more
+    const netUsage = startQty - currentQty;
+  }
+}
+
+// === UPDATE PREVIOUS QUANTITIES ===
+function updatePreviousQuantities() {
+  // Update previous quantities for all tracked compasses/beacons
+  for (const baseId of includedItems) {
+    const currentItem = currentItems.find(item => item.baseId === baseId);
+    if (currentItem) {
+      previousQuantities.set(baseId, currentItem.totalQuantity);
+    }
+  }
+}
+
 // === HELPER: Format Group Name ===
 function formatGroupName(group: string): string {
   if (group === 'none') return 'Uncategorized';
@@ -350,6 +523,7 @@ function renderBreakdown() {
   // Convert to array and sort by total value (highest first)
   const groups = Array.from(groupTotals.entries())
     .map(([group, total]) => ({ group, total }))
+    .filter(({ total }) => total > 0) // Only show positive totals
     .sort((a, b) => b.total - a.total);
 
   if (groups.length === 0) {
@@ -475,35 +649,32 @@ function getCurrentTotalValue(): number {
 function getHourlyWealthGain(): number {
   let gainedValue = 0;
   
+  // Calculate gains from all items
+  // Exclude ONLY the compasses/beacons that the user selected (includedItems)
+  // Other compasses/beacons are treated like normal items
   for (const item of currentItems) {
     if (item.price === null) continue;
     
+    // Skip only the selected compasses/beacons (they're handled separately)
+    if (includedItems.has(item.baseId)) {
+      continue;
+    }
+    
     const currentQty = item.totalQuantity;
     const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
+    const gainedQty = currentQty - startQty;
     
-    let itemValueToCheck: number;
-    
-    // If item is included (selected compass/beacon), check full current value against filters
-    if (includedItems.has(item.baseId)) {
-      itemValueToCheck = currentQty * item.price;
-      const itemValueAfterTax = applyTax(itemValueToCheck, item.baseId);
-      
-      // Check if full value passes price filters
-      if (minPriceFilter !== null && itemValueAfterTax < minPriceFilter) {
-        continue;
-      }
-      if (maxPriceFilter !== null && itemValueAfterTax > maxPriceFilter) {
-        continue;
-      }
-      
-      // Include full current value in calculation
-      gainedValue += itemValueAfterTax;
+    // For Flame Elementium (FE), always count the change (can be negative)
+    // For other items, only count gains (positive changes)
+    if (item.baseId === '100300') {
+      // FE: count change (can be negative, e.g., 200 - 300 = -100)
+      const feChange = gainedQty * item.price; // price is 1 for FE
+      gainedValue += feChange; // Can be negative
     } else {
-      // Normal items: check gained value against filters
-      const gainedQty = currentQty - startQty;
+      // Other items: only count gains
       if (gainedQty <= 0) continue; // No gain, skip
       
-      itemValueToCheck = gainedQty * item.price;
+      const itemValueToCheck = gainedQty * item.price;
       const itemValueAfterTax = applyTax(itemValueToCheck, item.baseId);
       
       // Check if gained value passes price filters
@@ -519,7 +690,37 @@ function getHourlyWealthGain(): number {
     }
   }
   
-  return gainedValue;
+  // Handle tracked compasses/beacons: net usage affects wealth
+  // netUsage = startQty - currentQty
+  // netUsage > 0: used items → subtract cost (negative impact)
+  // netUsage < 0: bought items → add value (positive impact)
+  // Selected compasses/beacons: do NOT apply tax (use raw price)
+  
+  for (const baseId of includedItems) {
+    // Always get the latest price from currentItems (prices can be updated during session)
+    const item = currentItems.find(i => i.baseId === baseId);
+    if (!item || item.price === null) continue;
+    
+    const currentQty = item.totalQuantity;
+    const startQty = hourlyStartSnapshot.get(baseId) || 0;
+    const netUsage = startQty - currentQty; // Calculate net usage
+    
+    if (netUsage === 0) continue;
+    
+    // Use current price for calculations (may have been updated during session)
+    // Selected compasses/beacons: use raw price without tax
+    const value = Math.abs(netUsage) * item.price;
+    
+    if (netUsage > 0) {
+      // Used items: subtract cost (negative impact on FE)
+      gainedValue -= value;
+    } else {
+      // Bought items: add value (positive impact on FE)
+      gainedValue += value;
+    }
+  }
+  
+  return gainedValue; // Allow negative values
 }
 
 // === GRAPH: Init with Chart.js ===
@@ -717,7 +918,7 @@ function updateHourlyWealth() {
   const elapsedTimeHours = hourlyElapsedSeconds / 3600;
   const rate = elapsedTimeHours > 0 ? gainedValue / elapsedTimeHours : 0;
   
-  // Update hourly display
+  // Update hourly display (allow negative values)
   if (wealthMode === 'hourly') {
     wealthValueEl.textContent = gainedValue.toFixed(2);
     wealthHourlyEl.textContent = rate.toFixed(2);
@@ -735,19 +936,18 @@ function actuallyStartHourlyTracking() {
   console.log('🕐 Starting hourly tracking...');
 
   // Take snapshot of current inventory
-  // For compasses/beacons: by default they don't count (startQty = currentQty)
-  // If included (selected by user), they count normally (startQty = currentQty, can show gains/losses)
   hourlyStartSnapshot.clear();
+  previousQuantities.clear();
+  hourlyUsage.clear();
+  hourlyPurchases.clear();
+  
   for (const item of currentItems) {
-    const itemData = itemDatabase[item.baseId];
-    const isCompassOrBeacon = itemData && (itemData.group === 'compass' || itemData.group === 'beacon');
+    // Snapshot all items normally
+    hourlyStartSnapshot.set(item.baseId, item.totalQuantity);
     
-    if (isCompassOrBeacon && !includedItems.has(item.baseId)) {
-      // Compasses/beacons not selected: set start quantity = current quantity so they don't count as gained
-      hourlyStartSnapshot.set(item.baseId, item.totalQuantity);
-    } else {
-      // Normal items or included compasses/beacons: snapshot their current quantity normally
-      hourlyStartSnapshot.set(item.baseId, item.totalQuantity);
+    // For tracked compasses/beacons, initialize previous quantity
+    if (includedItems.has(item.baseId)) {
+      previousQuantities.set(item.baseId, item.totalQuantity);
     }
   }
 
@@ -800,6 +1000,16 @@ function captureHourlyBucket() {
   currentHourStartValue = currentValue;
   hourlyHistory = [{ time: Date.now(), value: currentValue }];
   
+  // Reset usage and purchase tracking for next hour and update previous quantities
+  hourlyUsage.clear();
+  hourlyPurchases.clear();
+  for (const baseId of includedItems) {
+    const currentItem = currentItems.find(item => item.baseId === baseId);
+    if (currentItem) {
+      previousQuantities.set(baseId, currentItem.totalQuantity);
+    }
+  }
+  
   // Show notification (positioned relative to stats container)
   const statsContainer = document.querySelector('.stats-container');
   if (statsContainer) {
@@ -818,6 +1028,9 @@ function pauseHourlyTracking() {
   hourlyPaused = true;
   electronAPI.pauseHourlyTimer();
   
+  // Update previous quantities before pausing to avoid false usage detection on resume
+  updatePreviousQuantities();
+  
   pauseHourlyBtn.style.display = 'none';
   resumeHourlyBtn.style.display = 'inline-block';
 }
@@ -827,7 +1040,10 @@ function resumeHourlyTracking() {
   console.log('▶️ Resuming hourly tracking');
   hourlyPaused = false;
   electronAPI.resumeHourlyTimer();
-
+  
+  // Update previous quantities on resume to start tracking from current state
+  updatePreviousQuantities();
+  
   pauseHourlyBtn.style.display = 'inline-block';
   resumeHourlyBtn.style.display = 'none';
 }
@@ -988,6 +1204,9 @@ function closeBreakdownModal() {
   hourlyHistory = [];
   currentHourStartValue = 0;
   includedItems.clear();
+  previousQuantities.clear();
+  hourlyUsage.clear();
+  hourlyPurchases.clear();
   
   // Re-render to show all items again
   renderInventory();
@@ -1017,16 +1236,39 @@ function showCompassBeaconSelection() {
     searchInput.value = '';
   }
   
-  // Get all compasses and beacons from current inventory
-  const items: InventoryItem[] = [];
+  // Get all compasses and beacons from database (not just inventory)
+  interface CompassBeaconItem {
+    baseId: string;
+    itemName: string;
+    group: string;
+    quantity: number;
+  }
   
-  for (const item of currentItems) {
-    const itemData = itemDatabase[item.baseId];
-    if (itemData) {
-      if (itemData.group === 'compass' || itemData.group === 'beacon') {
-        items.push(item);
-      }
+  const items: CompassBeaconItem[] = [];
+  
+  // Get all compasses and beacons from database
+  for (const [baseId, itemData] of Object.entries(itemDatabase)) {
+    if (itemData.group === 'compass' || itemData.group === 'beacon') {
+      const inventoryItem = currentItems.find(item => item.baseId === baseId);
+      items.push({
+        baseId,
+        itemName: itemData.name,
+        group: itemData.group,
+        quantity: inventoryItem ? inventoryItem.totalQuantity : 0
+      });
     }
+  }
+  
+  // Always include Netherrealm Resonance 5028 (automatically selected)
+  const netherrealmResonanceData = itemDatabase['5028'];
+  if (netherrealmResonanceData) {
+    const inventoryItem = currentItems.find(item => item.baseId === '5028');
+    items.push({
+      baseId: '5028',
+      itemName: netherrealmResonanceData.name,
+      group: netherrealmResonanceData.group || 'currency',
+      quantity: inventoryItem ? inventoryItem.totalQuantity : 0
+    });
   }
   
   // Sort by name
@@ -1036,7 +1278,7 @@ function showCompassBeaconSelection() {
   let allItems = items;
   
   // Function to render items based on search
-  function renderItems(filteredItems: InventoryItem[]) {
+  function renderItems(filteredItems: CompassBeaconItem[]) {
     container.innerHTML = '';
     
     if (filteredItems.length === 0) {
@@ -1045,16 +1287,17 @@ function showCompassBeaconSelection() {
     }
     
     filteredItems.forEach(item => {
-      const itemData = itemDatabase[item.baseId];
       const checkbox = document.createElement('div');
       checkbox.className = 'compass-beacon-checkbox-item';
+      // Netherrealm Resonance 5028 is automatically selected
+      const isChecked = item.baseId === '5028' ? 'checked' : '';
       checkbox.innerHTML = `
         <label>
-          <input type="checkbox" data-baseid="${item.baseId}" data-type="${itemData?.group || ''}">
+          <input type="checkbox" data-baseid="${item.baseId}" data-type="${item.group}" ${isChecked}>
           <span class="checkbox-label">
             <img src="../../assets/${item.baseId}.webp" alt="${item.itemName}" class="checkbox-icon" onerror="this.style.display='none'">
             <span>${item.itemName}</span>
-            <span class="checkbox-quantity">(${item.totalQuantity})</span>
+            ${item.quantity > 0 ? `<span class="checkbox-quantity">(${item.quantity})</span>` : ''}
           </span>
         </label>
       `;
@@ -1073,7 +1316,7 @@ function showCompassBeaconSelection() {
         renderItems(allItems);
       } else {
         const filtered = allItems.filter(item => 
-          item.itemName.toLowerCase().includes(query)
+          item.itemName.toLowerCase().includes(query.toLowerCase())
         );
         renderItems(filtered);
       }
@@ -1099,6 +1342,9 @@ function handleCompassBeaconSelectionConfirm() {
       includedItems.add(baseId);
     }
   });
+  
+  // Always include Netherrealm Resonance 5028 (automatically selected)
+  includedItems.add('5028');
   
   console.log(`✅ Including ${includedItems.size} compasses/beacons in hourly calculation`);
   

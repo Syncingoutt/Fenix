@@ -112,10 +112,10 @@ body::-webkit-scrollbar {
 }
 
 img:not(.header-logo-pic) {
-  width: calc(32px * var(--scale));
-  height: calc(32px * var(--scale));
-  min-width: 28px;
-  min-height: 28px;
+  width: calc(38px * var(--scale));
+  height: calc(38px * var(--scale));
+  min-width: 38px;
+  min-height: 38px;
   max-width: none;
   max-height: none;
 }
@@ -128,9 +128,9 @@ img:not(.header-logo-pic) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: calc(15px * var(--scale)) calc(40px * var(--scale));
+  padding: calc(15px * var(--scale)) calc(40px * var(--scale)) calc(15px * var(--scale)) calc(1.25rem * var(--scale));
   background: var(--bg);
-  margin-bottom: calc(15px * var(--scale));
+  margin-bottom: calc(0.7rem * var(--scale));
 }
 
 .header-logo {
@@ -445,6 +445,53 @@ img:not(.header-logo-pic) {
 }
 
 /* ============================================
+   USAGE SECTION
+   ============================================ */
+
+.usage-container {
+  max-width: calc(1100px * var(--scale));
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  margin-top: calc(1rem * var(--scale));
+  margin-bottom: calc(0.5rem * var(--scale));
+}
+
+.usage-header {
+  padding: calc(0.75rem * var(--scale)) calc(1rem * var(--scale));
+  background-color: var(--bg-shade);
+  border-bottom: 1px solid var(--border);
+  font-size: calc(14px * var(--text-scale));
+  font-weight: 600;
+  color: var(--text);
+}
+
+.usage-content {
+  padding: 0;
+}
+
+.usage-footer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: calc(1rem * var(--scale));
+  padding: calc(0.75rem * var(--scale));
+  margin-top: calc(0.5rem * var(--scale));
+  border-top: 1px solid var(--border);
+  background-color: var(--bg-shade);
+  font-size: calc(14px * var(--text-scale));
+  font-weight: 600;
+}
+
+.usage-footer-label {
+  color: var(--text);
+}
+
+.usage-footer-total {
+  text-align: right;
+  color: var(--text);
+  min-width: calc(100px * var(--scale));
+}
+
+/* ============================================
    INVENTORY CONTAINER
    ============================================ */
 
@@ -470,7 +517,7 @@ img:not(.header-logo-pic) {
   display: grid;
   grid-template-columns: 1fr calc(120px * var(--scale)) calc(120px * var(--scale)) calc(120px * var(--scale));
   gap: calc(2rem * var(--scale));
-  padding: calc(1rem * var(--scale)) calc(2rem * var(--scale));
+  padding: calc(1rem * var(--scale)) calc(2rem * var(--scale)) calc(1rem * var(--scale)) calc(1.25rem * var(--scale));
   border-bottom: 1px solid var(--bg-shade);
   color: var(--text);
   align-items: center;
@@ -584,7 +631,7 @@ img:not(.header-logo-pic) {
   border: 1px solid var(--border);
   overflow: hidden;
   max-width: calc(258px * var(--scale));
-  margin-top: calc(1rem * var(--scale));
+  margin-top: calc(0.7rem * var(--scale));
 }
 
 .breakdown-header {
@@ -689,6 +736,14 @@ img:not(.header-logo-pic) {
   font-size: calc(14px * var(--text-scale));
   font-weight: 400;
   color: var(--text);
+}
+
+.breakdown-group.negative .breakdown-group-value {
+  color: #ef4444;
+}
+
+.breakdown-group.negative:hover {
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .breakdown-empty {

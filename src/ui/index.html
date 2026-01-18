@@ -153,6 +153,13 @@
         
         <div class="inventory-breakdown-wrapper">
           <div class="inventory-section">
+            <!-- Usage Section (only shown in hourly mode when items are being tracked) -->
+            <div id="usageSection" style="display: none;">
+              <div class="usage-container">
+                <div class="usage-header">Compasses & Beacons Used</div>
+                <div id="usageContent" class="usage-content"></div>
+              </div>
+            </div>
             <div class="inventory-container">
               <div class="item-row header-row">
                 <div class="item-name">Name</div>
