@@ -1674,6 +1674,7 @@ const updateModal = document.getElementById('updateModal')!;
 const updateModalTitle = document.getElementById('updateModalTitle')!;
 const updateModalSubtitle = document.getElementById('updateModalSubtitle')!;
 const updateModalMessage = document.getElementById('updateModalMessage')!;
+const updateModalChangelog = document.getElementById('updateModalChangelog')!;
 const updateProgressContainer = document.getElementById('updateProgressContainer')!;
 const updateProgressFill = document.getElementById('updateProgressFill')!;
 const updateProgressText = document.getElementById('updateProgressText')!;
@@ -1691,6 +1692,7 @@ function showUpdateModal(type: 'available' | 'downloaded', version: string, curr
     updateModalTitle.textContent = 'Update Available';
     updateModalSubtitle.textContent = `Version ${version}`;
     updateModalMessage.textContent = `A new version (${version}) is available!\n\nCurrent version: ${currentVersion || 'Unknown'}\n\nWould you like to download and install it now?`;
+    updateModalChangelog.style.display = 'block';
     updateBtnPrimary.textContent = 'Download Now';
     updateBtnSecondary.textContent = 'Later';
     updateProgressContainer.style.display = 'none';
@@ -1702,6 +1704,7 @@ function showUpdateModal(type: 'available' | 'downloaded', version: string, curr
     updateModalTitle.textContent = 'Update Downloaded';
     updateModalSubtitle.textContent = `Version ${version}`;
     updateModalMessage.textContent = 'Update downloaded successfully!\n\nThe update will be installed when you restart the application.';
+    updateModalChangelog.style.display = 'none';
     updateBtnPrimary.textContent = 'Restart Now';
     updateBtnSecondary.textContent = 'Later';
     updateProgressContainer.style.display = 'none';
@@ -1725,6 +1728,7 @@ function showDownloadProgress() {
   updateModalTitle.textContent = 'Downloading Update';
   updateModalSubtitle.textContent = `Version ${currentUpdateVersion}`;
   updateModalMessage.textContent = 'Please wait while the update is being downloaded...';
+  updateModalChangelog.style.display = 'none';
   updateBtnPrimary.style.display = 'none';
   updateBtnSecondary.style.display = 'none';
 }
@@ -1741,6 +1745,7 @@ function transitionToInstallPrompt(version: string) {
   updateModalTitle.textContent = 'Update Downloaded';
   updateModalSubtitle.textContent = `Version ${version}`;
   updateModalMessage.textContent = 'Update downloaded successfully!\n\nThe update will be installed when you restart the application.';
+  updateModalChangelog.style.display = 'none';
   updateBtnPrimary.textContent = 'Restart Now';
   updateBtnSecondary.textContent = 'Later';
   updateBtnPrimary.style.display = 'block';

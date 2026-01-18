@@ -1232,6 +1232,24 @@ img:not(.header-logo-pic) {
   margin-bottom: calc(20px * var(--scale));
 }
 
+.update-modal-changelog {
+  font-size: calc(14px * var(--text-scale));
+  color: var(--border);
+  text-align: center;
+  margin-bottom: calc(20px * var(--scale));
+}
+
+.update-modal-changelog a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.update-modal-changelog a:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
 .update-progress-container {
   margin-top: calc(24px * var(--scale));
 }
