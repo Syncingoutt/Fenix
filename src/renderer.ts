@@ -867,6 +867,10 @@ function stopHourlyTracking(auto = false) {
   // Reset state flags
   isHourlyActive = false;
   hourlyPaused = false;
+  
+  // Update UI to show all items (not just gained items) after stopping hourly mode
+  renderInventory();
+  renderBreakdown();
 }
 
 // === BREAKDOWN MODAL ===
@@ -987,6 +991,7 @@ function closeBreakdownModal() {
   
   // Re-render to show all items again
   renderInventory();
+  renderBreakdown();
 }
 
 // === COMPASS/BEACON SELECTION ===
