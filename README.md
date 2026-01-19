@@ -1,4 +1,4 @@
-<h1>Fenix - FE per hour tracker</h1>
+<h1>Fenix - Flame Elementium Tracking Tool</h1>
 
 <p>Torchlight Infinite tracking app for real-time FE per hour and inventory updates.</p>
 
