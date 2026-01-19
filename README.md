@@ -1,6 +1,6 @@
 <h1>Fenix - Flame Elementium Tracking Tool</h1>
 
-<p>Torchlight Infinite tracking app for real-time FE per hour and inventory updates.</p>
+<p>Fenix is a desktop tool for Torchlight Infinite, allowing you to track Flame Elementium (FE) earnings. See real-time inventory value, run hourly sessions, track beacon and compass usage, and more...</p>
 
 <p>This project is not affiliated with or endorsed by XD (XD inc.) in any way.</p>
 
