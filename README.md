@@ -9,6 +9,8 @@
 <i>Disclaimer: Portions of this repository were created or refined using AI-assisted development tools. Cursor was used extensively for script writing. UI/UX design was made by me without the use of AI.</i>
 
 <h2>Setting it up</h2>
+<b><p>Torchlight has to always be launched first -> enable log before the app, otherwise it will not work.</p></b>
+
 1. Open Torchlight, go to the "Other" section, and click "Enable Log".
 <br><br>
 <img width="1000" height="800" alt="Torchlight settings menu with 'enable log' button highlighted" src="https://github.com/user-attachments/assets/7a75b5b8-90b2-4db1-9584-199047a8f80b" />
