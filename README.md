@@ -44,7 +44,7 @@ See the amount of FE you have earned. There is a button to reset it, but it alwa
     <img width="500" height="400" alt="Hourly sessions popup showing multiple tracked hours listed separately" src="https://github.com/user-attachments/assets/56b72405-b06e-4e4e-8a11-590d6813f143" />
 <h4>Track used compasses/beacons</h4>
   <p>Track how many beacons, compasses, or resonances you have used to ensure that profits include spending.</p>
-  <img width="341" height="420" alt="Hourly mode interface for selecting compasses, beacons to track as used" src="https://github.com/user-attachments/assets/852d78e2-a6ee-4179-9651-ff9bc00c3b61" />
+  <img width="306" height="375" alt="Hourly mode interface for selecting compasses, beacons to track as used" src="https://github.com/user-attachments/assets/3bdea5bc-5932-4ec1-af48-85d2aabfbb67" />
 <br>
   <img width="710" height="266" alt="Hourly calculation showing used compasses and beacons subtracting from total value" src="https://github.com/user-attachments/assets/e55c9369-6d51-4fa0-bb8e-21ccb8cba89f" />
   <p>Keep in mind that this is not a way to check how many beacons/compasses/resonances you use, but instead to see how much to subtract from the total value, meaning that if you select Voidlands and use 5 of those compasses, it will be -5, but then drop 2 it will be -3</p>
