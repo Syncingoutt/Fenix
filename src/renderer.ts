@@ -772,7 +772,12 @@ function initGraph() {
             drawBorder: false
           },
           ticks: {
-            color: '#FAFAFA'
+            color: '#FAFAFA',
+            callback: function(value: any) {
+              const num = value as number;
+              // Only show decimal if non-zero
+              return num % 1 === 0 ? num.toFixed(0) : num.toFixed(1);
+            }
           }
         }
       },
@@ -786,7 +791,45 @@ function initGraph() {
           titleColor: '#FAFAFA',
           bodyColor: '#FAFAFA',
           borderColor: '#7E7E7E',
-          borderWidth: 1
+          borderWidth: 1,
+          displayColors: false,
+          boxWidth: 0,
+          boxHeight: 0,
+          callbacks: {
+            title: (items: any[]) => {
+              if (items.length === 0 || !chart) return '';
+              const item = items[0];
+              const value = item.parsed.y;
+              // Format value - only show decimal if non-zero
+              const formatted = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+              return `Wealth: ${formatted} FE`;
+            },
+            label: (context: any) => {
+              if (!chart) return '';
+              const dataIndex = context.dataIndex;
+              
+              // Get current history from chart (updated dynamically)
+              const currentHistory = (chart as any).currentHistory || 
+                (wealthMode === 'realtime' ? realtimeHistory : hourlyHistory);
+              
+              if (dataIndex >= 0 && dataIndex < currentHistory.length) {
+                const point = currentHistory[dataIndex];
+                const date = new Date(point.time);
+                
+                // Round to nearest minute (60 seconds) for smoother timestamp updates
+                const roundedSeconds = Math.floor(date.getSeconds() / 60) * 60;
+                const roundedDate = new Date(date);
+                roundedDate.setSeconds(roundedSeconds);
+                roundedDate.setMilliseconds(0);
+                
+                const hours = roundedDate.getHours().toString().padStart(2, '0');
+                const minutes = roundedDate.getMinutes().toString().padStart(2, '0');
+                return `${hours}:${minutes}`;
+              }
+              return '';
+            },
+            footer: () => '' // Remove default footer
+          }
         }
       },
       interaction: {
@@ -799,7 +842,24 @@ function initGraph() {
   updateGraph();
 }
 
-// === GRAPH: Push Point ===
+// === GRAPH: Push Point (for Total/Realtime - always tracks) ===
+function pushRealtimePoint(value: number) {
+  const now = Date.now();
+  const point = { time: now, value: Math.round(value) };
+  
+  // Always push to realtime history (Total tracking never stops)
+  realtimeHistory.push(point);
+  if (realtimeHistory.length > MAX_POINTS) {
+    realtimeHistory.shift();
+  }
+  
+  // Only update graph if we're in realtime mode
+  if (wealthMode === 'realtime') {
+    updateGraph();
+  }
+}
+
+// === GRAPH: Push Point (legacy - for mode-based tracking) ===
 function pushPoint(value: number) {
   const now = Date.now();
   const point = { time: now, value: Math.round(value) };
@@ -864,6 +924,10 @@ function updateGraph() {
   chart.data.datasets[0].data = data;
   chart.options.scales.x.ticks.maxTicksLimit = Math.min(12, Math.ceil(sessionDurationHours));
   
+  // Store history reference in chart for tooltip callbacks
+  (chart as any).currentHistory = currentHistory;
+  (chart as any).currentMode = wealthMode;
+  
   chart.update('none');
 }
 
@@ -904,11 +968,13 @@ function updateRealtimeWealth() {
   const elapsedTimeHours = realtimeElapsedSeconds / 3600;
   const rate = elapsedTimeHours > 0 ? (currentValue - realtimeStartValue) / elapsedTimeHours : 0;
   
-  // Update realtime display
+  // Always track Total (realtime) regardless of current mode
+  pushRealtimePoint(currentValue);
+  
+  // Update realtime display only when in realtime mode
   if (wealthMode === 'realtime') {
     wealthValueEl.textContent = currentValue.toFixed(2);
     wealthHourlyEl.textContent = rate.toFixed(2);
-    pushPoint(currentValue);
   }
 }
 
@@ -1143,19 +1209,26 @@ function renderHourGraph(bucket: HourlyBucket, index: number) {
     return '';
   });
   
-  // Map the actual data across the full 60-minute span
-  const dataPoints = Array.from({ length: 61 }, (_, i) => {
+  // Map the actual data across the full 60-minute span with timestamps
+  const dataPoints: { x: number; y: number; time: number }[] = Array.from({ length: 61 }, (_, i) => {
     const dataIndex = Math.floor((i / 60) * (sampledHistory.length - 1));
     const point = sampledHistory[dataIndex];
-    return point ? point.value - bucket.startValue : 0;
+    return {
+      x: i,
+      y: point ? point.value - bucket.startValue : 0,
+      time: point ? point.time : 0
+    };
   });
+  
+  // Calculate start time for this hour (approximate based on bucket)
+  const hourStartTime = bucket.history.length > 0 ? bucket.history[0].time : Date.now();
   
   new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [{
-        data: dataPoints,
+        data: dataPoints.map(p => p.y),
         borderColor: '#DE5C0B',
         backgroundColor: 'rgba(222, 92, 11, 0.1)',
         borderWidth: 2,
@@ -1177,12 +1250,71 @@ function renderHourGraph(bucket: HourlyBucket, index: number) {
         y: { 
           display: true,
           grid: { color: '#7E7E7E', drawBorder: false },
-          ticks: { color: '#FAFAFA', maxTicksLimit: 5 }
+          ticks: { 
+            color: '#FAFAFA', 
+            maxTicksLimit: 5,
+            callback: function(value: any) {
+              const num = value as number;
+              // Only show decimal if non-zero
+              return num % 1 === 0 ? num.toFixed(0) : num.toFixed(1);
+            }
+          }
         }
       },
       plugins: {
         legend: { display: false },
-        tooltip: { enabled: false }
+        tooltip: {
+          enabled: true,
+          backgroundColor: '#272727',
+          titleColor: '#FAFAFA',
+          bodyColor: '#FAFAFA',
+          borderColor: '#7E7E7E',
+          borderWidth: 1,
+          displayColors: false,
+          boxWidth: 0,
+          boxHeight: 0,
+          callbacks: {
+            title: (items: any[]) => {
+              if (items.length === 0) return '';
+              const item = items[0];
+              const value = item.parsed.y;
+              // Format value - only show decimal if non-zero
+              const formatted = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+              return `${formatted} FE`;
+            },
+            label: (context: any) => {
+              const dataIndex = context.dataIndex;
+              
+              if (dataIndex >= 0 && dataIndex < dataPoints.length) {
+                const point = dataPoints[dataIndex];
+                let date: Date;
+                
+                if (point.time > 0) {
+                  date = new Date(point.time);
+                } else {
+                  // Fallback: calculate time from hour start + minutes
+                  date = new Date(hourStartTime + dataIndex * 60000);
+                }
+                
+                // Round to nearest minute (60 seconds) for smoother timestamp updates
+                const roundedSeconds = Math.floor(date.getSeconds() / 60) * 60;
+                const roundedDate = new Date(date);
+                roundedDate.setSeconds(roundedSeconds);
+                roundedDate.setMilliseconds(0);
+                
+                const hours = roundedDate.getHours().toString().padStart(2, '0');
+                const minutes = roundedDate.getMinutes().toString().padStart(2, '0');
+                return `${hours}:${minutes}`;
+              }
+              return '';
+            },
+            footer: () => '' // Remove default footer
+          }
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index'
       }
     }
   });
@@ -1228,12 +1360,21 @@ function showCompassBeaconSelection() {
   const modal = document.getElementById('compassBeaconSelectionModal')!;
   const container = document.getElementById('compassBeaconCheckboxes')!;
   const searchInput = document.getElementById('compassBeaconSearch') as HTMLInputElement;
+  const helperActions = document.getElementById('compassBeaconHelperActions')!;
   
   // Clear previous selections
   container.innerHTML = '';
   includedItems.clear();
   if (searchInput) {
     searchInput.value = '';
+  }
+  
+  // Check for last selection and show restore option
+  const lastSelectionJson = localStorage.getItem('lastCompassBeaconSelection');
+  if (lastSelectionJson) {
+    helperActions.style.display = 'block';
+  } else {
+    helperActions.style.display = 'none';
   }
   
   // Get all compasses and beacons from database (not just inventory)
@@ -1244,94 +1385,314 @@ function showCompassBeaconSelection() {
     quantity: number;
   }
   
-  const items: CompassBeaconItem[] = [];
+  interface ItemGroup {
+    key: string;
+    title: string;
+    items: CompassBeaconItem[];
+    categorizer: (itemName: string, itemGroup: string, baseId: string) => boolean;
+  }
   
-  // Get all compasses and beacons from database
+  // Centralized categorization logic
+  type CategorizerFunction = (itemName: string, itemGroup: string, baseId: string) => boolean;
+  
+  const categorizers: Record<string, CategorizerFunction> = {
+    resonance: (name, group, baseId) => 
+      baseId === '5028' || baseId === '5040', // Netherrealm Resonance or Deep Space Resonance
+    
+    beaconsT8: (name, group, baseId) => 
+      group === 'beacon' && (name.includes('(Timemark 8)') || name === 'Deep Space Beacon'),
+    
+    beaconsT7: (name, group, baseId) => 
+      group === 'beacon' && (name.includes('(Timemark 7)') || (!name.includes('(Timemark 8)') && name !== 'Deep Space Beacon')),
+    
+    probes: (name, group, baseId) => 
+      group === 'compass' && name.includes('Probe'),
+    
+    scalpels: (name, group, baseId) => 
+      group === 'compass' && name.includes('Scalpel'),
+    
+    compasses: (name, group, baseId) => 
+      group === 'compass' && !name.includes('Probe') && !name.includes('Scalpel')
+  };
+  
+  // Define groups with metadata - easy to add new groups here
+  const groupDefinitions: Omit<ItemGroup, 'items'>[] = [
+    { key: 'resonance', title: 'Resonance', categorizer: categorizers.resonance },
+    { key: 'beaconsT8', title: 'T8 Beacons', categorizer: categorizers.beaconsT8 },
+    { key: 'beaconsT7', title: 'T7 Beacons', categorizer: categorizers.beaconsT7 },
+    { key: 'probes', title: 'Probes', categorizer: categorizers.probes },
+    { key: 'scalpels', title: 'Scalpels', categorizer: categorizers.scalpels },
+    { key: 'compasses', title: 'Compasses/Astrolabes', categorizer: categorizers.compasses }
+  ];
+  
+  // Initialize groups
+  const itemGroups: ItemGroup[] = groupDefinitions.map(def => ({
+    ...def,
+    items: []
+  }));
+  
+  // Collect and categorize items
   for (const [baseId, itemData] of Object.entries(itemDatabase)) {
-    if (itemData.group === 'compass' || itemData.group === 'beacon') {
+    // Include compass, beacon, and currency (for resonance items)
+    if (itemData.group === 'compass' || itemData.group === 'beacon' || itemData.group === 'currency') {
       const inventoryItem = currentItems.find(item => item.baseId === baseId);
-      items.push({
+      const item: CompassBeaconItem = {
         baseId,
         itemName: itemData.name,
         group: itemData.group,
         quantity: inventoryItem ? inventoryItem.totalQuantity : 0
-      });
+      };
+      
+      // Find matching group using categorizer (now includes baseId)
+      for (const itemGroup of itemGroups) {
+        if (itemGroup.categorizer(itemData.name, itemData.group, baseId)) {
+          itemGroup.items.push(item);
+          break; // Item can only belong to one group
+        }
+      }
     }
   }
   
+  // Helper: Sort items in a group by name
+  const sortGroupItems = (group: ItemGroup): void => {
+    group.items.sort((a, b) => a.itemName.localeCompare(b.itemName));
+  };
+  
+  // Helper: Filter items in a group by search query
+  const filterGroupItems = (group: ItemGroup, query: string): ItemGroup => {
+    const lowerQuery = query.toLowerCase();
+    return {
+      ...group,
+      items: group.items.filter(item => 
+        item.itemName.toLowerCase().includes(lowerQuery)
+      )
+    };
+  };
+  
+  // Sort all groups
+  itemGroups.forEach(sortGroupItems);
+  
+  // Store original groups for filtering
+  const allItemGroups = itemGroups;
+  
+  // Persistent checked items state - survives filtering/searching
+  const checkedItemsSet = new Set<string>();
+  
   // Always include Netherrealm Resonance 5028 (automatically selected)
-  const netherrealmResonanceData = itemDatabase['5028'];
-  if (netherrealmResonanceData) {
-    const inventoryItem = currentItems.find(item => item.baseId === '5028');
-    items.push({
-      baseId: '5028',
-      itemName: netherrealmResonanceData.name,
-      group: netherrealmResonanceData.group || 'currency',
-      quantity: inventoryItem ? inventoryItem.totalQuantity : 0
-    });
-  }
+  checkedItemsSet.add('5028');
   
-  // Sort by name
-  items.sort((a, b) => a.itemName.localeCompare(b.itemName));
-  
-  // Store items for filtering
-  let allItems = items;
-  
-  // Function to render items based on search
-  function renderItems(filteredItems: CompassBeaconItem[]) {
-    // Capture currently checked items before clearing
-    const checkedItems = new Set<string>();
+  // Helper: Sync checked state from DOM (used on initial render)
+  const syncCheckedItemsFromDOM = (): void => {
     const existingCheckboxes = container.querySelectorAll('input[type="checkbox"]:checked');
     existingCheckboxes.forEach(checkbox => {
       const baseId = (checkbox as HTMLInputElement).dataset.baseid;
       if (baseId) {
-        checkedItems.add(baseId);
+        checkedItemsSet.add(baseId);
       }
     });
+  };
+  
+  // Helper: Update confirm button visibility
+  const updateConfirmButtonVisibility = (): void => {
+    const confirmBtn = document.getElementById('compassBeaconSelectionConfirm');
+    if (confirmBtn) {
+      // Show button if any item other than 5028 is selected
+      const hasOtherSelections = Array.from(checkedItemsSet).some(id => id !== '5028');
+      if (hasOtherSelections) {
+        confirmBtn.style.display = 'block';
+        // Add visible class for animation after a tiny delay to ensure display block is applied
+        setTimeout(() => {
+          confirmBtn.classList.add('visible');
+        }, 10);
+      } else {
+        confirmBtn.classList.remove('visible');
+        // Remove display after animation completes
+        setTimeout(() => {
+          if (!confirmBtn.classList.contains('visible')) {
+            confirmBtn.style.display = 'none';
+          }
+        }, 300);
+      }
+    }
+  };
+  
+  // Helper: Update checked state when checkbox changes
+  const handleCheckboxChange = (baseId: string, checked: boolean): void => {
+    if (checked) {
+      checkedItemsSet.add(baseId);
+    } else {
+      checkedItemsSet.delete(baseId);
+    }
+    updateConfirmButtonVisibility();
+  };
+  
+  // Helper: Create checkbox element for an item
+  const createCheckboxElement = (item: CompassBeaconItem): HTMLDivElement => {
+    const checkboxDiv = document.createElement('div');
+    checkboxDiv.className = 'compass-beacon-checkbox-item';
+    
+    const label = document.createElement('label');
+    
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.dataset.baseid = item.baseId;
+    input.dataset.type = item.group;
+    input.checked = checkedItemsSet.has(item.baseId);
+    
+    // Add event listener to update persistent state
+    input.addEventListener('change', () => {
+      handleCheckboxChange(item.baseId, input.checked);
+    });
+    
+    const checkboxLabel = document.createElement('span');
+    checkboxLabel.className = 'checkbox-label';
+    
+    const icon = document.createElement('img');
+    icon.src = `../../assets/${item.baseId}.webp`;
+    icon.alt = item.itemName;
+    icon.className = 'checkbox-icon';
+    icon.onerror = () => { icon.style.display = 'none'; };
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = item.itemName;
+    
+    checkboxLabel.appendChild(icon);
+    checkboxLabel.appendChild(nameSpan);
+    
+    if (item.quantity > 0) {
+      const quantitySpan = document.createElement('span');
+      quantitySpan.className = 'checkbox-quantity';
+      quantitySpan.textContent = `(${item.quantity})`;
+      checkboxLabel.appendChild(quantitySpan);
+    }
+    
+    label.appendChild(input);
+    label.appendChild(checkboxLabel);
+    checkboxDiv.appendChild(label);
+    
+    return checkboxDiv;
+  };
+  
+  // Helper: Render a single group
+  const renderGroup = (group: ItemGroup): void => {
+    if (group.items.length === 0) return;
+    
+    // Create group header
+    const header = document.createElement('div');
+    header.className = 'compass-beacon-group-header';
+    header.textContent = group.title;
+    container.appendChild(header);
+    
+    // Create group container
+    const groupContainer = document.createElement('div');
+    groupContainer.className = 'compass-beacon-group-items';
+    
+    // Create checkbox for each item
+    group.items.forEach(item => {
+      const checkboxElement = createCheckboxElement(item);
+      groupContainer.appendChild(checkboxElement);
+    });
+    
+    container.appendChild(groupContainer);
+  };
+  
+  // Function to render items based on search
+  const renderItems = (groupsToRender: ItemGroup[], skipSync: boolean = false): void => {
+    // Sync any existing checked items from DOM before clearing (only needed on first render or when not skipping)
+    if (container.children.length > 0 && !skipSync) {
+      syncCheckedItemsFromDOM();
+    }
     
     container.innerHTML = '';
     
-    if (filteredItems.length === 0) {
-      container.innerHTML = '<div style="text-align: center; color: var(--border); padding: 20px;">No items found</div>';
-      return;
-    }
+    // Render all groups
+    groupsToRender.forEach(group => renderGroup(group));
     
-    filteredItems.forEach(item => {
-      const checkbox = document.createElement('div');
-      checkbox.className = 'compass-beacon-checkbox-item';
-      // Netherrealm Resonance 5028 is automatically selected, or preserve previously checked state
-      const isChecked = (item.baseId === '5028' || checkedItems.has(item.baseId)) ? 'checked' : '';
-      checkbox.innerHTML = `
-        <label>
-          <input type="checkbox" data-baseid="${item.baseId}" data-type="${item.group}" ${isChecked}>
-          <span class="checkbox-label">
-            <img src="../../assets/${item.baseId}.webp" alt="${item.itemName}" class="checkbox-icon" onerror="this.style.display='none'">
-            <span>${item.itemName}</span>
-            ${item.quantity > 0 ? `<span class="checkbox-quantity">(${item.quantity})</span>` : ''}
-          </span>
-        </label>
-      `;
-      container.appendChild(checkbox);
-    });
-  }
+    // Show message if no items found
+    if (container.children.length === 0) {
+      const noItemsDiv = document.createElement('div');
+      noItemsDiv.style.textAlign = 'center';
+      noItemsDiv.style.color = 'var(--border)';
+      noItemsDiv.style.padding = '20px';
+      noItemsDiv.textContent = 'No items found';
+      container.appendChild(noItemsDiv);
+    }
+  };
   
   // Initial render
-  renderItems(allItems);
+  renderItems(allItemGroups);
   
   // Add search functionality
   if (searchInput) {
     searchInput.oninput = (e) => {
-      const query = (e.target as HTMLInputElement).value.toLowerCase().trim();
+      const query = (e.target as HTMLInputElement).value.trim();
       if (query === '') {
-        renderItems(allItems);
+        renderItems(allItemGroups);
       } else {
-        const filtered = allItems.filter(item => 
-          item.itemName.toLowerCase().includes(query.toLowerCase())
-        );
-        renderItems(filtered);
+        // Filter all groups
+        const filteredGroups = allItemGroups.map(group => filterGroupItems(group, query));
+        renderItems(filteredGroups);
       }
     };
   }
+  
+  // Add Clear Selection button handler
+  const clearBtn = document.getElementById('compassBeaconSelectionClear');
+  if (clearBtn) {
+    clearBtn.onclick = () => {
+      // Clear all checkboxes except 5028 (Netherrealm Resonance)
+      checkedItemsSet.clear();
+      checkedItemsSet.add('5028'); // Keep 5028 always selected
+      
+      // Update button visibility
+      updateConfirmButtonVisibility();
+      
+      // Re-render to reflect changes (skip sync since we're manually setting the state)
+      const currentQuery = searchInput?.value.trim() || '';
+      if (currentQuery === '') {
+        renderItems(allItemGroups, true);
+      } else {
+        const filteredGroups = allItemGroups.map(group => filterGroupItems(group, currentQuery));
+        renderItems(filteredGroups, true);
+      }
+    };
+  }
+  
+  // Add Restore Last Selection handler
+  const restoreBtn = document.getElementById('compassBeaconRestore');
+  if (restoreBtn) {
+    restoreBtn.onclick = () => {
+      const lastSelectionJson = localStorage.getItem('lastCompassBeaconSelection');
+      if (lastSelectionJson) {
+        try {
+          const lastSelection = JSON.parse(lastSelectionJson) as string[];
+          
+          // Clear current selection and restore last one
+          checkedItemsSet.clear();
+          lastSelection.forEach(baseId => {
+            checkedItemsSet.add(baseId);
+          });
+          
+          // Update button visibility
+          updateConfirmButtonVisibility();
+          
+          // Re-render to reflect changes (skip sync since we're manually setting the state)
+          const currentQuery = searchInput?.value.trim() || '';
+          if (currentQuery === '') {
+            renderItems(allItemGroups, true);
+          } else {
+            const filteredGroups = allItemGroups.map(group => filterGroupItems(group, currentQuery));
+            renderItems(filteredGroups, true);
+          }
+        } catch (e) {
+          console.error('Failed to restore last selection:', e);
+        }
+      }
+    };
+  }
+  
+  // Initial button visibility check
+  updateConfirmButtonVisibility();
   
   // Show modal
   modal.classList.add('active');
@@ -1353,8 +1714,9 @@ function handleCompassBeaconSelectionConfirm() {
     }
   });
   
-  // Always include Netherrealm Resonance 5028 (automatically selected)
-  includedItems.add('5028');
+  // Save selection to localStorage for restore feature
+  const selectionArray = Array.from(includedItems);
+  localStorage.setItem('lastCompassBeaconSelection', JSON.stringify(selectionArray));
   
   console.log(`✅ Including ${includedItems.size} compasses/beacons in hourly calculation`);
   
@@ -1470,7 +1832,7 @@ document.getElementById('compassBeaconPromptYes')?.addEventListener('click', () 
 });
 
 // Compass/Beacon selection modal event listeners
-document.getElementById('compassBeaconSelectionCancel')?.addEventListener('click', () => {
+document.getElementById('compassBeaconSelectionClose')?.addEventListener('click', () => {
   includedItems.clear();
   hideCompassBeaconSelection();
 });

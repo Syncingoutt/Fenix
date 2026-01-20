@@ -262,14 +262,14 @@
   "12111": { "name": "Machine Deep Space Probe", "tradable": true, "group": "compass" },
   "12121": { "name": "Doll Deep Space Probe", "tradable": true, "group": "compass" },
   "12131": { "name": "Outlaw Deep Space Probe", "tradable": true, "group": "compass" },
+  "10290": { "name": "Pig Iron Scalpel", "tradable": true, "group": "compass" },
+  "10291": { "name": "Sterling Silver Scalpel", "tradable": true, "group": "compass" },
+  "10292": { "name": "Titanium-Alloy Scalpel", "tradable": true, "group": "compass" },
 
   "338001": { "name": "Wandering Star", "tradable": true, "group": "arcana" },
   "338002": { "name": "Star Net", "tradable": true, "group": "arcana" },
 
   "380102": { "name": "Mutagenic Slurry", "tradable": true, "group": "vorax" },
-  "10290": { "name": "Pig Iron Scalpel", "tradable": true, "group": "vorax" },
-  "10291": { "name": "Sterling Silver Scalpel", "tradable": true, "group": "vorax" },
-  "10292": { "name": "Titanium-Alloy Scalpel", "tradable": true, "group": "vorax" },
   "380101": { "name": "Cutting Instrument", "tradable": true, "group": "vorax" },
   "380103": { "name": "Vorax Amputated Limb - Decayed", "tradable": true, "group": "vorax" },
   "380109": { "name": "Vorax Amputated Limb - Engorged", "tradable": true, "group": "vorax" },

@@ -7,10 +7,7 @@
   --accent: #ffffff;
   --border: #7e7e7e;
   
-  /* Responsive scaling based on 1920x1080 baseline */
-  /* Set dynamically via JavaScript, default to 1 for 1920x1080 */
   --scale: 1;
-  /* Text scales less aggressively - set dynamically via JavaScript */
   --text-scale: 1;
 }
 
@@ -953,6 +950,7 @@ img:not(.header-logo-pic) {
   }
 }
 
+
 .breakdown-content-wrapper {
   background: var(--bg-shade);
   border: calc(2px * var(--scale)) solid var(--border);
@@ -1139,7 +1137,6 @@ img:not(.header-logo-pic) {
 .close-btn:hover {
   background: #c24f09;
   transform: translateY(calc(-2px * var(--scale)));
-  box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(222, 92, 11, 0.3);
 }
 
 .close-btn:active {
@@ -1304,7 +1301,6 @@ img:not(.header-logo-pic) {
 .update-btn-primary:hover {
   background: #c24f09;
   transform: translateY(calc(-2px * var(--scale)));
-  box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(222, 92, 11, 0.3);
 }
 
 .update-btn-primary:active {
@@ -1354,7 +1350,7 @@ img:not(.header-logo-pic) {
 
 .setup-modal-content {
   background: var(--bg-shade);
-  border: calc(2px * var(--scale)) solid var(--primary);
+  border: calc(2px * var(--scale)) solid var(--border);
   border-radius: calc(16px * var(--scale));
   padding: calc(40px * var(--scale));
   max-width: calc(600px * var(--scale));
@@ -1432,7 +1428,6 @@ img:not(.header-logo-pic) {
 .setup-btn-primary:hover {
   background: #c24f09;
   transform: translateY(calc(-2px * var(--scale)));
-  box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(222, 92, 11, 0.3);
 }
 
 .setup-btn-primary:active {
@@ -1785,7 +1780,6 @@ img:not(.header-logo-pic) {
 .settings-save-btn:hover {
   background: #c24f09;
   transform: translateY(calc(-2px * var(--scale)));
-  box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(222, 92, 11, 0.3);
 }
 
 .settings-save-btn:active {
@@ -1944,13 +1938,42 @@ img:not(.header-logo-pic) {
 .compass-beacon-prompt-content,
 .compass-beacon-selection-content {
   background: var(--bg-shade);
-  border: calc(2px * var(--scale)) solid var(--primary);
+  border: calc(2px * var(--scale)) solid var(--border);
   border-radius: calc(16px * var(--scale));
   padding: calc(40px * var(--scale));
   max-width: calc(600px * var(--scale));
   width: 90%;
   animation: slideUp 0.4s ease-out;
   position: relative;
+  padding-bottom: calc(12px * var(--scale));
+}
+
+.compass-beacon-close-btn {
+  position: absolute;
+  top: calc(16px * var(--scale));
+  right: calc(16px * var(--scale));
+  width: calc(32px * var(--scale));
+  height: calc(32px * var(--scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: calc(6px * var(--scale));
+  color: var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.compass-beacon-close-btn:hover {
+  background: rgba(126, 126, 126, 0.1);
+  color: var(--text);
+}
+
+.compass-beacon-close-btn svg {
+  width: calc(20px * var(--scale));
+  height: calc(20px * var(--scale));
 }
 
 .compass-beacon-prompt-header,
@@ -1989,19 +2012,31 @@ img:not(.header-logo-pic) {
 }
 
 .compass-beacon-search-container {
-  margin-bottom: calc(20px * var(--scale));
+  position: relative;
+}
+
+.compass-beacon-search-container .search-icon {
+  position: absolute;
+  left: calc(12px * var(--scale));
+  top: 50%;
+  transform: translateY(-50%);
+  width: calc(20px * var(--scale));
+  height: calc(20px * var(--scale));
+  pointer-events: none;
+  z-index: 1;
 }
 
 .compass-beacon-search {
   width: 100%;
-  padding: calc(12px * var(--scale)) calc(16px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(16px * var(--scale)) calc(12px * var(--scale)) calc(44px * var(--scale));
   background: var(--bg);
   border: calc(1px * var(--scale)) solid var(--border);
   border-radius: calc(8px * var(--scale));
   font-family: "Manrope", sans-serif;
-  font-size: calc(14px * var(--text-scale));
+  font-size: calc(16px * var(--text-scale));
   color: var(--text);
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
 .compass-beacon-search:focus {
@@ -2011,6 +2046,51 @@ img:not(.header-logo-pic) {
 
 .compass-beacon-search::placeholder {
   color: var(--border);
+}
+
+.compass-beacon-helper-actions {
+  margin-bottom: calc(16px * var(--scale));
+  display: flex;
+  justify-content: flex-start;
+}
+
+.compass-beacon-restore-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: "Manrope", sans-serif;
+  font-size: calc(14px * var(--text-scale));
+  color: var(--border);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.compass-beacon-restore-link:hover {
+  color: var(--primary);
+  text-decoration-color: var(--primary);
+}
+
+.compass-beacon-clear-btn {
+  width: 100%;
+  height: calc(40px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(12px * var(--scale));
+  margin-bottom: calc(20px * var(--scale));
+  background: transparent;
+  border: calc(1px * var(--scale)) solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  font-family: "Manrope", sans-serif;
+  font-size: calc(16px * var(--text-scale));
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.compass-beacon-clear-btn:hover {
+  background: rgba(126, 126, 126, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .compass-beacon-checkboxes {
@@ -2038,6 +2118,27 @@ img:not(.header-logo-pic) {
 
 .compass-beacon-checkboxes::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
+}
+
+.compass-beacon-group-header {
+  font-size: calc(16px * var(--text-scale));
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: calc(16px * var(--scale));
+  margin-bottom: calc(8px * var(--scale));
+  padding-bottom: calc(4px * var(--scale));
+  border-bottom: calc(1px * var(--scale)) solid var(--border);
+}
+
+.compass-beacon-group-header:first-child {
+  margin-top: 0;
+}
+
+.compass-beacon-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--scale));
+  margin-bottom: calc(8px * var(--scale));
 }
 
 .compass-beacon-checkbox-item {
@@ -2070,7 +2171,7 @@ img:not(.header-logo-pic) {
   align-items: center;
   gap: calc(8px * var(--scale));
   flex: 1;
-  font-size: calc(14px * var(--text-scale));
+  font-size: calc(16px * var(--text-scale));
   color: var(--text);
 }
 
@@ -2086,11 +2187,12 @@ img:not(.header-logo-pic) {
   margin-left: auto;
 }
 
-.compass-beacon-prompt-actions,
-.compass-beacon-selection-actions {
+.compass-beacon-prompt-actions {
   display: flex;
   gap: calc(12px * var(--scale));
   justify-content: center;
+  margin-top: calc(24px * var(--scale));
+  margin-bottom: calc(12px * var(--scale));
 }
 
 .compass-beacon-btn {
@@ -2105,6 +2207,42 @@ img:not(.header-logo-pic) {
   min-width: calc(120px * var(--scale));
 }
 
+.compass-beacon-confirm-btn {
+  position: absolute;
+  bottom: calc(60px * var(--scale));
+  right: calc(60px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(24px * var(--scale));
+  border: none;
+  border-radius: calc(8px * var(--scale));
+  background: var(--primary);
+  color: white;
+  font-family: "Manrope", sans-serif;
+  font-size: calc(14px * var(--text-scale));
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transform: translateX(calc(100px * var(--scale)));
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  pointer-events: none;
+}
+
+.compass-beacon-confirm-btn.visible {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: all;
+}
+
+.compass-beacon-confirm-btn:hover {
+  background: #c24f09;
+  transform: translateX(0) translateY(calc(-2px * var(--scale)));
+}
+
+.compass-beacon-confirm-btn:active {
+  transform: translateX(0) translateY(0);
+}
+
 .compass-beacon-btn-primary {
   background: var(--primary);
   color: white;
@@ -2113,7 +2251,6 @@ img:not(.header-logo-pic) {
 .compass-beacon-btn-primary:hover {
   background: #c24f09;
   transform: translateY(calc(-2px * var(--scale)));
-  box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(222, 92, 11, 0.3);
 }
 
 .compass-beacon-btn-primary:active {
