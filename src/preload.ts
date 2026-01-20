@@ -6,8 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onInventoryUpdate: (callback: () => void) => {
     ipcRenderer.on('inventory-updated', callback);
   },
-  toggleWindow: () => ipcRenderer.send('toggle-window'),
-  
   // Timer control methods
   startHourlyTimer: () => ipcRenderer.send('start-hourly-timer'),
   pauseHourlyTimer: () => ipcRenderer.send('pause-hourly-timer'),
@@ -39,7 +37,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('update-dialog-response', response);
   },
   // Log path configuration methods
-  getLogPath: () => ipcRenderer.invoke('get-log-path'),
   isLogPathConfigured: () => ipcRenderer.invoke('is-log-path-configured'),
   selectLogFile: () => ipcRenderer.invoke('select-log-file'),
   onShowLogPathSetup: (callback: () => void) => {

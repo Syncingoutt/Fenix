@@ -11,12 +11,6 @@ export interface ParsedLogEntry {
   pageId: number | null;
 }
 
-export interface PriceCheckData {
-  baseId: string;
-  prices: number[];
-  timestamp: string;
-}
-
 // Default path (will be overridden by user selection)
 const DEFAULT_LOG_PATH = '';
 
@@ -442,44 +436,6 @@ export function readLogFile(): ParsedLogEntry[] {
   return entries;
 }
 
-
-export function parsePriceCheck(lines: string[]): PriceCheckData | null {
-  let baseId: string | null = null;
-  let prices: number[] = [];
-  let timestamp = 'unknown';
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (i === 0) {
-      const timestampMatch = line.match(/\[([\d\.\-:]+)\]/);
-      if (timestampMatch) timestamp = timestampMatch[1];
-    }
-
-    if (line.includes('+refer') && line.includes('[')) {
-      const match = line.match(/\[(\d+)\]/);
-      if (match) {
-        baseId = match[1];
-      }
-    }
-
-    if ((line.includes('+unitPrices+') || line.includes('|          +')) && line.includes('[')) {
-      const match = line.match(/\[([0-9.]+)\]/);
-      if (match) {
-        const price = parseFloat(match[1]);
-        if (!isNaN(price)) {
-          prices.push(price);
-        }
-      }
-    }
-  }
-
-  if (baseId && prices.length === 100) {
-    return { baseId, prices, timestamp };
-  }
-
-  return null;
-}
 
 export function getLogSize(): number {
   const logPath = getLogPath();

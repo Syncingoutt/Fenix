@@ -28,7 +28,6 @@ interface ElectronAPI {
   onShowUpdateDialog: (callback: (data: { type: 'available' | 'downloaded'; version: string; currentVersion?: string }) => void) => void;
   onUpdateDownloadedTransition: (callback: (data: { version: string }) => void) => void;
   sendUpdateDialogResponse: (response: 'download' | 'restart' | 'later') => void;
-  getLogPath: () => Promise<string>;
   isLogPathConfigured: () => Promise<boolean>;
   selectLogFile: () => Promise<string | null>;
   onShowLogPathSetup: (callback: () => void) => void;

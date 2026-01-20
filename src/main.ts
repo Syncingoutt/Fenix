@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
 import { loadItemDatabase, loadPriceCache, savePriceCache } from './core/database';
-import { readLogFile, parseLogLine, parsePriceCheck, getLogSize, readLogFromPosition, getLogPath, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings } from './core/logParser';
+import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
@@ -68,6 +68,51 @@ const timerState: TimerState = {
   hourlyActive: false,
   hourlyPaused: false
 };
+
+// Price cache debouncing state
+let priceCacheSaveTimeout: NodeJS.Timeout | null = null;
+let priceCachePendingSave = false;
+const PRICE_CACHE_DEBOUNCE_MS = 5000; // 5 seconds debounce
+const PRICE_CACHE_PERIODIC_SAVE_MS = 30000; // 30 seconds periodic save
+
+// Debounced save function - batches rapid updates
+function debouncedSavePriceCache(): void {
+  if (priceCacheSaveTimeout) {
+    clearTimeout(priceCacheSaveTimeout);
+  }
+  
+  priceCachePendingSave = true;
+  
+  priceCacheSaveTimeout = setTimeout(async () => {
+    if (priceCachePendingSave && inventoryManager) {
+      try {
+        await savePriceCache(inventoryManager.getPriceCacheAsObject());
+        priceCachePendingSave = false;
+        console.log('💾 Price cache saved (debounced)');
+      } catch (error) {
+        console.error('Failed to save price cache:', error);
+      }
+    }
+  }, PRICE_CACHE_DEBOUNCE_MS);
+}
+
+// Force immediate save (for app shutdown)
+async function forceSavePriceCache(): Promise<void> {
+  if (priceCacheSaveTimeout) {
+    clearTimeout(priceCacheSaveTimeout);
+    priceCacheSaveTimeout = null;
+  }
+  
+  if (inventoryManager) {
+    try {
+      await savePriceCache(inventoryManager.getPriceCacheAsObject());
+      priceCachePendingSave = false;
+      console.log('💾 Price cache saved (forced)');
+    } catch (error) {
+      console.error('Failed to save price cache:', error);
+    }
+  }
+}
 
 function getIconPath(): string {
   if (app.isPackaged) {
@@ -496,6 +541,19 @@ app.whenReady().then(() => {
 
   console.log('✅ Main process timers started');
 
+  // Periodic price cache save - every 30 seconds if there are pending updates
+  setInterval(async () => {
+    if (priceCachePendingSave && inventoryManager) {
+      try {
+        await savePriceCache(inventoryManager.getPriceCacheAsObject());
+        priceCachePendingSave = false;
+        console.log('💾 Price cache saved (periodic)');
+      } catch (error) {
+        console.error('Failed to save price cache (periodic):', error);
+      }
+    }
+  }, PRICE_CACHE_PERIODIC_SAVE_MS);
+
   // Load settings and register keybind
   const settings = getSettings();
   if (settings.keybind) {
@@ -517,8 +575,8 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('window-all-closed', () => {
-  savePriceCache(inventoryManager.getPriceCacheAsObject());
+app.on('window-all-closed', async () => {
+  await forceSavePriceCache();
   
   if (process.platform !== 'darwin') {
     app.quit();
@@ -605,21 +663,6 @@ ipcMain.handle('get-maximize-state', () => {
     return mainWindow.isMaximized();
   }
   return false;
-});
-
-ipcMain.on('toggle-window', () => {
-  if (mainWindow) {
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
-    } else {
-      mainWindow.show();
-      mainWindow.focus();
-      // In fullscreen mode, ensure we stay above taskbar after showing
-      if (fullscreenMode) {
-        mainWindow.setAlwaysOnTop(true, 'screen-saver');
-      }
-    }
-  }
 });
 
 // Overlay widget IPC handlers
@@ -716,11 +759,6 @@ ipcMain.on('update-dialog-response', (event, response: 'download' | 'restart' | 
     autoUpdater.quitAndInstall(false, true);
   }
   // 'later' response just closes the modal, no action needed
-});
-
-// Log path configuration IPC handlers
-ipcMain.handle('get-log-path', () => {
-  return getLogPath();
 });
 
 ipcMain.handle('is-log-path-configured', () => {
@@ -977,8 +1015,8 @@ function watchLogFile() {
             const priceResult = processPriceCheckData(currentPriceCheckBaseId, prices);
             
             if (priceResult) {
-              inventoryManager.updatePrice(priceResult.baseId, priceResult.avgPrice);
-              savePriceCache(inventoryManager.getPriceCacheAsObject());
+              inventoryManager.updatePrice(priceResult.baseId, priceResult.avgPrice, priceResult.listingCount);
+              debouncedSavePriceCache();
               // Try to get item name from database if not in inventory
               const inventoryItem = inventoryManager.getInventoryMap().get(priceResult.baseId);
               let itemName: string;
@@ -989,7 +1027,7 @@ function watchLogFile() {
                 const itemData = itemDatabase[priceResult.baseId];
                 itemName = itemData?.name || priceResult.baseId;
               }
-              console.log(`💰 Price updated: ${itemName} = ${priceResult.avgPrice.toFixed(2)} (from ${prices.length} listings)`);
+              console.log(`💰 Price updated: ${itemName} = ${priceResult.avgPrice.toFixed(2)} (from ${priceResult.listingCount} listings)`);
               
               priceUpdated = true;
             } else {

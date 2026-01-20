@@ -1,5 +1,5 @@
 import { ParsedLogEntry } from './logParser';
-import { ItemDatabase, PriceCache } from './database';
+import { ItemDatabase, PriceCache, PriceCacheEntry } from './database';
 
 export interface InventoryItem {
   itemName: string;
@@ -14,12 +14,12 @@ export interface InventoryItem {
 
 export class InventoryManager {
   private inventory = new Map<string, InventoryItem>();
-  private priceCache = new Map<string, number>();
+  private priceCache = new Map<string, PriceCacheEntry>();
 
   constructor(private itemDatabase: ItemDatabase, initialPriceCache: PriceCache = {}) {
     // Load initial price cache
-    for (const [baseId, price] of Object.entries(initialPriceCache)) {
-      this.priceCache.set(baseId, price);
+    for (const [baseId, entry] of Object.entries(initialPriceCache)) {
+      this.priceCache.set(baseId, entry);
     }
   }
 
@@ -50,7 +50,8 @@ export class InventoryManager {
           existing.lastUpdated = entry.timestamp;
         }
       } else {
-        const cachedPrice = this.priceCache.get(entry.baseId) || null;
+        const cachedEntry = this.priceCache.get(entry.baseId);
+        const cachedPrice = cachedEntry ? cachedEntry.price : null;
         
         this.inventory.set(entry.baseId, {
           itemName,
@@ -68,8 +69,13 @@ export class InventoryManager {
     return this.inventory;
   }
 
-  updatePrice(baseId: string, price: number): void {
-    this.priceCache.set(baseId, price);
+  updatePrice(baseId: string, price: number, listingCount?: number): void {
+    const entry: PriceCacheEntry = {
+      price,
+      timestamp: Date.now(),
+      ...(listingCount !== undefined && { listingCount })
+    };
+    this.priceCache.set(baseId, entry);
     
     if (this.inventory.has(baseId)) {
       const item = this.inventory.get(baseId)!;
@@ -97,8 +103,8 @@ export class InventoryManager {
 
   getPriceCacheAsObject(): PriceCache {
     const obj: PriceCache = {};
-    this.priceCache.forEach((price, baseId) => {
-      obj[baseId] = price;
+    this.priceCache.forEach((entry, baseId) => {
+      obj[baseId] = entry;
     });
     return obj;
   }

@@ -12,8 +12,19 @@ export interface ItemDatabase {
   [baseId: string]: ItemData;
 }
 
+export interface PriceCacheEntry {
+  price: number;
+  timestamp: number; // Unix timestamp in milliseconds
+  listingCount?: number; // Optional: number of listings used for average
+}
+
 export interface PriceCache {
-  [baseId: string]: number;
+  [baseId: string]: PriceCacheEntry;
+}
+
+// Legacy format for migration
+interface LegacyPriceCache {
+  [baseId: string]: number | PriceCacheEntry;
 }
 
 // Use app.getPath('userData') for writable files in production
@@ -56,14 +67,38 @@ export function loadPriceCache(): PriceCache {
 
   try {
     const data = fs.readFileSync(PRICE_CACHE_FILE, 'utf-8');
-    return JSON.parse(data);
+    const rawCache: LegacyPriceCache = JSON.parse(data);
+    
+    // Migrate old format to new format if needed
+    const migratedCache: PriceCache = {};
+    let migrationNeeded = false;
+    
+    for (const [baseId, value] of Object.entries(rawCache)) {
+      if (typeof value === 'number') {
+        // Old format - migrate to new structure with current timestamp
+        migratedCache[baseId] = {
+          price: value,
+          timestamp: Date.now()
+        };
+        migrationNeeded = true;
+      } else {
+        // Already new format
+        migratedCache[baseId] = value;
+      }
+    }
+    
+    if (migrationNeeded) {
+      console.log('💰 Migrated price cache to new format with timestamps');
+    }
+    
+    return migratedCache;
   } catch (error) {
     console.error('Failed to load price cache:', error);
     return {};
   }
 }
 
-export function savePriceCache(cache: PriceCache): void {
+export async function savePriceCache(cache: PriceCache): Promise<void> {
   const PRICE_CACHE_FILE = getUserDataPath('price_cache.json');
   
   try {
@@ -72,7 +107,7 @@ export function savePriceCache(cache: PriceCache): void {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(PRICE_CACHE_FILE, JSON.stringify(cache, null, 2));
+    await fs.promises.writeFile(PRICE_CACHE_FILE, JSON.stringify(cache, null, 2));
   } catch (error) {
     console.error('Failed to save price cache:', error);
   }

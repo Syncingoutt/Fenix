@@ -43,12 +43,12 @@ export function calculateAveragePrice(prices: number[]): number | null {
   return sum / pricesForAverage.length;
 }
 
-export function processPriceCheckData(baseId: string, prices: number[]): { baseId: string; avgPrice: number } | null {
+export function processPriceCheckData(baseId: string, prices: number[]): { baseId: string; avgPrice: number; listingCount: number } | null {
   const avgPrice = calculateAveragePrice(prices);
   
   if (avgPrice === null) {
     return null;
   }
 
-  return { baseId, avgPrice };
+  return { baseId, avgPrice, listingCount: prices.length };
 }
