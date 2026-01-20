@@ -23,6 +23,9 @@ if (!gotTheLock) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
       mainWindow.focus();
+      if (fullscreenMode) {
+        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      }
     }
   });
 }
@@ -87,6 +90,7 @@ function getIconPath(): string {
 
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
+  // Use bounds for fullscreen (includes taskbar area), workAreaSize for windowed
   const { x, y, width, height } = primaryDisplay.bounds;
   
   // Always create frameless window - we'll use custom title bar for windowed mode
@@ -100,7 +104,6 @@ function createWindow() {
     minHeight: 700,
     icon: getIconPath(),
     frame: false, // Always frameless - we'll add custom title bar
-    alwaysOnTop: fullscreenMode,
     skipTaskbar: fullscreenMode,
     resizable: !fullscreenMode,
     movable: !fullscreenMode,
@@ -108,6 +111,7 @@ function createWindow() {
     fullscreenable: !fullscreenMode,
     transparent: false,
     hasShadow: !fullscreenMode,
+    thickFrame: !fullscreenMode, // Disable thick frame in fullscreen to remove border gaps
     show: false, // Don't show until ready to prevent flash
     backgroundColor: '#161616', // Match app background
     webPreferences: {
@@ -120,21 +124,32 @@ function createWindow() {
 
   // mainWindow.setMenu(null);
   
-  if (fullscreenMode) {
-    mainWindow.setBounds({ x: x, y: y, width: width, height: height });
-    mainWindow.setSkipTaskbar(true);
-  } else {
-    // In windowed mode, start maximized and add it to taskbar
-    mainWindow.setSkipTaskbar(false);
-    mainWindow.maximize();
-  }
-  
   mainWindow.webContents.session.clearCache();
   mainWindow.loadFile(path.join(__dirname, 'ui/index.html'));
   
   // Show window only after content is ready (prevents flash)
   mainWindow.once('ready-to-show', () => {
-    if (mainWindow && !fullscreenMode) {
+    if (!mainWindow) return;
+    
+    if (fullscreenMode) {
+      // Set bounds to cover entire screen including taskbar
+      // Add small buffer to ensure complete coverage
+      const buffer = 8;
+      mainWindow.setBounds({ 
+        x: x - buffer, 
+        y: y - buffer, 
+        width: width + buffer * 2, 
+        height: height + buffer * 2 
+      });
+      mainWindow.setSkipTaskbar(true);
+      // Use 'screen-saver' level to ensure window appears above taskbar
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      // Don't show automatically in fullscreen - user toggles with hotkey
+    } else {
+      // In windowed mode, start maximized and add it to taskbar
+      mainWindow.setSkipTaskbar(false);
+      mainWindow.setAlwaysOnTop(false);
+      mainWindow.maximize();
       mainWindow.show();
     }
   });
@@ -147,6 +162,11 @@ function createWindow() {
     if (mainWindow) {
       if (fullscreenMode) {
         mainWindow.setSkipTaskbar(true);
+        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        // Force Windows to recognize app as focused
+        mainWindow.moveTop();
+        mainWindow.focus();
+        app.focus({ steal: true });
       } else {
         mainWindow.setSkipTaskbar(false);
       }
@@ -194,6 +214,9 @@ function createTray() {
         if (mainWindow) {
           mainWindow.show();
           mainWindow.focus();
+          if (fullscreenMode) {
+            mainWindow.setAlwaysOnTop(true, 'screen-saver');
+          }
         }
       }
     },
@@ -233,6 +256,9 @@ function createTray() {
       } else {
         mainWindow.show();
         mainWindow.focus();
+        if (fullscreenMode) {
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        }
       }
     }
   });
@@ -452,7 +478,16 @@ function registerKeybind(keybind: string): boolean {
         mainWindow.hide();
       } else {
         mainWindow.show();
-        mainWindow.focus();
+        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        // Delay focus operations to ensure window is fully shown
+        setTimeout(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.moveTop();
+            mainWindow.focus();
+            mainWindow.webContents.focus();
+            app.focus({ steal: true });
+          }
+        }, 50);
       }
     }
   });
@@ -516,6 +551,10 @@ ipcMain.on('toggle-window', () => {
     } else {
       mainWindow.show();
       mainWindow.focus();
+      // In fullscreen mode, ensure we stay above taskbar after showing
+      if (fullscreenMode) {
+        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      }
     }
   }
 });
@@ -660,28 +699,32 @@ ipcMain.handle('save-settings', async (event, settings: { keybind?: string; full
         
         if (fullscreenMode) {
           // Switch to fullscreen overlay mode
-          mainWindow.setAlwaysOnTop(true);
+          mainWindow.setAlwaysOnTop(true, 'screen-saver'); // Above taskbar
           mainWindow.setSkipTaskbar(true);
           mainWindow.setResizable(false);
           mainWindow.setMovable(false);
-          mainWindow.setBounds({ x, y, width, height });
+          // Add small buffer to compensate for thick frame border (if window was created in windowed mode)
+          const buffer = 8;
+          mainWindow.setBounds({ 
+            x: x - buffer, 
+            y: y - buffer, 
+            width: width + buffer * 2, 
+            height: height + buffer * 2 
+          });
         } else {
           // Switch to normal window mode
           mainWindow.setAlwaysOnTop(false);
           mainWindow.setSkipTaskbar(false);
           mainWindow.setResizable(true);
           mainWindow.setMovable(true);
-          // Resize to normal window size (centered)
-          const normalWidth = 1600;
-          const normalHeight = 900;
-          const centerX = x + (width - normalWidth) / 2;
-          const centerY = y + (height - normalHeight) / 2;
+          // Resize to normal window size and maximize
           mainWindow.setBounds({ 
-            x: centerX, 
-            y: centerY, 
-            width: normalWidth, 
-            height: normalHeight 
+            x: x + (width - 1440) / 2, 
+            y: y + (height - 900) / 2, 
+            width: 1440, 
+            height: 900 
           });
+          mainWindow.maximize();
         }
         
         // Notify renderer to show/hide custom title bar
