@@ -1279,6 +1279,16 @@ function showCompassBeaconSelection() {
   
   // Function to render items based on search
   function renderItems(filteredItems: CompassBeaconItem[]) {
+    // Capture currently checked items before clearing
+    const checkedItems = new Set<string>();
+    const existingCheckboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+    existingCheckboxes.forEach(checkbox => {
+      const baseId = (checkbox as HTMLInputElement).dataset.baseid;
+      if (baseId) {
+        checkedItems.add(baseId);
+      }
+    });
+    
     container.innerHTML = '';
     
     if (filteredItems.length === 0) {
@@ -1289,8 +1299,8 @@ function showCompassBeaconSelection() {
     filteredItems.forEach(item => {
       const checkbox = document.createElement('div');
       checkbox.className = 'compass-beacon-checkbox-item';
-      // Netherrealm Resonance 5028 is automatically selected
-      const isChecked = item.baseId === '5028' ? 'checked' : '';
+      // Netherrealm Resonance 5028 is automatically selected, or preserve previously checked state
+      const isChecked = (item.baseId === '5028' || checkedItems.has(item.baseId)) ? 'checked' : '';
       checkbox.innerHTML = `
         <label>
           <input type="checkbox" data-baseid="${item.baseId}" data-type="${item.group}" ${isChecked}>
