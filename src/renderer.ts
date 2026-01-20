@@ -82,6 +82,8 @@ let isHourlyActive = false;
 let hourlyPaused = false;
 // Compasses/beacons to track usage for (selected by user)
 let includedItems: Set<string> = new Set(); // baseId -> track usage for this item
+// Selection state while the compass/beacon picker modal is open
+let compassBeaconSelectionState: Set<string> | null = null;
 // Track previous quantity of compasses/beacons to detect consumption
 let previousQuantities: Map<string, number> = new Map(); // baseId -> previous quantity
 // Track usage per hour for compasses/beacons (resets each hour)
@@ -1526,6 +1528,7 @@ function showCompassBeaconSelection() {
   
   // Always include Netherrealm Resonance 5028 (automatically selected)
   checkedItemsSet.add('5028');
+  compassBeaconSelectionState = checkedItemsSet;
   
   // Helper: Sync checked state from DOM (used on initial render)
   const syncCheckedItemsFromDOM = (): void => {
@@ -1747,18 +1750,26 @@ function showCompassBeaconSelection() {
 function hideCompassBeaconSelection() {
   const modal = document.getElementById('compassBeaconSelectionModal')!;
   modal.classList.remove('active');
+  compassBeaconSelectionState = null;
 }
 
 function handleCompassBeaconSelectionConfirm() {
   // Collect all checked items (these are the compasses/beacons to include in calculation)
   includedItems.clear();
-  const checkboxes = document.querySelectorAll('#compassBeaconSelectionModal input[type="checkbox"]:checked');
-  checkboxes.forEach(checkbox => {
-    const baseId = (checkbox as HTMLInputElement).dataset.baseid;
-    if (baseId) {
+  const selectionSet = compassBeaconSelectionState;
+  if (selectionSet) {
+    selectionSet.forEach(baseId => {
       includedItems.add(baseId);
-    }
-  });
+    });
+  } else {
+    const checkboxes = document.querySelectorAll('#compassBeaconSelectionModal input[type="checkbox"]:checked');
+    checkboxes.forEach(checkbox => {
+      const baseId = (checkbox as HTMLInputElement).dataset.baseid;
+      if (baseId) {
+        includedItems.add(baseId);
+      }
+    });
+  }
   
   // Save selection to localStorage for restore feature
   const selectionArray = Array.from(includedItems);
