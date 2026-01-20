@@ -92,8 +92,8 @@ function createWindow() {
   // Always create frameless window - we'll use custom title bar for windowed mode
   // This avoids needing to recreate the window when switching modes
   mainWindow = new BrowserWindow({
-    width: fullscreenMode ? width : 1920,
-    height: fullscreenMode ? height : 1080,
+    width: fullscreenMode ? width : 1440,
+    height: fullscreenMode ? height : 900,
     x: fullscreenMode ? x : undefined,
     y: fullscreenMode ? y : undefined,
     minWidth: 800,
@@ -108,6 +108,8 @@ function createWindow() {
     fullscreenable: !fullscreenMode,
     transparent: false,
     hasShadow: !fullscreenMode,
+    show: false, // Don't show until ready to prevent flash
+    backgroundColor: '#161616', // Match app background
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -119,18 +121,23 @@ function createWindow() {
   // mainWindow.setMenu(null);
   
   if (fullscreenMode) {
-    mainWindow.hide(); // Only hide in fullscreen mode
     mainWindow.setBounds({ x: x, y: y, width: width, height: height });
     mainWindow.setSkipTaskbar(true);
   } else {
-    // In windowed mode, show the window and add it to taskbar
-    mainWindow.center();
+    // In windowed mode, start maximized and add it to taskbar
     mainWindow.setSkipTaskbar(false);
-    // Don't hide - let it appear on taskbar
+    mainWindow.maximize();
   }
   
   mainWindow.webContents.session.clearCache();
   mainWindow.loadFile(path.join(__dirname, 'ui/index.html'));
+  
+  // Show window only after content is ready (prevents flash)
+  mainWindow.once('ready-to-show', () => {
+    if (mainWindow && !fullscreenMode) {
+      mainWindow.show();
+    }
+  });
   
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -144,6 +151,15 @@ function createWindow() {
         mainWindow.setSkipTaskbar(false);
       }
     }
+  });
+  
+  // Notify renderer of maximize state changes for icon toggle
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('maximize-state-changed', true);
+  });
+  
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('maximize-state-changed', false);
   });
 }
 
@@ -484,6 +500,13 @@ ipcMain.on('close-window', () => {
       mainWindow.close();
     }
   }
+});
+
+ipcMain.handle('get-maximize-state', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return mainWindow.isMaximized();
+  }
+  return false;
 });
 
 ipcMain.on('toggle-window', () => {

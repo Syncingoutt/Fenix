@@ -63,5 +63,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   closeWindow: () => {
     ipcRenderer.send('close-window');
-  }
+  },
+  onMaximizeStateChanged: (callback: (isMaximized: boolean) => void) => {
+    ipcRenderer.on('maximize-state-changed', (_event, isMaximized) => callback(isMaximized));
+  },
+  getMaximizeState: () => ipcRenderer.invoke('get-maximize-state')
 });

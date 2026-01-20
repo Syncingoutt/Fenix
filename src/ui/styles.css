@@ -6,6 +6,7 @@
   --secondary: #000000;
   --accent: #ffffff;
   --border: #7e7e7e;
+  --border-shade: #3d3d3d;
   
   --scale: 1;
   --text-scale: 1;
@@ -38,7 +39,6 @@ body {
   align-items: center;
   height: calc(32px * var(--scale));
   background: var(--bg-shade);
-  border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
   user-select: none;
   position: fixed;
@@ -46,6 +46,7 @@ body {
   left: 0;
   right: 0;
   z-index: 10000;
+  border-bottom: 1px solid var(--border-shade);
 }
 
 .title-bar-drag-area {
@@ -57,9 +58,13 @@ body {
 }
 
 .title-bar-title {
-  font-size: calc(13px * var(--text-scale));
+  font-size: calc(15px * var(--text-scale));
   font-weight: 500;
   color: var(--text);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .title-bar-controls {

@@ -40,6 +40,8 @@ interface ElectronAPI {
   minimizeWindow: () => void;
   maximizeWindow: () => void;
   closeWindow: () => void;
+  onMaximizeStateChanged: (callback: (isMaximized: boolean) => void) => void;
+  getMaximizeState: () => Promise<boolean>;
 }
 
 declare const electronAPI: ElectronAPI;
@@ -2220,6 +2222,33 @@ titleBarMaximize.addEventListener('click', () => {
 
 titleBarClose.addEventListener('click', () => {
   electronAPI.closeWindow();
+});
+
+// SVG icons for maximize button states
+const maximizeIcon = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0.75" y="0.75" width="10.5" height="10.5" stroke="#808080" stroke-width="1.5" fill="none"/>
+</svg>`;
+
+const restoreIcon = `<svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0.75" y="4.27686" width="11.9316" height="11.9737" stroke="#808080" stroke-width="1.5"/>
+  <rect x="0.752037" y="0.747944" width="11.1078" height="11.1156" transform="matrix(0.999996 -0.00273721 0.00272013 0.999996 3.99797 0.0367292)" stroke="#808080" stroke-width="1.5"/>
+  <rect x="1.25977" y="4.79004" width="10.91" height="10.9474" fill="#272727"/>
+</svg>`;
+
+// Update maximize button icon based on window state
+function updateMaximizeIcon(isMaximized: boolean) {
+  titleBarMaximize.innerHTML = isMaximized ? restoreIcon : maximizeIcon;
+  titleBarMaximize.title = isMaximized ? 'Restore' : 'Maximize';
+}
+
+// Listen for maximize state changes
+electronAPI.onMaximizeStateChanged((isMaximized) => {
+  updateMaximizeIcon(isMaximized);
+});
+
+// Initialize maximize button icon on load
+electronAPI.getMaximizeState().then((isMaximized) => {
+  updateMaximizeIcon(isMaximized);
 });
 
 // === SETTINGS MODAL ===
