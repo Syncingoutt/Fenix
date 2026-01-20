@@ -42,6 +42,10 @@ interface ElectronAPI {
   closeWindow: () => void;
   onMaximizeStateChanged: (callback: (isMaximized: boolean) => void) => void;
   getMaximizeState: () => Promise<boolean>;
+  toggleOverlayWidget: () => void;
+  updateOverlayWidget: (data: { duration: number; hourly: number; total: number; isHourlyMode: boolean; isPaused: boolean }) => void;
+  onWidgetPauseHourly: (callback: () => void) => void;
+  onWidgetResumeHourly: (callback: () => void) => void;
 }
 
 declare const electronAPI: ElectronAPI;
@@ -978,6 +982,34 @@ function updateRealtimeWealth() {
     wealthValueEl.textContent = currentValue.toFixed(2);
     wealthHourlyEl.textContent = rate.toFixed(2);
   }
+  
+  // Update overlay widget with current data
+  updateOverlayWidgetData();
+}
+
+function updateOverlayWidgetData() {
+  let duration: number;
+  let hourly: number;
+  let total: number;
+  const isHourlyMode = wealthMode === 'hourly' && isHourlyActive;
+
+  if (isHourlyMode) {
+    // Hourly mode - use hourly values
+    const gainedValue = getHourlyWealthGain();
+    const elapsedTimeHours = hourlyElapsedSeconds / 3600;
+    duration = hourlyElapsedSeconds;
+    hourly = elapsedTimeHours > 0 ? gainedValue / elapsedTimeHours : 0;
+    total = gainedValue;
+  } else {
+    // Realtime mode - use realtime values
+    const currentValue = getCurrentTotalValue();
+    const elapsedTimeHours = realtimeElapsedSeconds / 3600;
+    duration = realtimeElapsedSeconds;
+    hourly = elapsedTimeHours > 0 ? (currentValue - realtimeStartValue) / elapsedTimeHours : 0;
+    total = currentValue;
+  }
+
+  electronAPI.updateOverlayWidget({ duration, hourly, total, isHourlyMode, isPaused: hourlyPaused });
 }
 
 // === WEALTH: Hourly tracking ===
@@ -991,6 +1023,9 @@ function updateHourlyWealth() {
     wealthValueEl.textContent = gainedValue.toFixed(2);
     wealthHourlyEl.textContent = rate.toFixed(2);
   }
+  
+  // Update overlay widget with current data
+  updateOverlayWidgetData();
 }
 
 // === HOURLY: Start (with prompt) ===
@@ -1101,6 +1136,9 @@ function pauseHourlyTracking() {
   
   pauseHourlyBtn.style.display = 'none';
   resumeHourlyBtn.style.display = 'inline-block';
+  
+  // Update overlay widget immediately
+  updateOverlayWidgetData();
 }
 
 // === HOURLY: Resume ===
@@ -1114,6 +1152,9 @@ function resumeHourlyTracking() {
   
   pauseHourlyBtn.style.display = 'inline-block';
   resumeHourlyBtn.style.display = 'none';
+  
+  // Update overlay widget immediately
+  updateOverlayWidgetData();
 }
 
 // === HOURLY: Stop ===
@@ -1155,6 +1196,9 @@ function stopHourlyTracking(auto = false) {
   // Update UI to show all items (not just gained items) after stopping hourly mode
   renderInventory();
   renderBreakdown();
+  
+  // Update overlay widget with realtime data since hourly mode ended
+  updateOverlayWidgetData();
 }
 
 // === BREAKDOWN MODAL ===
@@ -1813,6 +1857,9 @@ hourlyBtn.addEventListener('click', () => {
     renderBreakdown(); // Update breakdown (will show 0s if no hourly session)
   }
   updateGraph();
+  
+  // Update overlay widget with current mode
+  updateOverlayWidgetData();
 });
 
 startHourlyBtn.addEventListener('click', startHourlyTracking);
@@ -1820,6 +1867,25 @@ stopHourlyBtn.addEventListener('click', () => stopHourlyTracking(false));
 pauseHourlyBtn.addEventListener('click', pauseHourlyTracking);
 resumeHourlyBtn.addEventListener('click', resumeHourlyTracking);
 resetRealtimeBtn.addEventListener('click', resetRealtimeTracking);
+
+// Overlay widget toggle button
+const overlayWidgetBtn = document.getElementById('overlayWidgetBtn');
+overlayWidgetBtn?.addEventListener('click', () => {
+  electronAPI.toggleOverlayWidget();
+});
+
+// Listen for widget pause/resume buttons
+electronAPI.onWidgetPauseHourly(() => {
+  if (isHourlyActive && !hourlyPaused) {
+    pauseHourlyTracking();
+  }
+});
+
+electronAPI.onWidgetResumeHourly(() => {
+  if (isHourlyActive && hourlyPaused) {
+    resumeHourlyTracking();
+  }
+});
 
 // Compass/Beacon prompt modal event listeners
 document.getElementById('compassBeaconPromptNo')?.addEventListener('click', () => {

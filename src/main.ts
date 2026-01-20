@@ -31,6 +31,7 @@ if (!gotTheLock) {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let overlayWidget: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let inventoryManager: InventoryManager;
 let itemDatabase: ReturnType<typeof loadItemDatabase>;
@@ -39,6 +40,15 @@ let lastSendBaseId: string | null = null; // Track the most recent SEND message'
 const WATCH_INTERVAL = 500;
 let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
 let fullscreenMode: boolean = false; // Default to windowed mode
+
+// Overlay widget display values (sent directly from renderer)
+let overlayDisplayData = {
+  duration: 0,
+  hourly: 0,
+  total: 0,
+  isHourlyMode: false,
+  isPaused: false
+};
 
 // Timer state managed in main process (never throttled)
 interface TimerState {
@@ -264,6 +274,57 @@ function createTray() {
   });
 }
 
+// Create overlay widget window
+function createOverlayWidget() {
+  if (overlayWidget && !overlayWidget.isDestroyed()) {
+    overlayWidget.show();
+    overlayWidget.focus();
+    return;
+  }
+
+  overlayWidget = new BrowserWindow({
+    width: 150,
+    height: 130,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    hasShadow: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  overlayWidget.loadFile(path.join(__dirname, 'ui/overlay-widget.html'));
+  
+  overlayWidget.setAlwaysOnTop(true, 'screen-saver');
+  
+  overlayWidget.on('closed', () => {
+    overlayWidget = null;
+  });
+
+  // Send initial data
+  overlayWidget.webContents.once('did-finish-load', () => {
+    updateOverlayWidget();
+  });
+}
+
+function updateOverlayWidget() {
+  if (overlayWidget && !overlayWidget.isDestroyed()) {
+    // Just pass through the display values from renderer
+    overlayWidget.webContents.send('widget-update', overlayDisplayData);
+  }
+}
+
+function closeOverlayWidget() {
+  if (overlayWidget && !overlayWidget.isDestroyed()) {
+    overlayWidget.close();
+    overlayWidget = null;
+  }
+}
+
 // Configure auto-updater
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
@@ -416,6 +477,8 @@ app.whenReady().then(() => {
         seconds: timerState.realtimeSeconds
       });
     }
+    // Update overlay widget
+    updateOverlayWidget();
   }, 1000);
 
   // Hourly timer - only when active
@@ -556,6 +619,38 @@ ipcMain.on('toggle-window', () => {
         mainWindow.setAlwaysOnTop(true, 'screen-saver');
       }
     }
+  }
+});
+
+// Overlay widget IPC handlers
+ipcMain.on('toggle-overlay-widget', () => {
+  if (overlayWidget && !overlayWidget.isDestroyed()) {
+    closeOverlayWidget();
+  } else {
+    createOverlayWidget();
+  }
+});
+
+ipcMain.on('close-overlay-widget', () => {
+  closeOverlayWidget();
+});
+
+// Receives already-calculated display values from renderer
+ipcMain.on('update-overlay-widget', (_event, data: { duration: number; hourly: number; total: number; isHourlyMode: boolean; isPaused: boolean }) => {
+  overlayDisplayData = data;
+  updateOverlayWidget();
+});
+
+// Widget pause/resume buttons forward to renderer
+ipcMain.on('widget-pause-hourly', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('widget-pause-hourly');
+  }
+});
+
+ipcMain.on('widget-resume-hourly', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('widget-resume-hourly');
   }
 });
 

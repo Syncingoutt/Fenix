@@ -413,6 +413,44 @@ img:not(.header-logo-pic) {
   justify-content: center;
   align-items: center;
   gap: calc(20px * var(--scale));
+  position: relative;
+}
+
+.overlay-widget-btn {
+  position: absolute;
+  bottom: calc(8px * var(--scale));
+  right: calc(8px * var(--scale));
+  width: calc(28px * var(--scale));
+  height: calc(28px * var(--scale));
+  min-width: 24px;
+  min-height: 24px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: calc(6px * var(--scale));
+  color: var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.overlay-widget-btn:hover {
+  background: rgba(222, 92, 11, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.overlay-widget-btn:active {
+  transform: scale(0.95);
+}
+
+.overlay-widget-btn svg {
+  width: calc(14px * var(--scale));
+  height: calc(14px * var(--scale));
+  min-width: 12px;
+  min-height: 12px;
 }
 
 .maintext {
