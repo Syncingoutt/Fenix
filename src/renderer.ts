@@ -353,7 +353,7 @@ function renderUsageSection() {
                  class="item-icon"
                  onerror="this.style.display='none'">
             <div class="item-name-content">
-              <div>${itemName}</div>
+              <div class="item-name-text">${itemName}</div>
             </div>
           </div>
           <div class="item-quantity">${quantityDisplay}</div>
@@ -410,7 +410,7 @@ function renderInventory() {
                class="item-icon"
                onerror="this.style.display='none'">
           <div class="item-name-content">
-            <div>${item.itemName}</div>
+            <div class="item-label">${item.itemName}</div>
             ${pageLabel ? `<div class="page-label">${pageLabel}</div>` : ''}
           </div>
         </div>
