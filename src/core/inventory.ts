@@ -6,6 +6,7 @@ export interface InventoryItem {
   totalQuantity: number;
   baseId: string;
   price: number | null;
+  priceTimestamp: number | null; // Unix timestamp in milliseconds when price was last updated
   instances: number;
   lastUpdated: string;
   pageId: number | null;
@@ -52,12 +53,14 @@ export class InventoryManager {
       } else {
         const cachedEntry = this.priceCache.get(entry.baseId);
         const cachedPrice = cachedEntry ? cachedEntry.price : null;
+        const cachedTimestamp = cachedEntry ? cachedEntry.timestamp : null;
         
         this.inventory.set(entry.baseId, {
           itemName,
           totalQuantity: entry.bagNum,
           baseId: entry.baseId,
           price: cachedPrice,
+          priceTimestamp: cachedTimestamp,
           instances: 1,
           lastUpdated: entry.timestamp,
           pageId: entry.pageId,
@@ -70,9 +73,10 @@ export class InventoryManager {
   }
 
   updatePrice(baseId: string, price: number, listingCount?: number): void {
+    const timestamp = Date.now();
     const entry: PriceCacheEntry = {
       price,
-      timestamp: Date.now(),
+      timestamp,
       ...(listingCount !== undefined && { listingCount })
     };
     this.priceCache.set(baseId, entry);
@@ -80,6 +84,7 @@ export class InventoryManager {
     if (this.inventory.has(baseId)) {
       const item = this.inventory.get(baseId)!;
       item.price = price;
+      item.priceTimestamp = timestamp;
     }
   }
 

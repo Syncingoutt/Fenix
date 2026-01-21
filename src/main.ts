@@ -88,7 +88,7 @@ function debouncedSavePriceCache(): void {
       try {
         await savePriceCache(inventoryManager.getPriceCacheAsObject());
         priceCachePendingSave = false;
-        console.log('💾 Price cache saved (debounced)');
+        console.log('Price cache saved (debounced)');
       } catch (error) {
         console.error('Failed to save price cache:', error);
       }
@@ -107,7 +107,7 @@ async function forceSavePriceCache(): Promise<void> {
     try {
       await savePriceCache(inventoryManager.getPriceCacheAsObject());
       priceCachePendingSave = false;
-      console.log('💾 Price cache saved (forced)');
+      console.log('Price cache saved (forced)');
     } catch (error) {
       console.error('Failed to save price cache:', error);
     }
@@ -547,7 +547,7 @@ app.whenReady().then(() => {
       try {
         await savePriceCache(inventoryManager.getPriceCacheAsObject());
         priceCachePendingSave = false;
-        console.log('💾 Price cache saved (periodic)');
+        console.log('Price cache saved (periodic)');
       } catch (error) {
         console.error('Failed to save price cache (periodic):', error);
       }
@@ -902,7 +902,7 @@ function watchLogFile() {
 
   // Detect log file truncation (when ensureLogSizeLimit runs)
   if (currentSize < lastLogPosition) {
-    console.log(`⚠️ Log file truncated detected (was ${lastLogPosition}, now ${currentSize}). Resetting tracking position.`);
+    console.log(`Log file truncated detected (was ${lastLogPosition}, now ${currentSize}). Resetting tracking position.`);
     // Reset to start of truncated file - we'll rebuild inventory from the remaining content
     lastLogPosition = 0;
     // Rebuild inventory from the truncated file to ensure we have current state
@@ -940,7 +940,7 @@ function watchLogFile() {
           const match = line.match(/\+refer\s*\[(\d+)\]/);
           if (match) {
             lastSendBaseId = match[1];
-            console.log(`🔍 Price check initiated for baseId: ${lastSendBaseId}`);
+            console.log(`Price check initiated for baseId: ${lastSendBaseId}`);
           }
         }
         
@@ -953,7 +953,7 @@ function watchLogFile() {
       if (line.includes('----Socket RecvMessage STT----XchgSearchPrice----')) {
         inPriceCheck = true;
         priceCheckBuffer = [];
-        console.log('📊 Receiving price data...');
+        console.log('Receiving price data...');
         // Use the most recent SEND message's baseId
         currentPriceCheckBaseId = lastSendBaseId;
         // If not found in lastSendBaseId, try to extract from the send message buffer
@@ -963,7 +963,7 @@ function watchLogFile() {
               const match = bufLine.match(/\+refer\s*\[(\d+)\]/);
               if (match) {
                 currentPriceCheckBaseId = match[1];
-                console.log(`🔍 Price check baseId extracted from send message buffer: ${currentPriceCheckBaseId}`);
+                console.log(`Price check baseId extracted from send message buffer: ${currentPriceCheckBaseId}`);
                 break;
               }
             }
@@ -982,7 +982,7 @@ function watchLogFile() {
                   const match = sendLine.match(/\+refer\s*\[(\d+)\]/);
                   if (match) {
                     currentPriceCheckBaseId = match[1];
-                    console.log(`🔍 Price check baseId found in preceding send message: ${currentPriceCheckBaseId}`);
+                    console.log(`Price check baseId found in preceding send message: ${currentPriceCheckBaseId}`);
                     break;
                   }
                 }
@@ -995,7 +995,7 @@ function watchLogFile() {
         priceCheckBuffer.push(line);
         
         if (line.includes('----Socket RecvMessage End----')) {
-          console.log(`✅ Price data received, buffer has ${priceCheckBuffer.length} lines`);
+          console.log(`Price data received, buffer has ${priceCheckBuffer.length} lines`);
           
           const prices: number[] = [];
           for (const bufLine of priceCheckBuffer) {
@@ -1027,14 +1027,14 @@ function watchLogFile() {
                 const itemData = itemDatabase[priceResult.baseId];
                 itemName = itemData?.name || priceResult.baseId;
               }
-              console.log(`💰 Price updated: ${itemName} = ${priceResult.avgPrice.toFixed(2)} (from ${priceResult.listingCount} listings)`);
+              console.log(`Price updated: ${itemName} = ${priceResult.avgPrice.toFixed(2)} (from ${priceResult.listingCount} listings)`);
               
               priceUpdated = true;
             } else {
-              console.log(`⚠️  Parse issue - BaseID: ${currentPriceCheckBaseId}, Prices: ${prices.length} (no valid prices found)`);
+              console.log(`Parse issue - BaseID: ${currentPriceCheckBaseId}, Prices: ${prices.length} (no valid prices found)`);
             }
           } else {
-            console.log(`⚠️  No baseId found for price check with ${prices.length} prices`);
+            console.log(`No baseId found for price check with ${prices.length} prices`);
           }
 
           inPriceCheck = false;

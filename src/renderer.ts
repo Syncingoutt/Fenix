@@ -4,10 +4,29 @@ interface InventoryItem {
   totalQuantity: number;
   baseId: string;
   price: number | null;
+  priceTimestamp: number | null; // Unix timestamp in milliseconds when price was last updated
   instances: number;
   lastUpdated: string;
   pageId: number | null;
   slotId: number | null;
+}
+
+// Price staleness thresholds
+const PRICE_STALE_3_DAYS_MS = 72 * 60 * 60 * 1000; // 72 hours = 3 days
+const PRICE_STALE_7_DAYS_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function getPriceAgeClass(priceTimestamp: number | null): string {
+  if (priceTimestamp === null) return '';
+  
+  const ageMs = Date.now() - priceTimestamp;
+  
+  if (ageMs >= PRICE_STALE_7_DAYS_MS) {
+    return 'price-very-stale';
+  } else if (ageMs >= PRICE_STALE_3_DAYS_MS) {
+    return 'price-stale';
+  }
+  
+  return '';
 }
 
 interface ElectronAPI {
@@ -409,6 +428,8 @@ function renderInventory() {
       const totalValueAfterTax = totalValue !== null ? applyTax(totalValue, item.baseId) : null;
       const pageLabel = getPageLabel(item);
 
+      const priceAgeClass = getPriceAgeClass(item.priceTimestamp);
+      
       return `
       <div class="item-row">
         <div class="item-name">
@@ -423,10 +444,10 @@ function renderInventory() {
         </div>
         <div class="item-quantity">${item.totalQuantity.toLocaleString()}</div>
         <div class="item-price">
-          <div class="price-single ${item.price === null ? 'no-price' : ''}">
+          <div class="price-single ${item.price === null ? 'no-price' : ''} ${priceAgeClass}">
             ${item.price !== null ? item.price.toFixed(2) : 'Not Set'}
           </div>
-          ${totalValueAfterTax !== null ? `<div class="price-total">${totalValueAfterTax.toFixed(2)}</div>` : ''}
+          ${totalValueAfterTax !== null ? `<div class="price-total ${priceAgeClass}">${totalValueAfterTax.toFixed(2)}</div>` : ''}
         </div>
       </div>
     `;
@@ -570,13 +591,31 @@ function renderBreakdown() {
 }
 
 // === SORT INDICATORS ===
+const PRICE_HELP_ICON_HTML = `
+<span class="price-help-icon">
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+    <circle cx="8" cy="8" r="6.5"/>
+    <text x="8" y="11.5" text-anchor="middle" font-size="9" font-weight="600" fill="currentColor" stroke="none">i</text>
+  </svg>
+  <span class="price-help-tooltip">
+    <strong>Price Color Guide</strong><br>
+    <span style="color: #fff;">● White</span> = Fresh (&lt; 3 days)<br>
+    <span style="color: #DE5C0B;">● Orange</span> = Stale (3-7 days)<br>
+    <span style="color: #982104;">● Dark Orange</span> = Very stale (7+ days)
+  </span>
+</span>`;
+
 function updateSortIndicators() {
   document.querySelectorAll('[data-sort]').forEach(el => {
     const sortType = (el as HTMLElement).dataset.sort;
     if (!sortType) return;
     
-    // Set text content without "Up" or "Down"
-    (el as HTMLElement).textContent = sortType === 'priceUnit' ? 'Price' : 'Total';
+    // Set content - include help icon for Price column
+    if (sortType === 'priceUnit') {
+      (el as HTMLElement).innerHTML = 'Price' + PRICE_HELP_ICON_HTML;
+    } else {
+      (el as HTMLElement).textContent = 'Total';
+    }
     
     // Remove existing sort classes
     (el as HTMLElement).classList.remove('sort-active', 'sort-asc', 'sort-desc');
