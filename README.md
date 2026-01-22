@@ -66,6 +66,12 @@ See the amount of FE you have earned. There is a button to reset it, but it alwa
 <h3>Filter by min/max price</h3>
 <p>If you do not wish to see all the items, you can set a minimum or a maximum price so that they are not shown/included in the total calculation</p>
 <img width="303" height="88" alt="Price filter controls for setting minimum and maximum item values" src="https://github.com/user-attachments/assets/ddb5b962-5375-4980-ab16-f136cf15d386" />
+<h3>Overlay</h3>
+<p>Click the small button under "Total" to open a movable overlay you can place anywhere on your screen.</p>
+<img width="482" height="239" alt=" Highlighted overlay button under Total with movable overlay" src="https://github.com/user-attachments/assets/45b009cf-2264-447e-8eb4-1e85f4558e6f" />
+
+<p>The hourly overlay also lets you pause the timer.</p>
+<img width="227" height="192" alt="Hourly mode overlay with pause button" src="https://github.com/user-attachments/assets/58e825b5-76e7-4e9c-9188-63c89474950d" />
 </details>
 
 
