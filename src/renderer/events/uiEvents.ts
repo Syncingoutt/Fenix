@@ -98,4 +98,28 @@ export function initUIEvents(
   electronAPI.onCloseSettingsModal(() => {
     closeSettingsModal();
   });
+  
+  // SPA Navigation handlers
+  const navItems = document.querySelectorAll('.nav-item');
+  const pages = document.querySelectorAll('.page');
+  
+  function navigateToPage(pageId: string): void {
+    // Update nav active state
+    navItems.forEach(item => item.classList.remove('active'));
+    const activeNav = document.getElementById(`nav-${pageId}`);
+    if (activeNav) activeNav.classList.add('active');
+    
+    // Update page visibility
+    pages.forEach(page => page.classList.remove('active'));
+    const activePage = document.getElementById(`page-${pageId}`);
+    if (activePage) activePage.classList.add('active');
+  }
+  
+  // Add click handlers to nav items
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const pageId = item.id.replace('nav-', '');
+      navigateToPage(pageId);
+    });
+  });
 }

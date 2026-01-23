@@ -154,6 +154,35 @@ img:not(.header-logo-pic) {
   font-size: calc(18px * var(--text-scale));
 }
 
+.nav-item {
+  cursor: pointer;
+  transition: color 0.2s;
+  user-select: none;
+  padding-bottom: calc(4px * var(--scale));
+  border-bottom: 2px solid transparent;
+}
+
+.nav-item:hover {
+  color: var(--primary);
+}
+
+.nav-item.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* ============================================
+   PAGE SECTIONS
+   ============================================ */
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
 .header-user {
   font-size: calc(18px * var(--text-scale));
   font-weight: 600;
@@ -2525,4 +2554,37 @@ body.overlay-widget {
 .timer-control-btn svg {
   width: 12px;
   height: 12px;
+}
+
+/* ============================================
+   STRATEGIES PAGE
+   ============================================ */
+
+.strategies-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(60vh * var(--scale));
+  padding: calc(40px * var(--scale));
+}
+
+.strategies-message-box {
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  border-radius: calc(12px * var(--scale));
+  padding: calc(40px * var(--scale)) calc(60px * var(--scale));
+  text-align: center;
+  max-width: calc(600px * var(--scale));
+}
+
+.strategies-message-box p {
+  font-size: calc(18px * var(--text-scale));
+  color: var(--text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.strategies-message-box p:first-child {
+  margin-bottom: calc(12px * var(--scale));
+  font-weight: 600;
 }
