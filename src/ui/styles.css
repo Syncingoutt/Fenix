@@ -812,7 +812,7 @@ img:not(.header-logo-pic) {
   background-color: var(--bg-shade);
   display: flex;
   flex-direction: row;
-  gap: calc(12px * var(--scale));
+  justify-content: space-around;
 }
 
 .price-filter-row {
