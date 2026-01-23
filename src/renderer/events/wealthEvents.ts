@@ -1,6 +1,6 @@
 // Wealth tracking event handlers
 
-import { setWealthMode, getWealthMode, getIsHourlyActive, getRealtimeElapsedSeconds, getHourlyPaused } from '../state/wealthState.js';
+import { setWealthMode, getWealthMode, getIsHourlyActive, getRealtimeElapsedSeconds, getHourlyPaused, getIncludedItems } from '../state/wealthState.js';
 import { formatTime } from '../utils/formatting.js';
 import { ElectronAPI } from '../types.js';
 import {
@@ -150,7 +150,6 @@ export function initWealthEvents(
   
   // Compass/Beacon prompt modal event listeners
   document.getElementById('compassBeaconPromptNo')?.addEventListener('click', () => {
-    const { getIncludedItems } = require('../state/wealthState');
     const includedItems = getIncludedItems();
     includedItems.clear();
     hideCompassBeaconPrompt();
@@ -164,7 +163,6 @@ export function initWealthEvents(
   
   // Compass/Beacon selection modal event listeners
   document.getElementById('compassBeaconSelectionClose')?.addEventListener('click', () => {
-    const { getIncludedItems } = require('../state/wealthState');
     const includedItems = getIncludedItems();
     includedItems.clear();
     hideCompassBeaconSelection();
@@ -175,7 +173,6 @@ export function initWealthEvents(
   // Close modals when clicking outside
   document.getElementById('compassBeaconPromptModal')?.addEventListener('click', (e) => {
     if (e.target === document.getElementById('compassBeaconPromptModal')) {
-      const { getIncludedItems } = require('../state/wealthState');
       const includedItems = getIncludedItems();
       includedItems.clear();
       hideCompassBeaconPrompt();
@@ -184,7 +181,6 @@ export function initWealthEvents(
   
   document.getElementById('compassBeaconSelectionModal')?.addEventListener('click', (e) => {
     if (e.target === document.getElementById('compassBeaconSelectionModal')) {
-      const { getIncludedItems } = require('../state/wealthState');
       const includedItems = getIncludedItems();
       includedItems.clear();
       hideCompassBeaconSelection();

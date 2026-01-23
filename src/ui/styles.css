@@ -165,7 +165,7 @@ img:not(.header-logo-pic) {
   font-size: calc(var(--text-body) * var(--text-scale));
 }
 .nav-item:first-child {
-  margin-left: calc(35px * var(--scale));
+  margin-left: calc(40px * var(--scale));
 }
 
 .nav-item {
@@ -940,7 +940,7 @@ img:not(.header-logo-pic) {
 
 .search-container input {
   width: 100%;
-  padding: calc(12px * var(--scale)) calc(40px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(18px * var(--scale));
   background: var(--bg-shade);
   border: 1px solid var(--border);
   border-radius: calc(8px * var(--scale));
