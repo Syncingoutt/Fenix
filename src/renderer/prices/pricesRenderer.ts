@@ -359,18 +359,18 @@ export async function loadPrices(): Promise<void> {
 function applyFilters(): void {
   let items = [...allPriceItems];
   
-  // Filter by group
-  if (currentGroup !== 'all') {
-    items = items.filter(item => item.group === currentGroup);
-  }
-  
-  // Filter by search term
+  // If there's a search term, ignore group filter and search across all items
   if (currentSearchTerm) {
     const term = currentSearchTerm.toLowerCase();
     items = items.filter(item =>
       item.name.toLowerCase().includes(term) ||
       item.baseId.toLowerCase().includes(term)
     );
+  } else {
+    // Only apply group filter when there's no search term
+    if (currentGroup !== 'all') {
+      items = items.filter(item => item.group === currentGroup);
+    }
   }
   
   filteredPriceItems = items;
