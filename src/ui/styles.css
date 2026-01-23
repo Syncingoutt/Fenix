@@ -32,6 +32,11 @@ body {
   margin: 0 auto;
 }
 
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
 /* Custom Title Bar (for windowed mode) */
 #custom-title-bar {
   display: flex;
