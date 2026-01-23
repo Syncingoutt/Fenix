@@ -50,6 +50,7 @@
           </div>
           <div class="header-nav">
             <div id="nav-home" class="nav-item active">Home</div>
+            <div id="nav-prices" class="nav-item">Prices</div>
             <div id="nav-strategies" class="nav-item">Strategies</div>
           </div>
           <div class="header-user">
@@ -210,6 +211,61 @@
             </div>
           </div>
         </div>
+        </section>
+
+        <!-- Page: Prices -->
+        <section id="page-prices" class="page">
+          <div class="prices-layout">
+            <!-- Sidebar -->
+            <div class="prices-sidebar">
+              <div class="prices-sidebar-title">Categories</div>
+              <div class="prices-sidebar-items">
+                <button class="prices-sidebar-item active" data-group="currency"><img src="../../assets/currency.webp">Currency</button>
+                <button class="prices-sidebar-item" data-group="compass"><img src="../../assets/compass.webp">Compass</button>
+                <button class="prices-sidebar-item" data-group="beacon"><img src="../../assets/beacon.webp">Beacon</button>
+                <button class="prices-sidebar-item" data-group="card"><img src="../../assets/card.webp">Card</button>
+                <button class="prices-sidebar-item" data-group="ember"><img src="../../assets/ember.webp">Ember</button>
+                <button class="prices-sidebar-item" data-group="cube"><img src="../../assets/cube.webp">Cube</button>
+                <button class="prices-sidebar-item" data-group="aeterna"><img src="../../assets/aeterna.webp">Aeterna</button>
+                <button class="prices-sidebar-item" data-group="surge"><img src="../../assets/surge.webp">Surge</button>
+                <button class="prices-sidebar-item" data-group="blacksail"><img src="../../assets/blacksail.webp">Blacksail</button>
+                <button class="prices-sidebar-item" data-group="dream"><img src="../../assets/dream.webp">Dream</button>
+                <button class="prices-sidebar-item" data-group="outlaw"><img src="../../assets/outlaw.webp">Outlaw</button>
+                <button class="prices-sidebar-item" data-group="sandlord"><img src="../../assets/sandlord.webp">Sandlord</button>
+                <button class="prices-sidebar-item" data-group="overrealm"><img src="../../assets/overrealm.webp">Overrealm</button>
+                <button class="prices-sidebar-item" data-group="mist"><img src="../../assets/mist.webp">Mist</button>
+                <button class="prices-sidebar-item" data-group="canvas"><img src="../../assets/canvas.webp">Canvas</button>
+                <button class="prices-sidebar-item" data-group="vorax"><img src="../../assets/vorax.webp">Vorax</button>
+              </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="prices-container">
+              <div class="prices-header">
+                <div class="prices-search-container">
+                  <input type="text" id="pricesSearchInput" class="prices-search-input" placeholder="Search by item...">
+                  <button id="pricesClearSearch" class="prices-clear-search" style="display: none;">✕</button>
+                </div>
+                <select id="pricesSeasonSelect" class="prices-season-select">
+                  <option value="s11-vorax">S11 Vorax</option>
+                </select>
+              </div>
+              <div class="prices-table-wrapper">
+                <table class="prices-table">
+                  <thead>
+                    <tr>
+                      <th class="prices-col-name" data-sort="name">Name</th>
+                      <th class="prices-col-price" data-sort="price">Price</th>
+                      <th class="prices-col-sparkline" data-sort="trend">Last 7 days</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pricesTableBody">
+                    <!-- Prices will be populated by JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- Page: Strategies -->

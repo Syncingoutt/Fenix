@@ -40,6 +40,9 @@ import { initInventoryEvents } from './renderer/events/inventoryEvents.js';
 import { initWealthEvents } from './renderer/events/wealthEvents.js';
 import { initUIEvents } from './renderer/events/uiEvents.js';
 
+// Prices
+import { initPrices } from './renderer/prices/pricesRenderer.js';
+
 declare const electronAPI: ElectronAPI;
 declare const Chart: any;
 
@@ -195,6 +198,9 @@ async function initialize(): Promise<void> {
   );
   
   initUIEvents(loadInventory, closeSettingsModal);
+  
+  // Initialize prices page
+  initPrices();
 
 // Listen to timer ticks from main process
 electronAPI.onTimerTick((data) => {

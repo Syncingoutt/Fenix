@@ -1,5 +1,5 @@
 import { ParsedLogEntry } from './logParser';
-import { ItemDatabase, PriceCache, PriceCacheEntry } from './database';
+import { ItemDatabase, PriceCache, PriceCacheEntry, DailyPricePoint } from './database';
 
 export interface InventoryItem {
   itemName: string;
@@ -74,11 +74,38 @@ export class InventoryManager {
 
   updatePrice(baseId: string, price: number, listingCount?: number): void {
     const timestamp = Date.now();
+
+    // Build or update per-day history (last 7 days)
+    const today = new Date(timestamp);
+    const todayKey = today.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    let history: DailyPricePoint[] = [];
+    const existing = this.priceCache.get(baseId);
+
+    if (existing?.history && Array.isArray(existing.history)) {
+      history = [...existing.history];
+    }
+
+    const idx = history.findIndex(point => point.date === todayKey);
+    if (idx >= 0) {
+      history[idx] = { date: todayKey, price };
+    } else {
+      history.push({ date: todayKey, price });
+    }
+
+    // Sort by date ascending and keep only the last 7 days
+    history.sort((a, b) => a.date.localeCompare(b.date));
+    if (history.length > 7) {
+      history = history.slice(history.length - 7);
+    }
+
     const entry: PriceCacheEntry = {
       price,
       timestamp,
-      ...(listingCount !== undefined && { listingCount })
+      ...(listingCount !== undefined && { listingCount }),
+      ...(history.length > 0 && { history })
     };
+
     this.priceCache.set(baseId, entry);
     
     if (this.inventory.has(baseId)) {

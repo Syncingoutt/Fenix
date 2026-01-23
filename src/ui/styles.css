@@ -957,7 +957,7 @@ img:not(.header-logo-pic) {
 
 .search-icon {
   position: absolute;
-  left: calc(12px * var(--scale));
+  right: calc(12px * var(--scale));
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
@@ -2590,4 +2590,334 @@ body.overlay-widget {
 .strategies-message-box p:first-child {
   margin-bottom: calc(12px * var(--scale));
   font-weight: 600;
+}
+
+/* ============================================
+   PRICES PAGE
+   ============================================ */
+
+.prices-layout {
+  display: flex;
+  gap: 0;
+  max-width: calc(1440px * var(--scale));
+  margin: 0 auto;
+}
+
+/* Sidebar */
+.prices-sidebar {
+  width: calc(220px * var(--scale));
+  flex-shrink: 0;
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  border-right: none;
+}
+
+.prices-sidebar-title {
+  padding: calc(14px * var(--scale)) calc(16px * var(--scale));
+  font-weight: 600;
+  font-size: calc(11px * var(--text-scale));
+  color: var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.prices-sidebar-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.prices-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: calc(12px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(16px * var(--scale));
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-shade);
+  color: var(--text);
+  font-size: calc(14px * var(--text-scale));
+  font-family: "Manrope", sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.prices-sidebar-item:last-child {
+  border-bottom: none;
+}
+
+.prices-sidebar-item img {
+  width: calc(26px * var(--scale));
+  height: calc(26px * var(--scale));
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.prices-sidebar-item:hover {
+  background: var(--bg);
+}
+
+.prices-sidebar-item.active {
+  background: var(--bg);
+  color: var(--primary);
+  font-weight: 600;
+  border-left: 3px solid var(--primary);
+  padding-left: calc(13px * var(--scale));
+}
+
+/* Main Content */
+.prices-container {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: calc(20px * var(--scale));
+}
+
+.prices-header {
+  display: flex;
+  align-items: center;
+  gap: calc(12px * var(--scale));
+  margin-bottom: calc(16px * var(--scale));
+}
+
+.prices-search-container {
+  display: flex;
+  align-items: center;
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  padding: calc(16px * var(--scale)) calc(16px * var(--scale));
+  flex: 1;
+  max-width: calc(800px * var(--scale));
+}
+
+.prices-season-select {
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: calc(14px * var(--text-scale));
+  font-family: "Manrope", sans-serif;
+  padding: calc(16px * var(--scale)) calc(16px * var(--scale));
+  padding-right: calc(36px * var(--scale));
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%237E7E7E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right calc(12px * var(--scale)) center;
+  min-width: calc(150px * var(--scale));
+  transition: border-color 0.15s;
+}
+
+.prices-season-select:hover {
+  border-color: var(--primary);
+}
+
+.prices-season-select:focus {
+  border-color: var(--primary);
+}
+
+.prices-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: calc(14px * var(--text-scale));
+  font-family: "Manrope", sans-serif;
+  outline: none;
+  padding: 0;
+}
+
+.prices-search-input::placeholder {
+  color: var(--border);
+}
+
+.prices-clear-search {
+  background: transparent;
+  border: none;
+  color: var(--border);
+  font-size: calc(16px * var(--text-scale));
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.prices-clear-search:hover {
+  color: var(--text);
+}
+
+.prices-table-wrapper {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.prices-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prices-table thead {
+  background: var(--bg-shade);
+  border-bottom: 1px solid var(--border);
+}
+
+.prices-table th {
+  padding: calc(14px * var(--scale)) calc(12px * var(--scale));
+  text-align: left;
+  font-weight: 600;
+  color: var(--text);
+  font-size: calc(13px * var(--text-scale));
+  cursor: pointer;
+  user-select: none;
+}
+
+.prices-table th:first-child {
+  padding-left: calc(16px * var(--scale));
+}
+
+.prices-table th[data-sort]:hover {
+  color: var(--primary);
+}
+
+.prices-table th.prices-col-sparkline {
+  text-align: center;
+}
+
+.prices-table th[data-sort]::after {
+  opacity: 0.5;
+  font-size: calc(11px * var(--text-scale));
+}
+
+.prices-table th.sort-asc::after {
+  content: ' ↑';
+  opacity: 1;
+  color: var(--primary);
+}
+
+.prices-table th.sort-desc::after {
+  content: ' ↓';
+  opacity: 1;
+  color: var(--primary);
+}
+
+.prices-table tbody tr {
+  border-bottom: 1px solid var(--border-shade);
+  transition: background-color 0.15s;
+}
+
+.prices-table tbody tr:hover {
+  background: var(--bg-shade);
+}
+
+.prices-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.prices-table td {
+  padding: calc(14px * var(--scale)) calc(12px * var(--scale));
+  vertical-align: middle;
+}
+
+.prices-table td:first-child {
+  padding-left: calc(16px * var(--scale));
+}
+
+/* Name column with icon */
+.prices-col-name {
+  width: 55%;
+}
+
+.prices-name-cell {
+  display: flex;
+  align-items: center;
+  gap: calc(14px * var(--scale));
+}
+
+.prices-item-icon {
+  width: calc(40px * var(--scale));
+  height: calc(40px * var(--scale));
+  object-fit: contain;
+  flex-shrink: 0;
+  background: var(--bg-shade);
+  border-radius: calc(4px * var(--scale));
+  padding: calc(4px * var(--scale));
+  border: 1px solid var(--border-shade);
+}
+
+.prices-item-name {
+  font-weight: 500;
+  color: var(--text);
+  font-size: calc(15px * var(--text-scale));
+}
+
+/* Value column */
+.prices-col-price {
+  width: 20%;
+}
+
+.prices-price-value {
+  color: var(--text); /* White - fresh price (< 3 days) */
+  font-size: calc(15px * var(--text-scale));
+  font-weight: 600;
+}
+
+.prices-price-value.no-price {
+  color: var(--border);
+  font-weight: 400;
+}
+
+.prices-price-value.price-stale {
+  color: #DE5C0B; /* Orange - stale (3-7 days) */
+}
+
+.prices-price-value.price-very-stale {
+  color: #982104; /* Dark orange - very stale (7+ days) */
+}
+
+/* Trend/Sparkline column */
+.prices-col-sparkline {
+  width: 0%;
+  text-align: center;
+}
+
+.prices-sparkline-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(8px * var(--scale));
+}
+
+.prices-sparkline {
+  display: block;
+  background: var(--bg-shade);
+  border-radius: calc(4px * var(--scale));
+  padding: calc(4px * var(--scale));
+}
+
+.prices-trend {
+  font-weight: 600;
+  font-size: calc(14px * var(--text-scale));
+  min-width: calc(60px * var(--scale));
+  text-align: right;
+  padding: calc(4px * var(--scale)) calc(8px * var(--scale));
+  border-radius: calc(4px * var(--scale));
+}
+
+.prices-trend.trend-up {
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.prices-trend.trend-down {
+  color: #F44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.prices-trend.trend-neutral {
+  color: var(--border);
+  background: transparent;
 }

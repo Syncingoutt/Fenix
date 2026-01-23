@@ -12,9 +12,21 @@ export interface InventoryItem {
   slotId: number | null;
 }
 
+export interface PriceCacheEntry {
+  price: number;
+  timestamp: number;
+  listingCount?: number;
+  history?: { date: string; price: number }[];
+}
+
+export interface PriceCache {
+  [baseId: string]: PriceCacheEntry;
+}
+
 export interface ElectronAPI {
   getInventory: () => Promise<InventoryItem[]>;
   getItemDatabase: () => Promise<Record<string, { name: string; tradable?: boolean; group?: string }>>;
+  getPriceCache: () => Promise<PriceCache>;
   onInventoryUpdate: (callback: () => void) => void;
   startHourlyTimer: () => void;
   pauseHourlyTimer: () => void;

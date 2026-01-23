@@ -12,10 +12,17 @@ export interface ItemDatabase {
   [baseId: string]: ItemData;
 }
 
+// Daily price point for history (one entry per calendar day)
+export interface DailyPricePoint {
+  date: string; // ISO date string: YYYY-MM-DD (UTC)
+  price: number;
+}
+
 export interface PriceCacheEntry {
   price: number;
   timestamp: number; // Unix timestamp in milliseconds
   listingCount?: number; // Optional: number of listings used for average
+  history?: DailyPricePoint[]; // Optional: last N days of prices (we currently keep 7)
 }
 
 export interface PriceCache {

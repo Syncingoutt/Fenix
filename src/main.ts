@@ -632,6 +632,10 @@ ipcMain.handle('get-item-database', () => {
   return itemDatabase;
 });
 
+ipcMain.handle('get-price-cache', () => {
+  return inventoryManager.getPriceCacheAsObject();
+});
+
 ipcMain.on('minimize-window', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.minimize();
