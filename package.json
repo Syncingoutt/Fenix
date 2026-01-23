@@ -27,6 +27,7 @@
       "target": "nsis",
       "icon": "assets/AppIcon.ico"
     },
+    "electronLanguages": ["en"],
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
