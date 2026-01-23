@@ -169,6 +169,9 @@ img:not(.header-logo-pic) {
 }
 
 .nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(6px * var(--scale));
   cursor: pointer;
   transition: color 0.2s;
   user-select: none;
@@ -183,6 +186,21 @@ img:not(.header-logo-pic) {
 .nav-item.active {
   color: var(--primary);
   border-bottom-color: var(--primary);
+}
+
+.nav-badge {
+  padding: calc(2px * var(--scale)) calc(8px * var(--scale));
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: calc(var(--text-xsmall) * var(--text-scale));
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nav-badge-new {
+  background: linear-gradient(90deg, #de5c0b, #f97316);
 }
 
 /* ============================================
