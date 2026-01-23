@@ -69,6 +69,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "electron-updater": "^6.6.2"
+    "electron-updater": "^6.6.2",
+    "firebase": "^10.14.0"
   }
 }

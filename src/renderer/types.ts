@@ -47,6 +47,8 @@ export interface ElectronAPI {
   onShowLogPathSetup: (callback: () => void) => void;
   getSettings: () => Promise<{ keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }>;
   saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }) => Promise<{ success: boolean; error?: string }>;
+  getUsernameInfo: () => Promise<{ username?: string; tag?: string; displayName?: string; nextChangeAt?: number; canChange: boolean }>;
+  setUsername: (username: string) => Promise<{ success: boolean; error?: string; nextChangeAt?: number }>;
   testKeybind: (keybind: string) => Promise<{ success: boolean; error?: string }>;
   onCloseSettingsModal: (callback: () => void) => void;
   onWindowModeChanged: (callback: (data: { fullscreenMode: boolean }) => void) => void;

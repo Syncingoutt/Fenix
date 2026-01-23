@@ -2,11 +2,12 @@ import { app, BrowserWindow, ipcMain, dialog, crashReporter, globalShortcut, Men
 import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
-import { loadItemDatabase, loadPriceCache, savePriceCache } from './core/database';
+import { loadItemDatabase, loadPriceCache, savePriceCache, PriceCacheEntry } from './core/database';
 import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
+import { PriceSyncService } from './core/priceSync';
 
 // Single instance lock - prevent multiple instances (CRITICAL for packaged apps)
 const gotTheLock = app.requestSingleInstanceLock();
@@ -34,12 +35,14 @@ let mainWindow: BrowserWindow | null = null;
 let overlayWidget: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let inventoryManager: InventoryManager;
+let priceSyncService: PriceSyncService;
 let itemDatabase: ReturnType<typeof loadItemDatabase>;
 let lastLogPosition = 0;
 let lastSendBaseId: string | null = null; // Track the most recent SEND message's baseId across log reads
 const WATCH_INTERVAL = 500;
 let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
 let fullscreenMode: boolean = false; // Default to windowed mode
+const PRICE_SYNC_INTERVAL_MS = 20 * 60 * 1000;
 
 // Overlay widget display values (sent directly from renderer)
 let overlayDisplayData = {
@@ -112,6 +115,26 @@ async function forceSavePriceCache(): Promise<void> {
       console.error('Failed to save price cache:', error);
     }
   }
+}
+
+function shouldApplyCloudEntry(localEntry: PriceCacheEntry | undefined, cloudEntry: PriceCacheEntry): boolean {
+  if (!localEntry) return true;
+  if (cloudEntry.timestamp > localEntry.timestamp) return true;
+  if (cloudEntry.timestamp < localEntry.timestamp) return false;
+  const cloudListings = cloudEntry.listingCount ?? 0;
+  const localListings = localEntry.listingCount ?? 0;
+  return cloudListings > localListings;
+}
+
+function applyCloudPriceUpdate(baseId: string, entry: PriceCacheEntry): boolean {
+  if (!inventoryManager) return false;
+  const localCache = inventoryManager.getPriceCacheAsObject();
+  const localEntry = localCache[baseId];
+  if (!shouldApplyCloudEntry(localEntry, entry)) {
+    return false;
+  }
+  inventoryManager.updatePrice(baseId, entry.price, entry.listingCount, entry.timestamp);
+  return true;
 }
 
 function getIconPath(): string {
@@ -469,7 +492,7 @@ if (app.isPackaged) {
   autoUpdater.checkForUpdatesAndNotify();
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Menu.setApplicationMenu(null);
 
   console.log('🔥 Torchlight Tracker - Starting...');
@@ -484,13 +507,24 @@ app.whenReady().then(() => {
   itemDatabase = loadItemDatabase();
   console.log(`📦 Loaded ${Object.keys(itemDatabase).length} items`);
   
-  const priceCache = loadPriceCache();
+  priceSyncService = new PriceSyncService();
+  const priceCache = await loadPriceCache((options) => priceSyncService.syncPrices(options));
   const priceCount = Object.keys(priceCache).length;
   if (priceCount > 0) {
     console.log(`💰 Loaded ${priceCount} cached prices`);
   }
   
   inventoryManager = new InventoryManager(itemDatabase, priceCache);
+
+  priceSyncService.setRemoteUpdateHandler((baseId, entry) => {
+    const applied = applyCloudPriceUpdate(baseId, entry);
+    if (applied) {
+      debouncedSavePriceCache();
+      if (mainWindow) {
+        mainWindow.webContents.send('inventory-updated');
+      }
+    }
+  });
   
   createWindow();
   createTray();
@@ -553,6 +587,29 @@ app.whenReady().then(() => {
       }
     }
   }, PRICE_CACHE_PERIODIC_SAVE_MS);
+
+  // Periodic cloud sync - fetch latest prices every 20 minutes
+  setInterval(async () => {
+    if (!priceSyncService || !inventoryManager) return;
+    const cloudCache = await priceSyncService.syncPrices();
+    const localCache = inventoryManager.getPriceCacheAsObject();
+    let appliedUpdates = 0;
+
+    for (const [baseId, cloudEntry] of Object.entries(cloudCache)) {
+      const localEntry = localCache[baseId];
+      if (shouldApplyCloudEntry(localEntry, cloudEntry)) {
+        inventoryManager.updatePrice(baseId, cloudEntry.price, cloudEntry.listingCount, cloudEntry.timestamp);
+        appliedUpdates += 1;
+      }
+    }
+
+    if (appliedUpdates > 0) {
+      debouncedSavePriceCache();
+      if (mainWindow) {
+        mainWindow.webContents.send('inventory-updated');
+      }
+    }
+  }, PRICE_SYNC_INTERVAL_MS);
 
   // Load settings and register keybind
   const settings = getSettings();
@@ -806,6 +863,20 @@ ipcMain.handle('get-settings', () => {
   return getSettings();
 });
 
+ipcMain.handle('get-username-info', () => {
+  return priceSyncService.getUsernameInfo();
+});
+
+ipcMain.handle('set-username', async (event, username: string) => {
+  try {
+    await priceSyncService.setUsername(username);
+    const info = priceSyncService.getUsernameInfo();
+    return { success: true, nextChangeAt: info.nextChangeAt };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update username' };
+  }
+});
+
 ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }) => {
   try {
     saveSettings(settings);
@@ -1020,7 +1091,15 @@ function watchLogFile() {
             const priceResult = processPriceCheckData(currentPriceCheckBaseId, prices);
             
             if (priceResult) {
-              inventoryManager.updatePrice(priceResult.baseId, priceResult.avgPrice, priceResult.listingCount);
+              const timestamp = Date.now();
+              inventoryManager.updatePrice(priceResult.baseId, priceResult.avgPrice, priceResult.listingCount, timestamp);
+              if (priceSyncService) {
+                priceSyncService.queuePriceUpdate(priceResult.baseId, {
+                  price: priceResult.avgPrice,
+                  timestamp,
+                  listingCount: priceResult.listingCount
+                });
+              }
               debouncedSavePriceCache();
               // Try to get item name from database if not in inventory
               const inventoryItem = inventoryManager.getInventoryMap().get(priceResult.baseId);

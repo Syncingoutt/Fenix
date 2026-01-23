@@ -72,8 +72,7 @@ export class InventoryManager {
     return this.inventory;
   }
 
-  updatePrice(baseId: string, price: number, listingCount?: number): void {
-    const timestamp = Date.now();
+  updatePrice(baseId: string, price: number, listingCount?: number, timestamp: number = Date.now()): void {
 
     // Build or update per-day history (last 7 days)
     const today = new Date(timestamp);

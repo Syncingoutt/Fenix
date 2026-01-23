@@ -1763,6 +1763,36 @@ img:not(.header-logo-pic) {
   background: rgba(222, 92, 11, 0.1);
 }
 
+.settings-input-row {
+  display: flex;
+  gap: calc(12px * var(--scale));
+  align-items: center;
+  margin-bottom: calc(8px * var(--scale));
+}
+
+.settings-text-input {
+  width: 100%;
+  padding: calc(12px * var(--scale)) calc(16px * var(--scale));
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  color: var(--text);
+  font-family: "Manrope", sans-serif;
+  font-size: calc(var(--text-small) * var(--text-scale));
+  transition: border-color 0.2s;
+}
+
+.settings-text-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.settings-helper-text {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--border);
+  line-height: 1.5;
+}
+
 .keybind-btn {
   padding: calc(12px * var(--scale)) calc(24px * var(--scale));
   background: var(--primary);

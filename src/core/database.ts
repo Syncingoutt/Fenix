@@ -34,6 +34,43 @@ interface LegacyPriceCache {
   [baseId: string]: number | PriceCacheEntry;
 }
 
+export function mergePriceCaches(localCache: PriceCache, cloudCache: PriceCache): PriceCache {
+  const merged: PriceCache = { ...localCache };
+
+  for (const [baseId, cloudEntry] of Object.entries(cloudCache)) {
+    const localEntry = localCache[baseId];
+    const cloudListings = cloudEntry.listingCount ?? 0;
+    const localListings = localEntry?.listingCount ?? 0;
+    let decision = 'use-cloud';
+    let reason = 'no local entry';
+
+    if (localEntry) {
+      if (cloudEntry.timestamp > localEntry.timestamp) {
+        decision = 'use-cloud';
+        reason = 'cloud newer';
+      } else if (cloudEntry.timestamp < localEntry.timestamp) {
+        decision = 'keep-local';
+        reason = 'local newer';
+      } else if (cloudListings > localListings) {
+        decision = 'use-cloud';
+        reason = 'equal timestamp, cloud has more listings';
+      } else {
+        decision = 'keep-local';
+        reason = 'equal timestamp, local has same or more listings';
+      }
+    }
+
+    if (decision === 'use-cloud') {
+      merged[baseId] = {
+        ...cloudEntry,
+        ...(localEntry?.history && { history: localEntry.history })
+      };
+    }
+  }
+
+  return merged;
+}
+
 // Use app.getPath('userData') for writable files in production
 // Use process.resourcesPath for read-only files from extraResources
 function getDataPath(filename: string): string {
@@ -65,11 +102,23 @@ export function loadItemDatabase(): ItemDatabase {
   return JSON.parse(data);
 }
 
-export function loadPriceCache(): PriceCache {
+export async function loadPriceCache(
+  cloudCacheProvider?: (options?: { forceFull?: boolean }) => Promise<PriceCache>
+): Promise<PriceCache> {
   const PRICE_CACHE_FILE = getUserDataPath('price_cache.json');
   
   if (!fs.existsSync(PRICE_CACHE_FILE)) {
-    return {};
+    const emptyCache = {};
+    if (!cloudCacheProvider) {
+      return emptyCache;
+    }
+    try {
+      const cloudCache = await cloudCacheProvider({ forceFull: true });
+      return mergePriceCaches(emptyCache, cloudCache);
+    } catch (error) {
+      console.error('Failed to load cloud price cache:', error);
+      return emptyCache;
+    }
   }
 
   try {
@@ -97,8 +146,19 @@ export function loadPriceCache(): PriceCache {
     if (migrationNeeded) {
       console.log('💰 Migrated price cache to new format with timestamps');
     }
-    
-    return migratedCache;
+
+    if (!cloudCacheProvider) {
+      return migratedCache;
+    }
+
+    try {
+      const forceFull = Object.keys(migratedCache).length === 0;
+      const cloudCache = await cloudCacheProvider({ forceFull });
+      return mergePriceCaches(migratedCache, cloudCache);
+    } catch (error) {
+      console.error('Failed to load cloud price cache:', error);
+      return migratedCache;
+    }
   } catch (error) {
     console.error('Failed to load price cache:', error);
     return {};

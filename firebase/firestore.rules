@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /prices/{baseId} {
+      // Allow authenticated users to read all prices
+      allow read: if request.auth != null;
+      
+      // Allow writes with validation and conflict resolution
+      allow write: if request.auth != null
+        // Validate price is a number in valid range
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && request.resource.data.price <= 1000000
+        // Validate timestamp is a number
+        && request.resource.data.timestamp is number
+        // Timestamp not more than 1 day in future (clock skew protection)
+        && request.resource.data.timestamp <= request.time.toMillis() + 86400000
+        // Timestamp not older than 7 days (prevent stale data)
+        && request.resource.data.timestamp >= request.time.toMillis() - 604800000
+        // Validate userId matches authenticated user
+        && request.resource.data.userId == request.auth.uid
+        // Validate baseId is numeric (enforced by path, but double-check)
+        && baseId.matches('^\\d+$')
+        // Conflict resolution: only write if our timestamp is newer, or same timestamp with more listings
+        && (!exists(/databases/$(database)/documents/prices/$(baseId))
+            || request.resource.data.timestamp > resource.data.timestamp
+            || (request.resource.data.timestamp == resource.data.timestamp
+                && (request.resource.data.listingCount is number
+                    ? request.resource.data.listingCount
+                    : 0) >= (resource.data.listingCount is number
+                    ? resource.data.listingCount
+                    : 0)));
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

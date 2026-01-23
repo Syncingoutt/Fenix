@@ -9,9 +9,11 @@ declare const electronAPI: ElectronAPI;
 
 let isRecordingKeybind = false;
 let currentSettings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean } = {};
+let currentUsernameInfo: { username?: string; tag?: string; displayName?: string; nextChangeAt?: number; canChange: boolean } | null = null;
 let pendingKeybind: string | null = null;
 let pendingFullscreenMode: boolean | null = null;
 let pendingIncludeTax: boolean | null = null;
+let pendingUsername: string | null = null;
 
 let settingsMenuOpen = false;
 let renderInventory: () => void;
@@ -31,6 +33,8 @@ const preferencesSection = document.getElementById('preferencesSection')!;
 const fullscreenModeRadio = document.getElementById('fullscreenModeRadio') as HTMLInputElement;
 const normalModeRadio = document.getElementById('normalModeRadio') as HTMLInputElement;
 const includeTaxCheckbox = document.getElementById('includeTaxCheckbox') as HTMLInputElement | null;
+const usernameInput = document.getElementById('usernameInput') as HTMLInputElement | null;
+const usernameHelperText = document.getElementById('usernameHelperText') as HTMLElement | null;
 const settingsSidebarItems = document.querySelectorAll('.settings-sidebar-item');
 
 export function initSettingsModal(
@@ -56,10 +60,12 @@ export function initSettingsModal(
       
       // Load current settings
       currentSettings = await electronAPI.getSettings();
+      currentUsernameInfo = await electronAPI.getUsernameInfo();
       pendingKeybind = currentSettings.keybind || 'CommandOrControl+`';
       pendingFullscreenMode = currentSettings.fullscreenMode !== undefined ? currentSettings.fullscreenMode : false;
       pendingIncludeTax = currentSettings.includeTax !== undefined ? currentSettings.includeTax : false;
       setIncludeTax(pendingIncludeTax);
+      pendingUsername = currentUsernameInfo.username || '';
       
       // Display current keybind
       keybindInput.value = formatKeybind(pendingKeybind);
@@ -78,6 +84,20 @@ export function initSettingsModal(
       // Set tax checkbox
       if (includeTaxCheckbox) {
         includeTaxCheckbox.checked = pendingIncludeTax;
+      }
+
+      // Set username input + helper text
+      if (usernameInput && usernameHelperText && currentUsernameInfo) {
+        usernameInput.value = pendingUsername || '';
+        const tagLabel = currentUsernameInfo.tag ? `Tag: #${currentUsernameInfo.tag}` : 'Tag: not set';
+        if (currentUsernameInfo.canChange) {
+          usernameHelperText.textContent = `${tagLabel}. You can change your username now.`;
+        } else if (currentUsernameInfo.nextChangeAt) {
+          const nextChange = new Date(currentUsernameInfo.nextChangeAt).toLocaleString();
+          usernameHelperText.textContent = `${tagLabel}. Next change available at ${nextChange}.`;
+        } else {
+          usernameHelperText.textContent = `${tagLabel}.`;
+        }
       }
       
       // Reset save button state
@@ -240,6 +260,12 @@ export function initSettingsModal(
       }
     });
   }
+
+  if (usernameInput) {
+    usernameInput.addEventListener('input', () => {
+      pendingUsername = usernameInput.value.trim();
+    });
+  }
   
   // Sidebar navigation
   settingsSidebarItems.forEach(item => {
@@ -280,6 +306,19 @@ export function initSettingsModal(
       const currentTaxValue = checkboxElement ? checkboxElement.checked : (pendingIncludeTax ?? false);
       settingsToSave.includeTax = currentTaxValue;
       
+      let usernameError: string | null = null;
+      if (currentUsernameInfo && pendingUsername !== null) {
+        const currentUsername = currentUsernameInfo.username || '';
+        if (pendingUsername !== currentUsername) {
+          const usernameResult = await electronAPI.setUsername(pendingUsername);
+          if (!usernameResult.success) {
+            usernameError = usernameResult.error || 'Failed to update username';
+          } else {
+            currentUsernameInfo = await electronAPI.getUsernameInfo();
+          }
+        }
+      }
+
       const result = await electronAPI.saveSettings(settingsToSave);
       
       if (result.success) {
@@ -300,12 +339,30 @@ export function initSettingsModal(
         // Get current items from state for stats update
         updateStats(getCurrentItems());
         
-        settingsFooterMessage.textContent = 'Settings saved successfully';
-        settingsFooterMessage.className = 'settings-footer-message success show';
+        if (usernameError) {
+          settingsFooterMessage.textContent = usernameError;
+          settingsFooterMessage.className = 'settings-footer-message error show';
+        } else {
+          settingsFooterMessage.textContent = 'Settings saved successfully';
+          settingsFooterMessage.className = 'settings-footer-message success show';
+        }
         
         keybindStatus.textContent = '';
         keybindStatus.className = 'keybind-status';
         
+        if (usernameInput && usernameHelperText && currentUsernameInfo) {
+          usernameInput.value = currentUsernameInfo.username || '';
+          const tagLabel = currentUsernameInfo.tag ? `Tag: #${currentUsernameInfo.tag}` : 'Tag: not set';
+          if (currentUsernameInfo.canChange) {
+            usernameHelperText.textContent = `${tagLabel}. You can change your username now.`;
+          } else if (currentUsernameInfo.nextChangeAt) {
+            const nextChange = new Date(currentUsernameInfo.nextChangeAt).toLocaleString();
+            usernameHelperText.textContent = `${tagLabel}. Next change available at ${nextChange}.`;
+          } else {
+            usernameHelperText.textContent = `${tagLabel}.`;
+          }
+        }
+
         settingsSaveBtn.disabled = false;
         settingsSaveBtn.textContent = 'Save';
         
@@ -343,6 +400,7 @@ function closeSettingsModal(): void {
   pendingKeybind = null;
   pendingFullscreenMode = null;
   pendingIncludeTax = null;
+  pendingUsername = null;
 }
 
 export { closeSettingsModal };
