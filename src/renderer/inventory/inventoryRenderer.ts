@@ -89,7 +89,7 @@ export function updateSortIndicators(): void {
   const currentSortOrder = getCurrentSortOrder();
   
   // Scope sort indicators to inventory section only so we don't affect other pages (e.g. Prices)
-  document.querySelectorAll('#inventory [data-sort]').forEach(el => {
+  document.querySelectorAll('.inventory-section [data-sort]').forEach(el => {
     const sortType = (el as HTMLElement).dataset.sort;
     if (!sortType) return;
     
