@@ -1247,7 +1247,7 @@ img:not(.header-logo-pic) {
   border-radius: 0 0 calc(16px * var(--scale)) calc(16px * var(--scale));
 }
 
-.close-btn {
+.breakdown-close-btn {
   padding: calc(12px * var(--scale)) calc(48px * var(--scale));
   background: var(--primary);
   color: white;
@@ -1260,12 +1260,12 @@ img:not(.header-logo-pic) {
   transition: all 0.2s;
 }
 
-.close-btn:hover {
+.breakdown-close-btn:hover {
   background: #c24f09;
   transform: translateY(calc(-2px * var(--scale)));
 }
 
-.close-btn:active {
+.breakdown-close-btn:active {
   transform: translateY(0);
 }
 
@@ -2393,4 +2393,136 @@ img:not(.header-logo-pic) {
   background: rgba(126, 126, 126, 0.1);
   border-color: var(--primary);
   color: var(--primary);
+}
+
+/* ============================================
+   OVERLAY WIDGET
+   ============================================ */
+
+/* Widget-specific html/body styles for transparent overlay */
+/* These apply when overlay-widget.html is loaded in a separate window */
+html.overlay-widget,
+html.overlay-widget body,
+body.overlay-widget {
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  padding: 0;
+  max-width: none;
+  margin: 0;
+}
+
+.widget {
+  position: relative;
+  background: rgba(22, 22, 22, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: 'Segoe UI', 'Manrope', sans-serif;
+  color: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: move;
+  -webkit-app-region: drag;
+  min-width: 130px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.stat-label {
+  color: #808080;
+  font-weight: 500;
+  min-width: 45px;
+}
+
+.stat-value {
+  color: #fafafa;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value.duration {
+  color: #de5c0b;
+  font-size: 14px;
+}
+
+.stat-value.hourly {
+  color: #10b981;
+}
+
+.stat-value.total {
+  color: #fafafa;
+}
+
+.widget-close-btn {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 14px;
+  height: 14px;
+  background: transparent;
+  border: none;
+  color: #808080;
+  font-size: 12px;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.widget-close-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.timer-controls {
+  display: none;
+  margin-top: 6px;
+}
+
+.timer-controls.visible {
+  display: block;
+}
+
+.timer-control-btn {
+  width: 100%;
+  height: 26px;
+  background: transparent;
+  border: 1px solid rgba(222, 92, 11, 0.5);
+  color: #de5c0b;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.timer-control-btn.visible {
+  display: flex;
+}
+
+.timer-control-btn:hover {
+  background: rgba(222, 92, 11, 0.15);
+  border-color: rgba(222, 92, 11, 0.8);
+  color: #ff7a2e;
+}
+
+.timer-control-btn svg {
+  width: 12px;
+  height: 12px;
 }
