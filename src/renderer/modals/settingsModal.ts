@@ -3,6 +3,7 @@
 import { ElectronAPI } from '../types.js';
 import { getIncludeTax, setIncludeTax } from '../state/settingsState.js';
 import { formatKeybind } from '../utils/formatting.js';
+import { getCurrentItems } from '../state/inventoryState.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -297,7 +298,6 @@ export function initSettingsModal(
         renderInventory();
         renderBreakdown();
         // Get current items from state for stats update
-        const { getCurrentItems } = require('../state/inventoryState');
         updateStats(getCurrentItems());
         
         settingsFooterMessage.textContent = 'Settings saved successfully';

@@ -17,9 +17,8 @@ import { initRealtimeTracker, initRealtimeTracking, updateRealtimeWealth, resetR
 import { initHourlyTracker, startHourlyTracking, stopHourlyTracking, pauseHourlyTracking, resumeHourlyTracking, actuallyStartHourlyTracking, trackCompassBeaconUsage, updatePreviousQuantities, updateHourlyWealth, captureHourlyBucket } from './renderer/wealth/hourlyTracker.js';
 
 // Inventory
-import { renderInventory } from './renderer/inventory/inventoryRenderer.js';
+import { renderInventory, updateSortIndicators } from './renderer/inventory/inventoryRenderer.js';
 import { renderBreakdown } from './renderer/inventory/breakdownRenderer.js';
-import { updateSortIndicators } from './renderer/inventory/breakdownRenderer.js';
 
 // Graph
 import { initGraph, pushRealtimePoint, pushPoint, updateGraph } from './renderer/graph/graphManager.js';
@@ -30,6 +29,7 @@ import { showCompassBeaconPrompt, hideCompassBeaconPrompt, showCompassBeaconSele
 import { initUpdateModal } from './renderer/modals/updateModal.js';
 import { initSettingsModal, closeSettingsModal } from './renderer/modals/settingsModal.js';
 import { initImportantNoticeModal } from './renderer/modals/importantNoticeModal.js'; // remove after v2.4.0
+import { initSetupModal } from './renderer/modals/setupModal.js';
 
 // Settings & Updates
 import { initSettingsManager } from './renderer/settings/settingsManager.js';
@@ -144,6 +144,7 @@ async function initialize(): Promise<void> {
   initBreakdownModal(renderInventory, () => renderBreakdown(renderInventory));
   initUpdateModal();
   initImportantNoticeModal();
+  initSetupModal(loadInventory);
   
   // Initialize settings manager and get settings menu state
   const settingsMenuState = initSettingsManager();
@@ -197,7 +198,7 @@ async function initialize(): Promise<void> {
     closeBreakdownModal
   );
   
-  initUIEvents(loadInventory, closeSettingsModal);
+  initUIEvents(closeSettingsModal);
   
   // Initialize prices page
   initPrices();

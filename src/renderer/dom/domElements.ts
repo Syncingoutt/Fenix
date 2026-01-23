@@ -21,8 +21,6 @@ export const customTitleBar = document.getElementById('custom-title-bar')!;
 export const titleBarMinimize = document.getElementById('title-bar-minimize') as HTMLButtonElement;
 export const titleBarMaximize = document.getElementById('title-bar-maximize') as HTMLButtonElement;
 export const titleBarClose = document.getElementById('title-bar-close') as HTMLButtonElement;
-export const setupModal = document.getElementById('setupModal')!;
-export const setupBtnSelect = document.getElementById('setupBtnSelect') as HTMLButtonElement;
 
 /**
  * Initialize initial UI state

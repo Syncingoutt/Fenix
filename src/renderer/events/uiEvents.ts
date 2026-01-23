@@ -1,7 +1,7 @@
-// UI event handlers (title bar, log path setup, etc.)
+// UI event handlers (title bar, etc.)
 
 import { ElectronAPI } from '../types.js';
-import { customTitleBar, titleBarMinimize, titleBarMaximize, titleBarClose, setupModal, setupBtnSelect } from '../dom/domElements.js';
+import { customTitleBar, titleBarMinimize, titleBarMaximize, titleBarClose } from '../dom/domElements.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -15,14 +15,11 @@ const restoreIcon = `<svg width="17" height="17" viewBox="0 0 17 17" fill="none"
   <rect x="1.25977" y="4.79004" width="10.91" height="10.9474" fill="#272727"/>
 </svg>`;
 
-let loadInventory: () => Promise<void>;
 let closeSettingsModal: () => void;
 
 export function initUIEvents(
-  inventoryLoader: () => Promise<void>,
   settingsModalCloseFn: () => void
 ): void {
-  loadInventory = inventoryLoader;
   closeSettingsModal = settingsModalCloseFn;
   
   // Function to update title bar visibility
@@ -73,25 +70,6 @@ export function initUIEvents(
   // Initialize maximize button icon on load
   electronAPI.getMaximizeState().then((isMaximized) => {
     updateMaximizeIcon(isMaximized);
-  });
-  
-  // Log path setup modal
-  setupBtnSelect.addEventListener('click', async () => {
-    try {
-      const selectedPath = await electronAPI.selectLogFile();
-      if (selectedPath) {
-        setupModal.classList.remove('active');
-        // Reload inventory with the new path
-        loadInventory();
-      }
-    } catch (error: any) {
-      console.error('Failed to select log file:', error);
-    }
-  });
-  
-  // Listen for first launch setup request
-  electronAPI.onShowLogPathSetup(() => {
-    setupModal.classList.add('active');
   });
   
   // Listen for close settings modal request (when window mode changes)
