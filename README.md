@@ -72,6 +72,14 @@ See the amount of FE you have earned. There is a button to reset it, but it alwa
 
 <p>The hourly overlay also lets you pause the timer.</p>
 <img width="227" height="192" alt="Hourly mode overlay with pause button" src="https://github.com/user-attachments/assets/58e825b5-76e7-4e9c-9188-63c89474950d" />
+<h2>Prices</h2>
+A page where you can view all the items and see how the economy is doing.
+  - See all items at once, sort by groups or search.
+  - Shows **7-day mini graphs** for each item
+  - Currently, the graph will update day-by-day, so initially it will show 0% and then rise or go down from there each day as you price check items.
+
+<img width="1437" height="1067" alt="a market showing all items, a 7-day mini-graph, groups of items" src="https://github.com/user-attachments/assets/358b1eb0-ceaf-4051-b28b-2631184f5f2a" />
+<i>stock market type shit, inspired by poe.ninja</i>
 </details>
 
 
