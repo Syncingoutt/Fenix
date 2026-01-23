@@ -5,20 +5,27 @@ service cloud.firestore {
       // Allow authenticated users to read all prices
       allow read: if request.auth != null;
       
-      // Allow writes with validation and conflict resolution
-      allow write: if request.auth != null
+      // Allow creates/updates with validation and conflict resolution
+      allow create, update: if request.auth != null
+        // Only allow expected fields
+        && request.resource.data.keys().hasOnly([
+          'price', 'timestamp', 'userId', 'listingCount', 'updatedAt'
+        ])
         // Validate price is a number in valid range
         && request.resource.data.price is number
         && request.resource.data.price >= 0
         && request.resource.data.price <= 1000000
         // Validate timestamp is a number
         && request.resource.data.timestamp is number
-        // Timestamp not more than 1 day in future (clock skew protection)
-        && request.resource.data.timestamp <= request.time.toMillis() + 86400000
+        // Timestamp not more than 10 minutes in future (clock skew protection)
+        && request.resource.data.timestamp <= request.time.toMillis() + 600000
         // Timestamp not older than 7 days (prevent stale data)
         && request.resource.data.timestamp >= request.time.toMillis() - 604800000
         // Validate userId matches authenticated user
         && request.resource.data.userId == request.auth.uid
+        // listingCount is optional but must be valid if provided
+        && (!(request.resource.data.listingCount is number)
+            || request.resource.data.listingCount >= 0)
         // Validate baseId is numeric (enforced by path, but double-check)
         && baseId.matches('^\\d+$')
         // Conflict resolution: only write if our timestamp is newer, or same timestamp with more listings
@@ -30,6 +37,9 @@ service cloud.firestore {
                     : 0) >= (resource.data.listingCount is number
                     ? resource.data.listingCount
                     : 0)));
+
+      // Prevent deletes
+      allow delete: if false;
     }
 
     match /users/{userId} {

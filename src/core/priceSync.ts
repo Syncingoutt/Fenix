@@ -44,15 +44,18 @@ interface QueueItem {
 }
 
 const CONFIG_FILENAME = 'cloud_sync.json';
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyAvz0DRZIJLNHQsHmPg7LaUq9s3N2eEQtg',
+  authDomain: 'fenix-2c341.firebaseapp.com',
+  projectId: 'fenix-2c341',
+  appId: '1:387287127608:web:c4e5aa07b3b91389c5b8cd',
+  messagingSenderId: '387287127608',
+  storageBucket: 'fenix-2c341.firebasestorage.app'
+};
 const DEFAULT_CONFIG: CloudSyncConfig = {
-  enabled: false,
+  enabled: true,
   firebase: {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    appId: '',
-    messagingSenderId: '',
-    storageBucket: ''
+    ...DEFAULT_FIREBASE_CONFIG
   },
   username: '',
   tag: ''
@@ -177,7 +180,7 @@ function loadCloudSyncConfig(): CloudSyncConfig {
 
   try {
     const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    return {
+    const mergedConfig: CloudSyncConfig = {
       ...DEFAULT_CONFIG,
       ...raw,
       firebase: {
@@ -185,10 +188,39 @@ function loadCloudSyncConfig(): CloudSyncConfig {
         ...(raw.firebase || {})
       }
     };
+
+    const updatedConfig = applyDefaultFirebaseConfig(mergedConfig);
+    if (updatedConfig !== mergedConfig) {
+      saveCloudSyncConfig(updatedConfig);
+    }
+
+    return updatedConfig;
   } catch (error) {
     console.error('Failed to read cloud sync config, using defaults:', error);
     return { ...DEFAULT_CONFIG };
   }
+}
+
+function applyDefaultFirebaseConfig(config: CloudSyncConfig): CloudSyncConfig {
+  const firebase = { ...config.firebase };
+  let updated = false;
+
+  (Object.keys(DEFAULT_FIREBASE_CONFIG) as Array<keyof typeof DEFAULT_FIREBASE_CONFIG>).forEach(key => {
+    const value = firebase[key];
+    if (!value || String(value).trim() === '') {
+      firebase[key] = DEFAULT_FIREBASE_CONFIG[key];
+      updated = true;
+    }
+  });
+
+  const enabled = typeof config.enabled === 'boolean' ? config.enabled : true;
+  const updatedConfig: CloudSyncConfig = {
+    ...config,
+    enabled: updated ? true : enabled,
+    firebase
+  };
+
+  return updated ? updatedConfig : config;
 }
 
 function saveCloudSyncConfig(config: CloudSyncConfig): void {
