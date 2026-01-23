@@ -28,7 +28,6 @@ import { showBreakdownModal, initBreakdownModal, closeBreakdownModal } from './r
 import { showCompassBeaconPrompt, hideCompassBeaconPrompt, showCompassBeaconSelection, hideCompassBeaconSelection, handleCompassBeaconSelectionConfirm } from './renderer/modals/compassBeaconModal.js';
 import { initUpdateModal } from './renderer/modals/updateModal.js';
 import { initSettingsModal, closeSettingsModal } from './renderer/modals/settingsModal.js';
-import { initImportantNoticeModal } from './renderer/modals/importantNoticeModal.js'; // remove after v2.4.0
 import { initSetupModal } from './renderer/modals/setupModal.js';
 
 // Settings & Updates
@@ -143,7 +142,6 @@ async function initialize(): Promise<void> {
   // Initialize modals
   initBreakdownModal(renderInventory, () => renderBreakdown(renderInventory));
   initUpdateModal();
-  initImportantNoticeModal();
   initSetupModal(loadInventory);
   
   // Initialize settings manager and get settings menu state

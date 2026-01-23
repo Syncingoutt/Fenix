@@ -55,8 +55,8 @@
     ]
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Syncingoutt",
+  "license": "MIT",
   "devDependencies": {
     "@types/electron": "^1.6.12",
     "@types/node": "^24.9.1",

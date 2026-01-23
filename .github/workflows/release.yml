@@ -164,21 +164,21 @@ jobs:
           See commit history for details.
           "@
           
-          # Find installer files (.exe) and update metadata (.yml, .blockmap)
+          # Find NSIS installer and update metadata files
           $installerFiles = Get-ChildItem -Path release -Filter "*.exe" -File | ForEach-Object { $_.FullName }
           $ymlFiles = Get-ChildItem -Path release -Filter "*.yml" -File | ForEach-Object { $_.FullName }
           $blockmapFiles = Get-ChildItem -Path release -Filter "*.blockmap" -File | ForEach-Object { $_.FullName }
           
           # Combine all files needed for auto-updates (exclude debug files)
           $allFiles = @()
-          if ($installerFiles) { 
+          if ($installerFiles) {
             $allFiles += $installerFiles | Where-Object { $_ -notlike "*debug*" }
           }
-          if ($ymlFiles) { 
+          if ($ymlFiles) {
             $allFiles += $ymlFiles | Where-Object { $_ -like "*latest.yml" }
           }
-          if ($blockmapFiles) { 
-            $allFiles += $blockmapFiles 
+          if ($blockmapFiles) {
+            $allFiles += $blockmapFiles
           }
           
           if ($installerFiles.Count -eq 0) {

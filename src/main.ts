@@ -760,7 +760,8 @@ ipcMain.on('update-dialog-response', (event, response: 'download' | 'restart' | 
   if (response === 'download') {
     autoUpdater.downloadUpdate();
   } else if (response === 'restart') {
-    autoUpdater.quitAndInstall(false, true);
+    // Silent install: true = no UI, true = run after install
+    autoUpdater.quitAndInstall(true, true);
   }
   // 'later' response just closes the modal, no action needed
 });
