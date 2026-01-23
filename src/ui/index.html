@@ -12,7 +12,7 @@
       function updateScale() {
         const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
         // Minimum scale of 0.75 to keep UI readable on smaller windows
-        const clampedScale = Math.max(0.85, Math.min(1, scale));
+        const clampedScale = Math.max(0.84, Math.min(1, scale));
         document.documentElement.style.setProperty('--scale', clampedScale);
 
         // Text scale has a slightly higher minimum (0.8) to ensure readability

@@ -131,7 +131,6 @@ img:not(.header-logo-pic) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: calc(15px * var(--scale)) calc(40px * var(--scale)) calc(15px * var(--scale)) calc(1.25rem * var(--scale));
   background: var(--bg);
   margin-bottom: calc(0.7rem * var(--scale));
 }
@@ -332,7 +331,6 @@ img:not(.header-logo-pic) {
 .segmented-wrapper {
   display: flex;
   justify-content: flex-end;
-  width: 98%;
   margin-bottom: calc(1rem * var(--scale));
 }
 
@@ -420,7 +418,7 @@ img:not(.header-logo-pic) {
 
 .stats-container {
   display: grid;
-  grid-template-columns: calc(1100px * var(--scale)) calc(257px * var(--scale));
+  grid-template-columns: calc(1100px * var(--scale)) calc(280px * var(--scale));
   grid-template-rows: repeat(3, 1fr);
   gap: calc(15px * var(--scale)) calc(20px * var(--scale));
   height: calc(600px * var(--scale));
@@ -780,7 +778,7 @@ img:not(.header-logo-pic) {
   background-color: var(--bg);
   border: 1px solid var(--border);
   overflow: hidden;
-  max-width: calc(258px * var(--scale));
+  max-width: calc(280px * var(--scale));
   margin-top: calc(0.7rem * var(--scale));
 }
 
@@ -799,7 +797,7 @@ img:not(.header-logo-pic) {
   background-color: var(--bg);
   border: 1px solid var(--border);
   overflow: hidden;
-  max-width: calc(258px * var(--scale));
+  max-width: calc(280px * var(--scale));
   margin-top: calc(-41px * var(--scale));
   border-radius: calc(8px * var(--scale));
 }
