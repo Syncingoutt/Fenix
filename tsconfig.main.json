@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs"
+  },
+  "include": [
+    "src/main.ts",
+    "src/preload.ts",
+    "src/core/**/*"
+  ],
+  "exclude": [
+    "src/renderer/**/*",
+    "src/ui/**/*"
+  ]
+}

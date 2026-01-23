@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2020"
+  },
+  "include": [
+    "src/renderer.ts",
+    "src/renderer/**/*"
+  ],
+  "exclude": [
+    "src/main.ts",
+    "src/preload.ts",
+    "src/core/**/*",
+    "src/ui/**/*"
+  ]
+}

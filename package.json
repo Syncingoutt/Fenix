@@ -4,9 +4,9 @@
   "description": "Torchlight Infinite Inventory Tracker",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc && xcopy \"src\\ui\" \"dist\\ui\" /E /I /Y",
+    "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && xcopy \"src\\ui\" \"dist\\ui\" /E /I /Y",
     "start": "npm run build && electron .",
-    "dev": "tsc && xcopy \"src\\ui\" \"dist\\ui\" /E /I /Y && electron .",
+    "dev": "tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && xcopy \"src\\ui\" \"dist\\ui\" /E /I /Y && electron .",
     "package": "npm run build && electron-builder",
     "prod": "node scripts/release.js"
   },
