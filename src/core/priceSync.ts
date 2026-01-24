@@ -636,12 +636,12 @@ export class PriceSyncService {
     
     // Write directly - price checks are always fresh, no need to read first
     // Firestore rules will handle conflict resolution
-    await setDoc(priceRef, {
-      price: item.entry.price,
-      timestamp: item.entry.timestamp,
-      listingCount: item.entry.listingCount ?? null,
-      userId: this.userId,
-      updatedAt: serverTimestamp()
-    }, { merge: false });
+      await setDoc(priceRef, {
+        price: item.entry.price,
+        timestamp: item.entry.timestamp,
+        listingCount: item.entry.listingCount ?? null,
+        userId: this.userId,
+        updatedAt: serverTimestamp()
+      }, { merge: false });
   }
 }
