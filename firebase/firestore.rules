@@ -2,8 +2,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /prices/{baseId} {
-      // Allow authenticated users to read all prices
-      allow read: if request.auth != null;
+      // Prevent client reads; clients use snapshot documents instead
+      allow read: if false;
       
       // Allow creates/updates with validation and conflict resolution
       allow create, update: if request.auth != null
@@ -40,6 +40,16 @@ service cloud.firestore {
 
       // Prevent deletes
       allow delete: if false;
+    }
+
+    match /prices/snapshot/{leagueId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /prices/history/{leagueId}/{snapshotId} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
 
     match /users/{userId} {

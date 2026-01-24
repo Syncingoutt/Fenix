@@ -46,7 +46,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // Settings methods
   getSettings: () => ipcRenderer.invoke('get-settings'),
-  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }) => ipcRenderer.invoke('save-settings', settings),
+  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string }) => ipcRenderer.invoke('save-settings', settings),
   getUsernameInfo: () => ipcRenderer.invoke('get-username-info'),
   setUsername: (username: string) => ipcRenderer.invoke('set-username', username),
   getCloudSyncStatus: () => ipcRenderer.invoke('get-cloud-sync-status'),

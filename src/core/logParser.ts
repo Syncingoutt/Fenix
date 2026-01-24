@@ -106,15 +106,19 @@ export function isLogPathConfigured(): boolean {
 /**
  * Get settings from config file
  */
-export function getSettings(): { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean } {
+export function getSettings(): { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string } {
   const config = loadConfig();
-  return config.settings || {};
+  const settings = config.settings || {};
+  if (!settings.leagueId || String(settings.leagueId).trim() === '') {
+    settings.leagueId = 's11-vorax';
+  }
+  return settings;
 }
 
 /**
  * Save settings to config file (preserves log path)
  */
-export function saveSettings(settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }): void {
+export function saveSettings(settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string }): void {
   const config = loadConfig();
   config.settings = { ...config.settings, ...settings };
   saveConfig(config);

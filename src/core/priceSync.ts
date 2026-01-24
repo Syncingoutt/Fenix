@@ -3,7 +3,7 @@ import * as path from 'path';
 import { app } from 'electron';
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { initializeAuth, signInAnonymously, Auth } from 'firebase/auth';
-import { getFirestore, Firestore, collection, getDocs, doc, getDoc, setDoc, Timestamp, serverTimestamp, query, where, orderBy, startAfter, limit, QueryConstraint } from 'firebase/firestore';
+import { getFirestore, Firestore, doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { PriceCache, PriceCacheEntry } from './database';
 
 export interface PriceUpdateEntry {
@@ -405,9 +405,7 @@ export class PriceSyncService {
     const userRef = doc(this.db, 'users', this.userId);
     const snapshot = await getDoc(userRef);
     const now = Date.now();
-    const updatePayload: Record<string, unknown> = {
-      lastSeenAt: now
-    };
+    const updatePayload: Record<string, unknown> = {};
 
     if (!snapshot.exists()) {
       updatePayload.createdAt = now;
@@ -489,7 +487,7 @@ export class PriceSyncService {
     }, { merge: true });
   }
 
-  async syncPrices(options?: { forceFull?: boolean }): Promise<PriceCache> {
+  async syncPrices(options?: { forceFull?: boolean; leagueId?: string }): Promise<PriceCache> {
     const ready = await this.initialize();
     if (!ready || !this.db) {
       return {};
@@ -502,90 +500,33 @@ export class PriceSyncService {
 
     try {
       const cache: PriceCache = {};
-      const cursorMs = this.lastSyncCursorMs ?? 0;
-      const useIncremental = !options?.forceFull && cursorMs > 0;
-      let maxUpdatedAtMs = useIncremental ? cursorMs : 0;
-      
-      if (useIncremental) {
-        let lastDoc: unknown | null = null;
-        let batchSize = 0;
-        do {
-          const constraints: QueryConstraint[] = [
-            where('updatedAt', '>', Timestamp.fromMillis(cursorMs)),
-            orderBy('updatedAt'),
-            limit(500)
-          ];
-          if (lastDoc) {
-            constraints.push(startAfter(lastDoc as any));
-          }
+      const leagueId = (options?.leagueId || 's11-vorax').trim() || 's11-vorax';
+      // Use pricesSnapshots collection (not prices/snapshot) to avoid 3-segment path issue
+      const snapshotRef = doc(this.db, 'pricesSnapshots', leagueId);
+      const snapshot = await getDoc(snapshotRef);
 
-          const snapshot = await getDocs(query(collection(this.db, 'prices'), ...constraints));
-          batchSize = snapshot.size;
-          if (batchSize === 0) break;
+      if (!snapshot.exists()) {
+        this.lastSyncAt = now;
+        this.lastSyncCache = cache;
+        return cache;
+      }
 
-          snapshot.forEach(docSnap => {
-            const data = docSnap.data() as Record<string, unknown>;
-            const price = typeof data.price === 'number' ? data.price : null;
-            const timestamp = typeof data.timestamp === 'number' ? data.timestamp : null;
-            if (price === null || timestamp === null) return;
-            const listingCount = typeof data.listingCount === 'number' ? data.listingCount : undefined;
-
-            cache[docSnap.id] = {
-              price,
-              timestamp,
-              ...(listingCount !== undefined && { listingCount })
-            };
-
-            const updatedAt = data.updatedAt;
-            if (updatedAt instanceof Timestamp) {
-              const updatedAtMs = updatedAt.toMillis();
-              if (updatedAtMs > maxUpdatedAtMs) {
-                maxUpdatedAtMs = updatedAtMs;
-              }
-            }
-          });
-
-          lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
-        } while (batchSize === 500);
-      } else {
-        const snapshot = await getDocs(collection(this.db, 'prices'));
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data() as Record<string, unknown>;
-          const price = typeof data.price === 'number' ? data.price : null;
-          const timestamp = typeof data.timestamp === 'number' ? data.timestamp : null;
+      const snapshotData = snapshot.data() as Record<string, unknown>;
+      const data = snapshotData.data;
+      if (data && typeof data === 'object') {
+        Object.entries(data as Record<string, Record<string, unknown>>).forEach(([baseId, entry]) => {
+          if (!entry || typeof entry !== 'object') return;
+          const price = typeof entry.price === 'number' ? entry.price : null;
+          const timestamp = typeof entry.timestamp === 'number' ? entry.timestamp : null;
           if (price === null || timestamp === null) return;
-          const listingCount = typeof data.listingCount === 'number' ? data.listingCount : undefined;
+          const listingCount = typeof entry.listingCount === 'number' ? entry.listingCount : undefined;
 
-          cache[docSnap.id] = {
+          cache[baseId] = {
             price,
             timestamp,
             ...(listingCount !== undefined && { listingCount })
           };
-
-          const updatedAt = data.updatedAt;
-          if (updatedAt instanceof Timestamp) {
-            const updatedAtMs = updatedAt.toMillis();
-            if (updatedAtMs > maxUpdatedAtMs) {
-              maxUpdatedAtMs = updatedAtMs;
-            }
-          }
         });
-      }
-
-      if (maxUpdatedAtMs && maxUpdatedAtMs !== this.lastSyncCursorMs) {
-        this.lastSyncCursorMs = maxUpdatedAtMs;
-        if (this.config) {
-          this.config.lastSyncCursorMs = maxUpdatedAtMs;
-          saveCloudSyncConfig(this.config);
-        }
-      } else if (!this.lastSyncCursorMs || this.lastSyncCursorMs === 0) {
-        // Fallback to avoid repeated full syncs if updatedAt is missing
-        const fallbackCursor = Date.now() - 5 * 60 * 1000;
-        this.lastSyncCursorMs = fallbackCursor;
-        if (this.config) {
-          this.config.lastSyncCursorMs = fallbackCursor;
-          saveCloudSyncConfig(this.config);
-        }
       }
 
       this.lastSyncAt = now;
@@ -597,7 +538,7 @@ export class PriceSyncService {
     }
   }
 
-  queuePriceUpdate(baseId: string, entry: PriceUpdateEntry): void {
+  queuePriceWrite(baseId: string, entry: PriceUpdateEntry): void {
     if (!/^\d+$/.test(baseId)) {
       return;
     }
@@ -693,76 +634,14 @@ export class PriceSyncService {
 
     const priceRef = doc(this.db, 'prices', item.baseId);
     
-    // Read current server state
-    const snapshot = await getDoc(priceRef);
-    
-    // Check if server has newer data
-    if (snapshot.exists()) {
-      const serverData = snapshot.data();
-      const serverTimestamp = serverData.timestamp as number;
-      
-      if (serverTimestamp > item.entry.timestamp) {
-        // Server is newer, use server's data
-        if (this.onRemoteUpdate) {
-          const serverEntry: PriceCacheEntry = {
-            price: serverData.price as number,
-            timestamp: serverTimestamp,
-            ...(serverData.listingCount !== undefined && { listingCount: serverData.listingCount as number })
-          };
-          this.onRemoteUpdate(item.baseId, serverEntry);
-        }
-        return; // Skip update, server has newer data
-      }
-      
-      if (serverTimestamp === item.entry.timestamp) {
-        const serverListings = (serverData.listingCount as number) ?? 0;
-        const localListings = item.entry.listingCount ?? 0;
-        if (serverListings > localListings) {
-          // Server has more listings, use server's data
-          if (this.onRemoteUpdate) {
-            const serverEntry: PriceCacheEntry = {
-              price: serverData.price as number,
-              timestamp: serverTimestamp,
-              ...(serverData.listingCount !== undefined && { listingCount: serverData.listingCount as number })
-            };
-            this.onRemoteUpdate(item.baseId, serverEntry);
-          }
-          return; // Skip update, server has better data
-        }
-      }
-    }
-    
-    // Write our update (Firestore rules will validate)
-    try {
-      await setDoc(priceRef, {
-        price: item.entry.price,
-        timestamp: item.entry.timestamp,
-        listingCount: item.entry.listingCount ?? null,
-        userId: this.userId,
-        updatedAt: serverTimestamp()
-      }, { merge: false });
-    } catch (writeError: any) {
-      // If write was rejected (permission-denied), re-read server data
-      // This handles race conditions where server was updated between our read and write
-      if (writeError?.code === 'permission-denied') {
-        console.warn(`[sync] Price sync blocked for ${item.baseId}. Check Firestore rules.`);
-        const updatedSnapshot = await getDoc(priceRef);
-        if (updatedSnapshot.exists()) {
-          const serverData = updatedSnapshot.data();
-          const serverTimestamp = serverData.timestamp as number;
-          if (serverTimestamp >= item.entry.timestamp && this.onRemoteUpdate) {
-            const serverEntry: PriceCacheEntry = {
-              price: serverData.price as number,
-              timestamp: serverTimestamp,
-              ...(serverData.listingCount !== undefined && { listingCount: serverData.listingCount as number })
-            };
-            this.onRemoteUpdate(item.baseId, serverEntry);
-          }
-        }
-        // Don't throw - we've handled it by updating from server
-        return;
-      }
-      throw writeError; // Re-throw other errors
-    }
+    // Write directly - price checks are always fresh, no need to read first
+    // Firestore rules will handle conflict resolution
+    await setDoc(priceRef, {
+      price: item.entry.price,
+      timestamp: item.entry.timestamp,
+      listingCount: item.entry.listingCount ?? null,
+      userId: this.userId,
+      updatedAt: serverTimestamp()
+    }, { merge: false });
   }
 }

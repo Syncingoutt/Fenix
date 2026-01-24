@@ -166,7 +166,6 @@
             <path d="M19 19L14.65 14.65" stroke="#7E7E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           <input type="text" id="searchInput" placeholder="Search items..." />
-          <button id="clearSearch" style="display: none;">✕</button>
         </div>
         
         <div class="inventory-breakdown-wrapper">
@@ -258,6 +257,7 @@
                   <thead>
                     <tr>
                       <th class="prices-col-name" data-sort="name">Name</th>
+                      <th class="prices-col-updated">Updated at</th>
                       <th class="prices-col-price" data-sort="price">Price</th>
                       <th class="prices-col-sparkline" data-sort="trend">Last 7 days</th>
                     </tr>
@@ -552,6 +552,15 @@
                 <div class="settings-group-description" id="cloudSyncHelperText">
                   Cloud Sync is enabled. Disabling it will stop all cloud reads and writes.
                 </div>
+              </div>
+
+              <div class="settings-group">
+                <div class="settings-group-label">League/Season ID</div>
+                <div class="settings-group-description">Controls which snapshot doc is used for prices (default: s11-vorax).</div>
+                <div class="settings-input-row">
+                  <input type="text" id="leagueIdInput" class="settings-text-input" placeholder="s11-vorax">
+                </div>
+                <div class="settings-helper-text">Example: s11-vorax</div>
               </div>
 
               <div class="settings-group">

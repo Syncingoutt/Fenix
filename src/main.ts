@@ -42,7 +42,8 @@ let lastSendBaseId: string | null = null; // Track the most recent SEND message'
 const WATCH_INTERVAL = 500;
 let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
 let fullscreenMode: boolean = false; // Default to windowed mode
-const PRICE_SYNC_INTERVAL_MS = 20 * 60 * 1000;
+let currentLeagueId: string = 's11-vorax';
+const PRICE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 // Overlay widget display values (sent directly from renderer)
 let overlayDisplayData = {
@@ -506,9 +507,14 @@ app.whenReady().then(async () => {
   
   itemDatabase = loadItemDatabase();
   console.log(`📦 Loaded ${Object.keys(itemDatabase).length} items`);
+
+  const initialSettings = getSettings();
+  if (initialSettings.leagueId && initialSettings.leagueId.trim() !== '') {
+    currentLeagueId = initialSettings.leagueId.trim();
+  }
   
   priceSyncService = new PriceSyncService();
-  const priceCache = await loadPriceCache((options) => priceSyncService.syncPrices(options));
+  const priceCache = await loadPriceCache((options) => priceSyncService.syncPrices({ ...options, leagueId: currentLeagueId }));
   const priceCount = Object.keys(priceCache).length;
   if (priceCount > 0) {
     console.log(`💰 Loaded ${priceCount} cached prices`);
@@ -597,10 +603,10 @@ app.whenReady().then(async () => {
     }
   }, PRICE_CACHE_PERIODIC_SAVE_MS);
 
-  // Periodic cloud sync - fetch latest prices every 20 minutes
+  // Periodic cloud sync - fetch latest prices every 5 minutes
   setInterval(async () => {
     if (!priceSyncService || !inventoryManager) return;
-    const cloudCache = await priceSyncService.syncPrices();
+    const cloudCache = await priceSyncService.syncPrices({ leagueId: currentLeagueId });
     const localCache = inventoryManager.getPriceCacheAsObject();
     let appliedUpdates = 0;
 
@@ -627,6 +633,9 @@ app.whenReady().then(async () => {
   }
   if (typeof settings.fullscreenMode === 'boolean') {
     fullscreenMode = settings.fullscreenMode;
+  }
+  if (settings.leagueId && settings.leagueId.trim() !== '') {
+    currentLeagueId = settings.leagueId.trim();
   }
   registerKeybind(currentKeybind);
   
@@ -884,7 +893,7 @@ ipcMain.handle('set-cloud-sync-enabled', async (event, enabled: boolean) => {
   try {
     await priceSyncService.setSyncEnabled(enabled);
     if (enabled && inventoryManager) {
-      const cloudCache = await priceSyncService.syncPrices({ forceFull: true });
+      const cloudCache = await priceSyncService.syncPrices({ forceFull: true, leagueId: currentLeagueId });
       const localCache = inventoryManager.getPriceCacheAsObject();
       let appliedUpdates = 0;
       for (const [baseId, cloudEntry] of Object.entries(cloudCache)) {
@@ -921,7 +930,7 @@ ipcMain.handle('set-username', async (event, username: string) => {
   }
 });
 
-ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }) => {
+ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string }) => {
   try {
     saveSettings(settings);
     
@@ -935,6 +944,10 @@ ipcMain.handle('save-settings', async (event, settings: { keybind?: string; full
       }
     }
     
+    if (settings.leagueId && settings.leagueId.trim() !== '') {
+      currentLeagueId = settings.leagueId.trim();
+    }
+
     // Check if window mode changed
     const windowModeChanged = settings.fullscreenMode !== undefined && settings.fullscreenMode !== fullscreenMode;
     
@@ -1138,7 +1151,7 @@ function watchLogFile() {
               const timestamp = Date.now();
               inventoryManager.updatePrice(priceResult.baseId, priceResult.avgPrice, priceResult.listingCount, timestamp);
               if (priceSyncService) {
-                priceSyncService.queuePriceUpdate(priceResult.baseId, {
+                priceSyncService.queuePriceWrite(priceResult.baseId, {
                   price: priceResult.avgPrice,
                   timestamp,
                   listingCount: priceResult.listingCount

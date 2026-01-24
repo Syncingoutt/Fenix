@@ -169,6 +169,16 @@ function formatPrice(price: number): string {
 }
 
 /**
+ * Format updated timestamp for display
+ */
+function formatUpdatedAt(timestamp: number): string {
+  if (!timestamp || Number.isNaN(timestamp)) {
+    return '--';
+  }
+  return new Date(timestamp).toLocaleString();
+}
+
+/**
  * Render a single price row
  */
 function renderPriceRow(item: PriceItem, index: number): string {
@@ -194,6 +204,9 @@ function renderPriceRow(item: PriceItem, index: number): string {
           <img src="${iconPath}" alt="${item.name}" class="prices-item-icon" onerror="this.style.display='none'">
           <span class="prices-item-name">${escapeHtml(item.name)}</span>
         </div>
+      </td>
+      <td class="prices-col-updated">
+        <span class="prices-updated-at">${formatUpdatedAt(item.timestamp)}</span>
       </td>
       <td class="prices-col-price">
         <span class="prices-price-value ${priceClass}">${priceFormatted}</span>

@@ -3125,6 +3125,21 @@ body.overlay-widget {
   background: transparent;
 }
 
+/* Updated at column */
+.prices-col-updated {
+  width: calc(180px * var(--scale));
+  text-align: center;
+  padding-right: calc(64px * var(--scale)) !important;
+  cursor: default !important;
+}
+
+.prices-updated-at {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--border);
+  white-space: nowrap;
+  margin-left: calc(-32px * var(--scale));
+}
+
 #page-prices {
   margin-top: calc(40px * var(--scale));
 }

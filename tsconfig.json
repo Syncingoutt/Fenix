@@ -7,5 +7,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "moduleResolution": "node"
-  }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["functions/**"]
 }

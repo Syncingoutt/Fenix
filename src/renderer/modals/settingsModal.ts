@@ -9,13 +9,14 @@ import { showSyncDisableConfirmModal } from './syncDisableConfirmModal.js';
 declare const electronAPI: ElectronAPI;
 
 let isRecordingKeybind = false;
-let currentSettings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean } = {};
+let currentSettings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string } = {};
 let currentUsernameInfo: { username?: string; tag?: string; displayName?: string; nextChangeAt?: number; canChange: boolean } | null = null;
 let pendingKeybind: string | null = null;
 let pendingFullscreenMode: boolean | null = null;
 let pendingIncludeTax: boolean | null = null;
 let pendingUsername: string | null = null;
 let pendingCloudSyncEnabled: boolean | null = null;
+let pendingLeagueId: string | null = null;
 let currentCloudSyncEnabled: boolean | null = null;
 
 let settingsMenuOpen = false;
@@ -40,6 +41,7 @@ const usernameInput = document.getElementById('usernameInput') as HTMLInputEleme
 const usernameHelperText = document.getElementById('usernameHelperText') as HTMLElement | null;
 const cloudSyncCheckbox = document.getElementById('cloudSyncCheckbox') as HTMLInputElement | null;
 const cloudSyncHelperText = document.getElementById('cloudSyncHelperText') as HTMLElement | null;
+const leagueIdInput = document.getElementById('leagueIdInput') as HTMLInputElement | null;
 const changeLogPathBtn = document.getElementById('changeLogPathBtn') as HTMLButtonElement | null;
 const logPathHelperText = document.getElementById('logPathHelperText') as HTMLElement | null;
 const settingsSidebarItems = document.querySelectorAll('.settings-sidebar-item');
@@ -72,6 +74,7 @@ export function initSettingsModal(
       pendingFullscreenMode = currentSettings.fullscreenMode !== undefined ? currentSettings.fullscreenMode : false;
       pendingIncludeTax = currentSettings.includeTax !== undefined ? currentSettings.includeTax : false;
       setIncludeTax(pendingIncludeTax);
+      pendingLeagueId = (currentSettings.leagueId || 's11-vorax').trim();
       pendingUsername = currentUsernameInfo.username || '';
       const cloudSyncStatus = await electronAPI.getCloudSyncStatus();
       currentCloudSyncEnabled = cloudSyncStatus.enabled;
@@ -95,6 +98,10 @@ export function initSettingsModal(
       // Set tax checkbox
       if (includeTaxCheckbox) {
         includeTaxCheckbox.checked = pendingIncludeTax;
+      }
+
+      if (leagueIdInput) {
+        leagueIdInput.value = pendingLeagueId || 's11-vorax';
       }
 
       // Set username input + helper text
@@ -295,6 +302,12 @@ export function initSettingsModal(
     });
   }
 
+  if (leagueIdInput) {
+    leagueIdInput.addEventListener('input', () => {
+      pendingLeagueId = leagueIdInput.value.trim();
+    });
+  }
+
   if (changeLogPathBtn) {
     changeLogPathBtn.addEventListener('click', async () => {
       const selectedPath = await electronAPI.selectLogFile();
@@ -329,7 +342,7 @@ export function initSettingsModal(
     settingsSaveBtn.textContent = 'Saving...';
     
     try {
-      const settingsToSave: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean } = {};
+      const settingsToSave: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string } = {};
       
       if (pendingKeybind) {
         settingsToSave.keybind = pendingKeybind;
@@ -342,6 +355,10 @@ export function initSettingsModal(
       const checkboxElement = document.getElementById('includeTaxCheckbox') as HTMLInputElement | null;
       const currentTaxValue = checkboxElement ? checkboxElement.checked : (pendingIncludeTax ?? false);
       settingsToSave.includeTax = currentTaxValue;
+
+      if (pendingLeagueId !== null) {
+        settingsToSave.leagueId = pendingLeagueId.trim() || 's11-vorax';
+      }
       
       let usernameError: string | null = null;
       if (currentUsernameInfo && pendingUsername !== null) {
@@ -398,6 +415,10 @@ export function initSettingsModal(
         
         setIncludeTax(currentTaxValue);
         pendingIncludeTax = currentTaxValue;
+
+        if (settingsToSave.leagueId) {
+          pendingLeagueId = settingsToSave.leagueId;
+        }
         
         renderInventory();
         renderBreakdown();
@@ -474,6 +495,7 @@ function closeSettingsModal(): void {
   pendingIncludeTax = null;
   pendingUsername = null;
   pendingCloudSyncEnabled = null;
+  pendingLeagueId = null;
   currentCloudSyncEnabled = null;
 }
 

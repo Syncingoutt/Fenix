@@ -4,7 +4,7 @@ import { getCurrentSortBy, setCurrentSortBy, getCurrentSortOrder, setCurrentSort
 import { getWealthMode } from '../state/wealthState.js';
 import { getIsHourlyActive } from '../state/wealthState.js';
 import { SortBy } from '../types.js';
-import { minPriceInput, maxPriceInput, searchInput, clearSearch } from '../dom/domElements.js';
+import { minPriceInput, maxPriceInput, searchInput } from '../dom/domElements.js';
 
 let renderInventory: () => void;
 let renderBreakdown: () => void;
@@ -80,26 +80,6 @@ export function initInventoryEvents(
   searchInput?.addEventListener('input', (e) => {
     const query = (e.target as HTMLInputElement).value;
     setSearchQuery(query);
-    renderInventory();
-    
-    // Show/hide clear button
-    if (clearSearch) {
-      if (query) {
-        clearSearch.style.display = 'block';
-      } else {
-        clearSearch.style.display = 'none';
-      }
-    }
-  });
-  
-  clearSearch?.addEventListener('click', () => {
-    setSearchQuery('');
-    if (searchInput) {
-      searchInput.value = '';
-    }
-    if (clearSearch) {
-      clearSearch.style.display = 'none';
-    }
     renderInventory();
   });
 }

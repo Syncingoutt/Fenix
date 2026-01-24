@@ -1,5 +1,18 @@
 {
+  "name": "functions",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
   "dependencies": {
-    "fenix": "file:.."
+    "firebase-admin": "^12.1.1",
+    "firebase-functions": "^5.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
   }
 }
