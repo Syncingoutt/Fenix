@@ -48,6 +48,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }) => ipcRenderer.invoke('save-settings', settings),
   getUsernameInfo: () => ipcRenderer.invoke('get-username-info'),
   setUsername: (username: string) => ipcRenderer.invoke('set-username', username),
+  getCloudSyncStatus: () => ipcRenderer.invoke('get-cloud-sync-status'),
+  setCloudSyncEnabled: (enabled: boolean) => ipcRenderer.invoke('set-cloud-sync-enabled', enabled),
+  onShowSyncConsent: (callback: () => void) => {
+    ipcRenderer.on('show-sync-consent', callback);
+  },
   testKeybind: (keybind: string) => ipcRenderer.invoke('test-keybind', keybind),
   onCloseSettingsModal: (callback: () => void) => {
     ipcRenderer.on('close-settings-modal', callback);

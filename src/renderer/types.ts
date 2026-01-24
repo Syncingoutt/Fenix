@@ -49,6 +49,9 @@ export interface ElectronAPI {
   saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }) => Promise<{ success: boolean; error?: string }>;
   getUsernameInfo: () => Promise<{ username?: string; tag?: string; displayName?: string; nextChangeAt?: number; canChange: boolean }>;
   setUsername: (username: string) => Promise<{ success: boolean; error?: string; nextChangeAt?: number }>;
+  getCloudSyncStatus: () => Promise<{ enabled: boolean; consent: 'pending' | 'granted' | 'denied' }>;
+  setCloudSyncEnabled: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
+  onShowSyncConsent: (callback: () => void) => void;
   testKeybind: (keybind: string) => Promise<{ success: boolean; error?: string }>;
   onCloseSettingsModal: (callback: () => void) => void;
   onWindowModeChanged: (callback: (data: { fullscreenMode: boolean }) => void) => void;

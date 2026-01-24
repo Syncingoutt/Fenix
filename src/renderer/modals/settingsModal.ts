@@ -4,6 +4,7 @@ import { ElectronAPI } from '../types.js';
 import { getIncludeTax, setIncludeTax } from '../state/settingsState.js';
 import { formatKeybind } from '../utils/formatting.js';
 import { getCurrentItems } from '../state/inventoryState.js';
+import { showSyncDisableConfirmModal } from './syncDisableConfirmModal.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -14,6 +15,8 @@ let pendingKeybind: string | null = null;
 let pendingFullscreenMode: boolean | null = null;
 let pendingIncludeTax: boolean | null = null;
 let pendingUsername: string | null = null;
+let pendingCloudSyncEnabled: boolean | null = null;
+let currentCloudSyncEnabled: boolean | null = null;
 
 let settingsMenuOpen = false;
 let renderInventory: () => void;
@@ -35,6 +38,8 @@ const normalModeRadio = document.getElementById('normalModeRadio') as HTMLInputE
 const includeTaxCheckbox = document.getElementById('includeTaxCheckbox') as HTMLInputElement | null;
 const usernameInput = document.getElementById('usernameInput') as HTMLInputElement | null;
 const usernameHelperText = document.getElementById('usernameHelperText') as HTMLElement | null;
+const cloudSyncCheckbox = document.getElementById('cloudSyncCheckbox') as HTMLInputElement | null;
+const cloudSyncHelperText = document.getElementById('cloudSyncHelperText') as HTMLElement | null;
 const settingsSidebarItems = document.querySelectorAll('.settings-sidebar-item');
 
 export function initSettingsModal(
@@ -66,6 +71,9 @@ export function initSettingsModal(
       pendingIncludeTax = currentSettings.includeTax !== undefined ? currentSettings.includeTax : false;
       setIncludeTax(pendingIncludeTax);
       pendingUsername = currentUsernameInfo.username || '';
+      const cloudSyncStatus = await electronAPI.getCloudSyncStatus();
+      currentCloudSyncEnabled = cloudSyncStatus.enabled;
+      pendingCloudSyncEnabled = cloudSyncStatus.enabled;
       
       // Display current keybind
       keybindInput.value = formatKeybind(pendingKeybind);
@@ -98,6 +106,13 @@ export function initSettingsModal(
         } else {
           usernameHelperText.textContent = `${tagLabel}.`;
         }
+      }
+
+      if (cloudSyncCheckbox && cloudSyncHelperText && currentCloudSyncEnabled !== null) {
+        cloudSyncCheckbox.checked = currentCloudSyncEnabled;
+        cloudSyncHelperText.textContent = currentCloudSyncEnabled
+          ? 'Cloud Sync is enabled. Disabling it will stop all cloud reads and writes.'
+          : 'Cloud Sync is disabled. You will only see local prices.';
       }
       
       // Reset save button state
@@ -266,6 +281,12 @@ export function initSettingsModal(
       pendingUsername = usernameInput.value.trim();
     });
   }
+
+  if (cloudSyncCheckbox) {
+    cloudSyncCheckbox.addEventListener('change', () => {
+      pendingCloudSyncEnabled = cloudSyncCheckbox.checked;
+    });
+  }
   
   // Sidebar navigation
   settingsSidebarItems.forEach(item => {
@@ -319,6 +340,34 @@ export function initSettingsModal(
         }
       }
 
+      if (pendingCloudSyncEnabled !== null && currentCloudSyncEnabled !== null) {
+        if (pendingCloudSyncEnabled !== currentCloudSyncEnabled) {
+          if (!pendingCloudSyncEnabled) {
+            const confirmDisable = await showSyncDisableConfirmModal();
+            if (!confirmDisable) {
+              if (cloudSyncCheckbox) {
+                cloudSyncCheckbox.checked = currentCloudSyncEnabled;
+              }
+              pendingCloudSyncEnabled = currentCloudSyncEnabled;
+            } else {
+              const syncResult = await electronAPI.setCloudSyncEnabled(false);
+              if (!syncResult.success) {
+                usernameError = syncResult.error || 'Failed to update Cloud Sync';
+              } else {
+                currentCloudSyncEnabled = false;
+              }
+            }
+          } else {
+            const syncResult = await electronAPI.setCloudSyncEnabled(true);
+            if (!syncResult.success) {
+              usernameError = syncResult.error || 'Failed to update Cloud Sync';
+            } else {
+              currentCloudSyncEnabled = true;
+            }
+          }
+        }
+      }
+
       const result = await electronAPI.saveSettings(settingsToSave);
       
       if (result.success) {
@@ -363,6 +412,13 @@ export function initSettingsModal(
           }
         }
 
+        if (cloudSyncCheckbox && cloudSyncHelperText && currentCloudSyncEnabled !== null) {
+          cloudSyncCheckbox.checked = currentCloudSyncEnabled;
+          cloudSyncHelperText.textContent = currentCloudSyncEnabled
+            ? 'Cloud Sync is enabled. Disabling it will stop all cloud reads and writes.'
+            : 'Cloud Sync is disabled. You will only see local prices.';
+        }
+
         settingsSaveBtn.disabled = false;
         settingsSaveBtn.textContent = 'Save';
         
@@ -401,6 +457,8 @@ function closeSettingsModal(): void {
   pendingFullscreenMode = null;
   pendingIncludeTax = null;
   pendingUsername = null;
+  pendingCloudSyncEnabled = null;
+  currentCloudSyncEnabled = null;
 }
 
 export { closeSettingsModal };

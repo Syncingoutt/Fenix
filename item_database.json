@@ -233,6 +233,7 @@
   "10260": { "name": "Outlaw Compass", "tradable": true, "group": "compass" },
   "10270": { "name": "Cage Compass", "tradable": true, "group": "compass" },
   "12050": { "name": "Beacon Profound Probe", "tradable": true, "group": "compass" },
+  "10001": { "name": "Sinful Plunder Compass", "tradable": true, "group": "compass" },
   "10002": { "name": "Sinful Plunder Compass (Artifact)", "tradable": true, "group": "compass" },
   "10003": { "name": "Transgression Plunder Compass", "tradable": true, "group": "compass" },  
   "10012": { "name": "Conquering Novel Compass", "tradable": true, "group": "compass" },

@@ -528,6 +528,15 @@ app.whenReady().then(async () => {
   
   createWindow();
   createTray();
+
+  if (mainWindow) {
+    mainWindow.webContents.once('did-finish-load', () => {
+      const syncStatus = priceSyncService.getSyncStatus();
+      if (syncStatus.consent === 'pending') {
+        mainWindow?.webContents.send('show-sync-consent');
+      }
+    });
+  }
   
   // Check if log path is configured, if not, show setup dialog
   if (!isLogPathConfigured()) {
@@ -861,6 +870,37 @@ ipcMain.handle('select-log-file', async () => {
 // Settings IPC handlers
 ipcMain.handle('get-settings', () => {
   return getSettings();
+});
+
+ipcMain.handle('get-cloud-sync-status', () => {
+  return priceSyncService.getSyncStatus();
+});
+
+ipcMain.handle('set-cloud-sync-enabled', async (event, enabled: boolean) => {
+  try {
+    await priceSyncService.setSyncEnabled(enabled);
+    if (enabled && inventoryManager) {
+      const cloudCache = await priceSyncService.syncPrices({ forceFull: true });
+      const localCache = inventoryManager.getPriceCacheAsObject();
+      let appliedUpdates = 0;
+      for (const [baseId, cloudEntry] of Object.entries(cloudCache)) {
+        const localEntry = localCache[baseId];
+        if (shouldApplyCloudEntry(localEntry, cloudEntry)) {
+          inventoryManager.updatePrice(baseId, cloudEntry.price, cloudEntry.listingCount, cloudEntry.timestamp);
+          appliedUpdates += 1;
+        }
+      }
+      if (appliedUpdates > 0) {
+        debouncedSavePriceCache();
+        if (mainWindow) {
+          mainWindow.webContents.send('inventory-updated');
+        }
+      }
+    }
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update cloud sync setting' };
+  }
 });
 
 ipcMain.handle('get-username-info', () => {

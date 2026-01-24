@@ -28,6 +28,8 @@ import { showBreakdownModal, initBreakdownModal, closeBreakdownModal } from './r
 import { showCompassBeaconPrompt, hideCompassBeaconPrompt, showCompassBeaconSelection, hideCompassBeaconSelection, handleCompassBeaconSelectionConfirm } from './renderer/modals/compassBeaconModal.js';
 import { initUpdateModal } from './renderer/modals/updateModal.js';
 import { initSettingsModal, closeSettingsModal } from './renderer/modals/settingsModal.js';
+import { initSyncConsentModal } from './renderer/modals/syncConsentModal.js';
+import { initSyncDisableConfirmModal } from './renderer/modals/syncDisableConfirmModal.js';
 import { initSetupModal } from './renderer/modals/setupModal.js';
 
 // Settings & Updates
@@ -143,6 +145,8 @@ async function initialize(): Promise<void> {
   initBreakdownModal(renderInventory, () => renderBreakdown(renderInventory));
   initUpdateModal();
   initSetupModal(loadInventory);
+  initSyncConsentModal();
+  initSyncDisableConfirmModal();
   
   // Initialize settings manager and get settings menu state
   const settingsMenuState = initSettingsManager();

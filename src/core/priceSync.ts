@@ -18,8 +18,11 @@ export interface PriceSyncStatus {
   lastError?: string;
 }
 
+type SyncConsent = 'pending' | 'granted' | 'denied';
+
 interface CloudSyncConfig {
-  enabled: boolean;
+  enabled?: boolean;
+  syncConsent?: SyncConsent;
   firebase: {
     apiKey: string;
     authDomain: string;
@@ -53,7 +56,8 @@ const DEFAULT_FIREBASE_CONFIG = {
   storageBucket: 'fenix-2c341.firebasestorage.app'
 };
 const DEFAULT_CONFIG: CloudSyncConfig = {
-  enabled: true,
+  enabled: false,
+  syncConsent: 'pending',
   firebase: {
     ...DEFAULT_FIREBASE_CONFIG
   },
@@ -189,7 +193,7 @@ function loadCloudSyncConfig(): CloudSyncConfig {
       }
     };
 
-    const updatedConfig = applyDefaultFirebaseConfig(mergedConfig);
+    const updatedConfig = normalizeSyncConsent(applyDefaultFirebaseConfig(mergedConfig));
     if (updatedConfig !== mergedConfig) {
       saveCloudSyncConfig(updatedConfig);
     }
@@ -213,14 +217,39 @@ function applyDefaultFirebaseConfig(config: CloudSyncConfig): CloudSyncConfig {
     }
   });
 
-  const enabled = typeof config.enabled === 'boolean' ? config.enabled : true;
   const updatedConfig: CloudSyncConfig = {
     ...config,
-    enabled: updated ? true : enabled,
     firebase
   };
 
   return updated ? updatedConfig : config;
+}
+
+function normalizeSyncConsent(config: CloudSyncConfig): CloudSyncConfig {
+  let syncConsent = config.syncConsent;
+  let enabled = config.enabled;
+
+  if (!syncConsent) {
+    syncConsent = 'pending';
+  }
+
+  if (syncConsent === 'pending') {
+    enabled = false;
+  } else if (syncConsent === 'granted') {
+    enabled = true;
+  } else if (syncConsent === 'denied') {
+    enabled = false;
+  }
+
+  if (config.syncConsent === syncConsent && config.enabled === enabled) {
+    return config;
+  }
+
+  return {
+    ...config,
+    syncConsent,
+    enabled
+  };
 }
 
 function saveCloudSyncConfig(config: CloudSyncConfig): void {
@@ -259,9 +288,47 @@ export class PriceSyncService {
   private disabledLogged = false;
   private configErrorLogged = false;
   private lastSyncCursorMs: number | null = null;
+  private currentConsent: SyncConsent = 'pending';
 
   getConfigPath(): string {
     return getConfigPath();
+  }
+
+  getSyncStatus(): { enabled: boolean; consent: SyncConsent } {
+    if (!this.config) {
+      this.config = loadCloudSyncConfig();
+    }
+    const normalized = normalizeSyncConsent(this.config);
+    if (normalized !== this.config) {
+      this.config = normalized;
+      saveCloudSyncConfig(this.config);
+    }
+    const enabled = this.config.enabled === true;
+    const consent = this.config.syncConsent ?? 'pending';
+    this.currentConsent = consent;
+    return { enabled, consent };
+  }
+
+  async setSyncEnabled(enabled: boolean): Promise<void> {
+    if (!this.config) {
+      this.config = loadCloudSyncConfig();
+    }
+    const consent: SyncConsent = enabled ? 'granted' : 'denied';
+    this.config.enabled = enabled;
+    this.config.syncConsent = consent;
+    saveCloudSyncConfig(this.config);
+    this.currentConsent = consent;
+
+    if (enabled) {
+      await this.initialize();
+    } else {
+      this.queue = [];
+      if (this.queueTimer) {
+        clearInterval(this.queueTimer);
+        this.queueTimer = null;
+      }
+      this.inFlight = false;
+    }
   }
 
   setRemoteUpdateHandler(handler: (baseId: string, entry: PriceCacheEntry) => void): void {
@@ -281,6 +348,9 @@ export class PriceSyncService {
 
   private async initializeInternal(): Promise<boolean> {
     this.config = loadCloudSyncConfig();
+    if (this.config.syncConsent) {
+      this.currentConsent = this.config.syncConsent;
+    }
     if (typeof this.config.lastSyncCursorMs === 'number') {
       this.lastSyncCursorMs = this.config.lastSyncCursorMs;
     }

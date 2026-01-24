@@ -355,6 +355,58 @@
       </div>
     </div>
 
+    <!-- Cloud Sync Consent Modal -->
+    <div class="sync-consent-modal" id="syncConsentModal">
+      <div class="sync-consent-modal-content">
+        <div class="sync-consent-modal-header">
+          <div class="sync-consent-modal-title">Enable Cloud Sync?</div>
+          <div class="sync-consent-modal-subtitle">Optional, but recommended</div>
+        </div>
+        
+        <div class="sync-consent-modal-body">
+          <div class="sync-consent-modal-message">
+            Enable syncing to share price updates and receive community updates across devices.
+            We only read game log data (item IDs, prices, listing counts, timestamps) and never collect personal data.
+            You can change this later in Settings.
+          </div>
+          <div class="sync-consent-modal-note">
+            Keeping sync off means no cloud price updates and no contribution to shared prices.
+          </div>
+        </div>
+
+        <div class="sync-consent-modal-actions">
+          <button class="sync-consent-btn secondary" id="syncConsentDisableBtn">No, stay offline</button>
+          <button class="sync-consent-btn" id="syncConsentEnableBtn">Yes, enable sync</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cloud Sync Disable Confirmation Modal -->
+    <div class="sync-consent-modal" id="syncDisableConfirmModal">
+      <div class="sync-consent-modal-content">
+        <div class="sync-consent-modal-header">
+          <div class="sync-consent-modal-title">Disable Cloud Sync?</div>
+          <div class="sync-consent-modal-subtitle">This will stop all cloud synchronization</div>
+        </div>
+        
+        <div class="sync-consent-modal-body">
+          <div class="sync-consent-modal-message">
+            Are you sure you want to disable Cloud Sync? You will stop receiving cloud price updates and will need to update prices manually.
+            <br><br>
+            Your local prices will remain unchanged, but you won't benefit from community price updates.
+          </div>
+          <div class="sync-consent-modal-note">
+            You can re-enable Cloud Sync anytime in Settings.
+          </div>
+        </div>
+
+        <div class="sync-consent-modal-actions">
+          <button class="sync-consent-btn secondary" id="syncDisableCancelBtn">Cancel</button>
+          <button class="sync-consent-btn" id="syncDisableConfirmBtn">Disable Sync</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Compass/Beacon Prompt Modal -->
     <div class="compass-beacon-prompt-modal" id="compassBeaconPromptModal">
       <div class="compass-beacon-prompt-content">
@@ -486,6 +538,19 @@
                     <input type="checkbox" id="includeTaxCheckbox">
                     <span class="settings-checkbox"></span>
                   </label>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <div class="settings-option">
+                  <div class="settings-option-label">Cloud Sync</div>
+                  <label class="settings-checkbox-wrapper">
+                    <input type="checkbox" id="cloudSyncCheckbox">
+                    <span class="settings-checkbox"></span>
+                  </label>
+                </div>
+                <div class="settings-group-description" id="cloudSyncHelperText">
+                  Cloud Sync is enabled. Disabling it will stop all cloud reads and writes.
                 </div>
               </div>
             </div>
