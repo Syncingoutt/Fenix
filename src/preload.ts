@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // Log path configuration methods
   isLogPathConfigured: () => ipcRenderer.invoke('is-log-path-configured'),
+  getLogPath: () => ipcRenderer.invoke('get-log-path'),
   selectLogFile: () => ipcRenderer.invoke('select-log-file'),
   onShowLogPathSetup: (callback: () => void) => {
     ipcRenderer.on('show-log-path-setup', callback);

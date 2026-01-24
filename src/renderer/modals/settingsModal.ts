@@ -40,6 +40,8 @@ const usernameInput = document.getElementById('usernameInput') as HTMLInputEleme
 const usernameHelperText = document.getElementById('usernameHelperText') as HTMLElement | null;
 const cloudSyncCheckbox = document.getElementById('cloudSyncCheckbox') as HTMLInputElement | null;
 const cloudSyncHelperText = document.getElementById('cloudSyncHelperText') as HTMLElement | null;
+const changeLogPathBtn = document.getElementById('changeLogPathBtn') as HTMLButtonElement | null;
+const logPathHelperText = document.getElementById('logPathHelperText') as HTMLElement | null;
 const settingsSidebarItems = document.querySelectorAll('.settings-sidebar-item');
 
 export function initSettingsModal(
@@ -74,6 +76,7 @@ export function initSettingsModal(
       const cloudSyncStatus = await electronAPI.getCloudSyncStatus();
       currentCloudSyncEnabled = cloudSyncStatus.enabled;
       pendingCloudSyncEnabled = cloudSyncStatus.enabled;
+      const currentLogPath = await electronAPI.getLogPath();
       
       // Display current keybind
       keybindInput.value = formatKeybind(pendingKeybind);
@@ -113,6 +116,10 @@ export function initSettingsModal(
         cloudSyncHelperText.textContent = currentCloudSyncEnabled
           ? 'Cloud Sync is enabled. Disabling it will stop all cloud reads and writes.'
           : 'Cloud Sync is disabled. You will only see local prices.';
+      }
+
+      if (logPathHelperText) {
+        logPathHelperText.textContent = currentLogPath ? `${currentLogPath}` : 'Current: Not set';
       }
       
       // Reset save button state
@@ -285,6 +292,15 @@ export function initSettingsModal(
   if (cloudSyncCheckbox) {
     cloudSyncCheckbox.addEventListener('change', () => {
       pendingCloudSyncEnabled = cloudSyncCheckbox.checked;
+    });
+  }
+
+  if (changeLogPathBtn) {
+    changeLogPathBtn.addEventListener('click', async () => {
+      const selectedPath = await electronAPI.selectLogFile();
+      if (selectedPath && logPathHelperText) {
+        logPathHelperText.textContent = `${selectedPath}`;
+      }
     });
   }
   

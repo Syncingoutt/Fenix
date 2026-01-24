@@ -1893,6 +1893,57 @@ img:not(.header-logo-pic) {
   line-height: 1.5;
 }
 
+.settings-action-btn {
+  padding: calc(12px * var(--scale)) calc(24px * var(--scale));
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: calc(8px * var(--scale));
+  font-family: "Manrope", sans-serif;
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-action-btn:hover {
+  transform: translateY(-1px);
+}
+
+.settings-path-text {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--border);
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.settings-path-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: calc(12px * var(--scale));
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  padding: calc(10px * var(--scale)) calc(12px * var(--scale));
+}
+
+.settings-path-field .settings-path-text {
+  white-space: normal;
+  word-break: break-all;
+  overflow: visible;
+}
+
+.settings-path-btn {
+  padding: calc(8px * var(--scale)) calc(16px * var(--scale));
+  font-size: calc(var(--text-small) * var(--text-scale));
+}
+
+.settings-path-btn:hover {
+  transform: none;
+}
+
 .keybind-btn {
   padding: calc(12px * var(--scale)) calc(24px * var(--scale));
   background: var(--primary);

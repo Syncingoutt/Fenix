@@ -43,6 +43,7 @@ export interface ElectronAPI {
   onUpdateDownloadedTransition: (callback: (data: { version: string }) => void) => void;
   sendUpdateDialogResponse: (response: 'download' | 'restart' | 'later') => void;
   isLogPathConfigured: () => Promise<boolean>;
+  getLogPath: () => Promise<string>;
   selectLogFile: () => Promise<string | null>;
   onShowLogPathSetup: (callback: () => void) => void;
   getSettings: () => Promise<{ keybind?: string; fullscreenMode?: boolean; includeTax?: boolean }>;

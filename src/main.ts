@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
 import { loadItemDatabase, loadPriceCache, savePriceCache, PriceCacheEntry } from './core/database';
-import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings } from './core/logParser';
+import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings, getLogPath } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
@@ -834,6 +834,10 @@ ipcMain.on('update-dialog-response', (event, response: 'download' | 'restart' | 
 
 ipcMain.handle('is-log-path-configured', () => {
   return isLogPathConfigured();
+});
+
+ipcMain.handle('get-log-path', () => {
+  return getLogPath();
 });
 
 ipcMain.handle('select-log-file', async () => {
