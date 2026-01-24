@@ -246,6 +246,7 @@
   "10153": { "name": "Divide Mechanical Compass", "tradable": true, "group": "compass" },
   "10154": { "name": "Cruising Mechanical Compass (Artifact)", "tradable": true, "group": "compass" },
   "10162": { "name": "Divine Warrior Dark Surge Compass", "tradable": true, "group": "compass" },
+  "10261": { "name": "Bounty Outlaw Compass", "tradable": true, "group": "compass" },
   "10262": { "name": "Alert Outlaw Compass", "tradable": true, "group": "compass" },
   "12000": { "name": "Flourishing Profound Probe", "tradable": true, "group": "compass" },
   "12001": { "name": "Flourishing Deep Space Probe", "tradable": true, "group": "compass" },
