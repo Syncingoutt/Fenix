@@ -1,6 +1,6 @@
 {
   "name": "fenix",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Torchlight Infinite Inventory Tracker",
   "main": "dist/main.js",
   "scripts": {
