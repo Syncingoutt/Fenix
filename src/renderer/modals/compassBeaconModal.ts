@@ -389,7 +389,6 @@ export function handleCompassBeaconSelectionConfirm(): void {
   const selectionArray = Array.from(includedItems);
   localStorage.setItem('lastCompassBeaconSelection', JSON.stringify(selectionArray));
   
-  console.log(`✅ Including ${includedItems.size} compasses/beacons in hourly calculation`);
   
   hideCompassBeaconSelection();
   actuallyStartHourlyTracking();

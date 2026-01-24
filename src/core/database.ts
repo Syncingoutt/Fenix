@@ -92,7 +92,6 @@ const ITEM_DATABASE_FILE = getDataPath('item_database.json');
 
 export function loadItemDatabase(): ItemDatabase {
   if (!fs.existsSync(ITEM_DATABASE_FILE)) {
-    console.log('⚠️  Item database not found. Creating empty database...');
     const emptyDb = {};
     fs.writeFileSync(ITEM_DATABASE_FILE, JSON.stringify(emptyDb, null, 2));
     return emptyDb;
@@ -144,7 +143,6 @@ export async function loadPriceCache(
     }
     
     if (migrationNeeded) {
-      console.log('💰 Migrated price cache to new format with timestamps');
     }
 
     if (!cloudCacheProvider) {

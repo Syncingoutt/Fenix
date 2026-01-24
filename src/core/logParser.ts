@@ -216,7 +216,7 @@ export function readLogFile(): ParsedLogEntry[] {
   const logPath = getLogPath();
   
   if (!logPath || !fs.existsSync(logPath)) {
-    console.error(`❌ Log file not found at: ${logPath || 'not configured'}`);
+    console.error(`Log file not found at: ${logPath || 'not configured'}`);
     return [];
   }
 
@@ -472,7 +472,7 @@ export function ensureLogSizeLimit(maxSizeMB = 500): void {
     const KEEP_BYTES = 5 * 1024 * 1024;
     const start = Math.max(0, stats.size - KEEP_BYTES);
 
-    console.warn(`⚠️  Log file is ${Math.round(stats.size / 1024 / 1024)}MB — truncating...`);
+    console.warn(`Log file is ${Math.round(stats.size / 1024 / 1024)}MB — truncating...`);
 
     const fd = fs.openSync(logPath, 'r+');
     const buffer = Buffer.alloc(stats.size - start);
@@ -481,9 +481,8 @@ export function ensureLogSizeLimit(maxSizeMB = 500): void {
     fs.writeSync(fd, buffer, 0, buffer.length, 0);
     fs.closeSync(fd);
 
-    console.log(`✅ Log file truncated to last ${Math.round(KEEP_BYTES / 1024 / 1024)}MB`);
   } catch (error: any) {
-    console.error(`❌ Failed to truncate log file: ${error.message || error}`);
+    console.error(`Failed to truncate log file: ${error.message || error}`);
     // Don't throw - we want the app to continue running even if truncation fails
   }
 }

@@ -92,7 +92,6 @@ function debouncedSavePriceCache(): void {
       try {
         await savePriceCache(inventoryManager.getPriceCacheAsObject());
         priceCachePendingSave = false;
-        console.log('Price cache saved (debounced)');
       } catch (error) {
         console.error('Failed to save price cache:', error);
       }
@@ -111,7 +110,6 @@ async function forceSavePriceCache(): Promise<void> {
     try {
       await savePriceCache(inventoryManager.getPriceCacheAsObject());
       priceCachePendingSave = false;
-      console.log('Price cache saved (forced)');
     } catch (error) {
       console.error('Failed to save price cache:', error);
     }
@@ -152,12 +150,11 @@ function getIconPath(): string {
     
     for (const iconPath of possiblePaths) {
       if (fs.existsSync(iconPath)) {
-        console.log(`✅ Found icon at: ${iconPath}`);
         return iconPath;
       }
     }
     // Log all tried paths for debugging
-    console.error(`❌ Icon not found in any of these locations:`);
+    console.error(`Icon not found in any of these locations:`);
     possiblePaths.forEach(p => console.error(`   - ${p}`));
     // Fallback - return first path anyway
     return possiblePaths[0];
@@ -272,17 +269,16 @@ function createTray() {
   
   // Verify icon exists, log error if not (but don't crash)
   if (!fs.existsSync(iconPath)) {
-    console.error(`❌ Tray icon not found at: ${iconPath}`);
+    console.error(`Tray icon not found at: ${iconPath}`);
     console.error(`   Trying to continue without tray icon...`);
     // Try to create tray anyway with empty string - might use default
     try {
       tray = new Tray(iconPath);
     } catch (error) {
-      console.error(`❌ Failed to create tray: ${error}`);
+      console.error(`Failed to create tray: ${error}`);
       return; // Exit early if we can't create tray
     }
   } else {
-    console.log(`✅ Tray icon found at: ${iconPath}`);
     tray = new Tray(iconPath);
   }
   
@@ -401,7 +397,6 @@ autoUpdater.autoInstallOnAppQuit = true;
 let isManualCheck = false; // Track if update check was triggered manually
 
 autoUpdater.on('checking-for-update', () => {
-  console.log('🔍 Checking for updates...');
   if (mainWindow && isManualCheck) {
     mainWindow.webContents.send('update-status', {
       status: 'checking',
@@ -411,7 +406,6 @@ autoUpdater.on('checking-for-update', () => {
 });
 
 autoUpdater.on('update-available', (info) => {
-  console.log('✨ Update available:', info.version);
   if (mainWindow && isManualCheck) {
     // For manual checks, notify renderer and start download automatically
     mainWindow.webContents.send('update-status', {
@@ -431,7 +425,6 @@ autoUpdater.on('update-available', (info) => {
 });
 
 autoUpdater.on('update-not-available', (info) => {
-  console.log('✅ No updates available');
   if (mainWindow && isManualCheck) {
     mainWindow.webContents.send('update-status', {
       status: 'not-available',
@@ -442,7 +435,7 @@ autoUpdater.on('update-not-available', (info) => {
 });
 
 autoUpdater.on('error', (err) => {
-  console.error('❌ Error checking for updates:', err);
+  console.error('Error checking for updates:', err);
   if (mainWindow && isManualCheck) {
     mainWindow.webContents.send('update-status', {
       status: 'error',
@@ -454,7 +447,6 @@ autoUpdater.on('error', (err) => {
 
 autoUpdater.on('download-progress', (progressObj) => {
   const percent = Math.round(progressObj.percent);
-  console.log(`📥 Downloading update: ${percent}%`);
   if (mainWindow) {
     mainWindow.webContents.send('update-download-progress', percent);
     if (isManualCheck) {
@@ -467,7 +459,6 @@ autoUpdater.on('download-progress', (progressObj) => {
 });
 
 autoUpdater.on('update-downloaded', (info) => {
-  console.log('✅ Update downloaded:', info.version);
   if (mainWindow && isManualCheck) {
     // For manual checks, notify renderer and prompt for restart
     mainWindow.webContents.send('update-status', {
@@ -496,8 +487,6 @@ if (app.isPackaged) {
 app.whenReady().then(async () => {
   // Menu.setApplicationMenu(null);
 
-  console.log('🔥 Torchlight Tracker - Starting...');
-  
   // Initialize log parser with userData path
   initLogParser(app.getPath('userData'));
   
@@ -506,7 +495,6 @@ app.whenReady().then(async () => {
   setInterval(() => ensureLogSizeLimit(500), 60 * 60 * 1000);
   
   itemDatabase = loadItemDatabase();
-  console.log(`📦 Loaded ${Object.keys(itemDatabase).length} items`);
 
   const initialSettings = getSettings();
   if (initialSettings.leagueId && initialSettings.leagueId.trim() !== '') {
@@ -515,10 +503,6 @@ app.whenReady().then(async () => {
   
   priceSyncService = new PriceSyncService();
   const priceCache = await loadPriceCache((options) => priceSyncService.syncPrices({ ...options, leagueId: currentLeagueId }));
-  const priceCount = Object.keys(priceCache).length;
-  if (priceCount > 0) {
-    console.log(`💰 Loaded ${priceCount} cached prices`);
-  }
   
   inventoryManager = new InventoryManager(itemDatabase, priceCache);
 
@@ -555,12 +539,10 @@ app.whenReady().then(async () => {
     // Load inventory if path is configured
     const logEntries = readLogFile();
     inventoryManager.buildInventory(logEntries);
-    console.log(`✅ Initial inventory loaded`);
     lastLogPosition = getLogSize();
   }
 
   // Start main process timers (never throttled)
-  console.log('⏱️  Starting main process timers...');
   
   // Realtime timer - always running
   setInterval(() => {
@@ -588,7 +570,6 @@ app.whenReady().then(async () => {
     }
   }, 1000);
 
-  console.log('✅ Main process timers started');
 
   // Periodic price cache save - every 30 seconds if there are pending updates
   setInterval(async () => {
@@ -596,7 +577,6 @@ app.whenReady().then(async () => {
       try {
         await savePriceCache(inventoryManager.getPriceCacheAsObject());
         priceCachePendingSave = false;
-        console.log('Price cache saved (periodic)');
       } catch (error) {
         console.error('Failed to save price cache (periodic):', error);
       }
@@ -690,9 +670,8 @@ function registerKeybind(keybind: string): boolean {
   
   if (ret) {
     currentKeybind = keybind;
-    console.log(`✅ Keybind registered: ${keybind}`);
   } else {
-    console.error(`❌ Failed to register keybind: ${keybind}`);
+    console.error(`Failed to register keybind: ${keybind}`);
   }
   
   return ret;
@@ -1035,7 +1014,6 @@ function watchLogFile() {
 
   // Detect log file truncation (when ensureLogSizeLimit runs)
   if (currentSize < lastLogPosition) {
-    console.log(`Log file truncated detected (was ${lastLogPosition}, now ${currentSize}). Resetting tracking position.`);
     // Reset to start of truncated file - we'll rebuild inventory from the remaining content
     lastLogPosition = 0;
     // Rebuild inventory from the truncated file to ensure we have current state
@@ -1073,7 +1051,6 @@ function watchLogFile() {
           const match = line.match(/\+refer\s*\[(\d+)\]/);
           if (match) {
             lastSendBaseId = match[1];
-            console.log(`Price check initiated for baseId: ${lastSendBaseId}`);
           }
         }
         
@@ -1086,7 +1063,6 @@ function watchLogFile() {
       if (line.includes('----Socket RecvMessage STT----XchgSearchPrice----')) {
         inPriceCheck = true;
         priceCheckBuffer = [];
-        console.log('Receiving price data...');
         // Use the most recent SEND message's baseId
         currentPriceCheckBaseId = lastSendBaseId;
         // If not found in lastSendBaseId, try to extract from the send message buffer
@@ -1096,7 +1072,6 @@ function watchLogFile() {
               const match = bufLine.match(/\+refer\s*\[(\d+)\]/);
               if (match) {
                 currentPriceCheckBaseId = match[1];
-                console.log(`Price check baseId extracted from send message buffer: ${currentPriceCheckBaseId}`);
                 break;
               }
             }
@@ -1115,7 +1090,6 @@ function watchLogFile() {
                   const match = sendLine.match(/\+refer\s*\[(\d+)\]/);
                   if (match) {
                     currentPriceCheckBaseId = match[1];
-                    console.log(`Price check baseId found in preceding send message: ${currentPriceCheckBaseId}`);
                     break;
                   }
                 }
@@ -1128,7 +1102,6 @@ function watchLogFile() {
         priceCheckBuffer.push(line);
         
         if (line.includes('----Socket RecvMessage End----')) {
-          console.log(`Price data received, buffer has ${priceCheckBuffer.length} lines`);
           
           const prices: number[] = [];
           for (const bufLine of priceCheckBuffer) {
@@ -1168,14 +1141,11 @@ function watchLogFile() {
                 const itemData = itemDatabase[priceResult.baseId];
                 itemName = itemData?.name || priceResult.baseId;
               }
-              console.log(`Price updated: ${itemName} = ${priceResult.avgPrice.toFixed(2)} (from ${priceResult.listingCount} listings)`);
               
               priceUpdated = true;
             } else {
-              console.log(`Parse issue - BaseID: ${currentPriceCheckBaseId}, Prices: ${prices.length} (no valid prices found)`);
             }
           } else {
-            console.log(`No baseId found for price check with ${prices.length} prices`);
           }
 
           inPriceCheck = false;
