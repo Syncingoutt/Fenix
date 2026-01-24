@@ -61,7 +61,7 @@ function calculateTrendFromHistory(history: PriceHistoryPoint[] | undefined, pri
   // Fallback: simple timestamp-based heuristic
   const hoursSinceUpdate = (Date.now() - timestamp) / (1000 * 60 * 60);
 
-  if (hoursSinceUpdate < 24) {
+  if (hoursSinceUpdate < 6) {
     return { trend: 'neutral', percent: 0 };
   }
 

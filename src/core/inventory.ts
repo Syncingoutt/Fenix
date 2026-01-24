@@ -74,9 +74,10 @@ export class InventoryManager {
 
   updatePrice(baseId: string, price: number, listingCount?: number, timestamp: number = Date.now()): void {
 
-    // Build or update per-day history (last 7 days)
-    const today = new Date(timestamp);
-    const todayKey = today.toISOString().slice(0, 10); // YYYY-MM-DD
+    // Build or update per-6-hour history (last 7 days = 28 points)
+    // Round timestamp down to nearest 6-hour interval
+    const bucket = Math.floor(timestamp / (6 * 60 * 60 * 1000)) * (6 * 60 * 60 * 1000);
+    const sixHourKey = new Date(bucket).toISOString().slice(0, 13) + ':00:00';
 
     let history: DailyPricePoint[] = [];
     const existing = this.priceCache.get(baseId);
@@ -85,17 +86,17 @@ export class InventoryManager {
       history = [...existing.history];
     }
 
-    const idx = history.findIndex(point => point.date === todayKey);
+    const idx = history.findIndex(point => point.date === sixHourKey);
     if (idx >= 0) {
-      history[idx] = { date: todayKey, price };
+      history[idx] = { date: sixHourKey, price };
     } else {
-      history.push({ date: todayKey, price });
+      history.push({ date: sixHourKey, price });
     }
 
-    // Sort by date ascending and keep only the last 7 days
+    // Sort by date ascending and keep only the last 28 points (7 days * 4 updates per day)
     history.sort((a, b) => a.date.localeCompare(b.date));
-    if (history.length > 7) {
-      history = history.slice(history.length - 7);
+    if (history.length > 28) {
+      history = history.slice(history.length - 28);
     }
 
     const entry: PriceCacheEntry = {
