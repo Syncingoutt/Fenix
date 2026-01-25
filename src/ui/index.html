@@ -52,7 +52,6 @@
             <div id="nav-home" class="nav-item active">Home</div>
             <div id="nav-prices" class="nav-item">
               <span>Prices</span>
-              <span class="nav-badge nav-badge-new">New!</span>
             </div>
             <div id="nav-strategies" class="nav-item">Strategies</div>
           </div>
@@ -86,7 +85,7 @@
                   <path d="M9 21H15M12 3C8 3 5 6 5 10C5 13.31 7.69 16 11 16C11.65 16 12.26 15.88 12.82 15.67C13.38 15.46 13.88 15.15 14.29 14.76C14.7 14.37 15.02 13.9 15.24 13.38C15.46 12.86 15.57 12.3 15.57 11.71C15.57 11.12 15.46 10.56 15.24 10.04C15.02 9.52 14.7 9.05 14.29 8.66C13.88 8.27 13.38 7.96 12.82 7.75C12.26 7.54 11.65 7.42 11 7.42C10.35 7.42 9.74 7.54 9.18 7.75C8.62 7.96 8.12 8.27 7.71 8.66C7.3 9.05 6.98 9.52 6.76 10.04C6.54 10.56 6.43 11.12 6.43 11.71C6.43 12.3 6.54 12.86 6.76 13.38C6.98 13.9 7.3 14.37 7.71 14.76C8.12 15.15 8.62 15.46 9.18 15.67C9.74 15.88 10.35 16 11 16C14.31 16 17 13.31 17 10C17 6 14 3 12 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>App ideas</span>
+                <span>App ideas (WIP)</span>
                 <svg class="my-account-menu-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -607,24 +606,5 @@
     </div>
 
     <script type="module" src="../renderer.js"></script>
-    <script>
-      function updateSegmentedTransform() {
-        const activeBg = document.querySelector('.segmented-active-bg');
-        const inputs = document.querySelectorAll('.segmented input');
-        const checkedIndex = Array.from(inputs).findIndex(input => input.checked);
-        if (activeBg && checkedIndex >= 0) {
-          // Use the clamped scale from CSS variable for consistency
-          const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--scale')) || 1;
-          activeBg.style.transform = `translateX(${checkedIndex * 125 * scale}px)`;
-        }
-      }
-      
-      document.querySelectorAll('.segmented input').forEach((input, index) => {
-        input.addEventListener('change', updateSegmentedTransform);
-      });
-      
-      window.addEventListener('resize', updateSegmentedTransform);
-      updateSegmentedTransform(); // Initialize on load
-    </script>
   </body>
 </html>

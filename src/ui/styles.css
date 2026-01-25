@@ -515,12 +515,17 @@ img:not(.header-logo-pic) {
   position: absolute;
   top: 0;
   left: 0;
-  width: calc(125px * var(--scale));
+  width: calc(140px * var(--scale));
   height: calc(40px * var(--scale));
   background: var(--primary);
   border-radius: calc(24px * var(--scale));
   z-index: 0;
   transition: transform 0.25s ease;
+  transform: translateX(0);
+}
+
+.segmented:has(label:nth-child(3) input:checked) .segmented-active-bg {
+  transform: translateX(calc(140px * var(--scale)));
 }
 
 .segmented label {
@@ -540,7 +545,7 @@ img:not(.header-logo-pic) {
 }
 
 .segmented .button-label {
-  width: calc(125px * var(--scale));
+  width: calc(140px * var(--scale));
   height: calc(40px * var(--scale));
   padding: 0 calc(18px * var(--scale));
   display: flex;
