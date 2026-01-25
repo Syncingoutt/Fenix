@@ -3,7 +3,7 @@
 import { InventoryItem } from '../types.js';
 import { FLAME_ELEMENTIUM_ID } from '../constants.js';
 import { getCurrentItems, getMinPriceFilter, getMaxPriceFilter } from '../state/inventoryState.js';
-import { getHourlyStartSnapshot, getIncludedItems } from '../state/wealthState.js';
+import { getHourlyStartSnapshot, getIncludedItems, getHourlyAHSales, getHourlyPurchases, getHourlyUsage } from '../state/wealthState.js';
 import { applyTax } from '../utils/tax.js';
 import { passesPriceFilters } from '../utils/filters.js';
 
@@ -87,6 +87,9 @@ export function getHourlyWealthGain(): number {
   // netUsage < 0: bought items → add value (positive impact)
   // Selected compasses/beacons: do NOT apply tax (use raw price)
   
+  const hourlyAHSales = getHourlyAHSales();
+  const hourlyPurchases = getHourlyPurchases();
+  
   for (const baseId of includedItems) {
     // Always get the latest price from currentItems (prices can be updated during session)
     const item = currentItems.find(i => i.baseId === baseId);
@@ -100,13 +103,31 @@ export function getHourlyWealthGain(): number {
     
     // Use current price for calculations (may have been updated during session)
     // Selected compasses/beacons: use raw price without tax
-    const value = Math.abs(netUsage) * item.price;
     
     if (netUsage > 0) {
-      // Used items: subtract cost (negative impact on FE)
+      // Quantity decreased: items were used or sold
+      const ahSalesQty = hourlyAHSales.get(baseId) || 0;
+      const itemsGained = hourlyPurchases.get(baseId) || 0;
+      const hourlyUsage = getHourlyUsage();
+      const itemsUsed = hourlyUsage.get(baseId) || 0;
+      
+      // Only subtract value for items that were gained during the hour (not items at start)
+      // Items sold from hourly inventory = min(ahSalesQty, itemsGained)
+      const itemsSoldFromHourlyInventory = Math.min(ahSalesQty, itemsGained);
+      
+      // Items used from hourly inventory = min(itemsUsed, itemsGained - itemsSoldFromHourlyInventory)
+      // This ensures we don't count more items than were actually gained
+      const itemsUsedFromHourlyInventory = Math.min(itemsUsed, itemsGained - itemsSoldFromHourlyInventory);
+      
+      // Total items from hourly inventory that were used/sold
+      const totalItemsFromHourlyInventory = itemsSoldFromHourlyInventory + itemsUsedFromHourlyInventory;
+      
+      // Only subtract value for items that were gained during the hour
+      const value = totalItemsFromHourlyInventory * item.price;
       gainedValue -= value;
     } else {
       // Bought items: add value (positive impact on FE)
+      const value = Math.abs(netUsage) * item.price;
       gainedValue += value;
     }
   }

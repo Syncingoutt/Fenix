@@ -27,6 +27,7 @@ export interface ElectronAPI {
   getInventory: () => Promise<InventoryItem[]>;
   getItemDatabase: () => Promise<Record<string, { name: string; tradable?: boolean; group?: string }>>;
   getPriceCache: () => Promise<PriceCache>;
+  getLastProtoName: (baseId: string) => Promise<string | undefined>;
   onInventoryUpdate: (callback: () => void) => void;
   startHourlyTimer: () => void;
   pauseHourlyTimer: () => void;

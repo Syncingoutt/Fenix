@@ -9,6 +9,7 @@ export interface ParsedLogEntry {
   bagNum: number;
   slotId: number | null;
   pageId: number | null;
+  protoName?: string; // ProtoName context (e.g., 'XchgForSale', 'Spv3Open')
 }
 
 // Default path (will be overridden by user selection)
@@ -172,7 +173,15 @@ function parseInitBagDataLine(line: string): ParsedLogEntry | null {
   };
 }
 
-export function parseLogLine(line: string): ParsedLogEntry | null {
+/**
+ * Extract ProtoName from a line if it contains ItemChange@ ProtoName=...
+ */
+function extractProtoName(line: string): string | null {
+  const protoMatch = line.match(/ItemChange@\s+ProtoName=(\w+)/);
+  return protoMatch ? protoMatch[1] : null;
+}
+
+export function parseLogLine(line: string, protoName?: string): ParsedLogEntry | null {
   const idMatch = line.match(/Id=([^\s]+)/);
   if (!idMatch) return null;
   
@@ -208,7 +217,8 @@ export function parseLogLine(line: string): ParsedLogEntry | null {
     baseId,
     bagNum,
     slotId,
-    pageId
+    pageId,
+    protoName
   };
 }
 
@@ -348,6 +358,9 @@ export function readLogFile(): ParsedLogEntry[] {
       }
     }
     
+    // Track ProtoName context for ItemChange entries
+    let currentProtoName: string | null = null;
+    
     // ALSO collect all ItemChange entries after the ResetItemsLayout end
     // This includes PickItems events and other item updates that happen after sorting
     for (let i = lastResetItemsLayoutEnd; i < lines.length; i++) {
@@ -358,9 +371,19 @@ export function readLogFile(): ParsedLogEntry[] {
         break;
       }
       
+      // Track ProtoName context
+      const protoName = extractProtoName(line);
+      if (protoName) {
+        if (line.includes(' start')) {
+          currentProtoName = protoName;
+        } else if (line.includes(' end')) {
+          currentProtoName = null;
+        }
+      }
+      
       // Parse ItemChange entries (Add, Update, Remove) that come after the sort
       if (line.includes('ItemChange@') && line.includes('Id=')) {
-        const parsed = parseLogLine(line);
+        const parsed = parseLogLine(line, currentProtoName || undefined);
         if (parsed) {
           // First, check if we already have this exact fullId (for ItemChange entries)
           // This handles cases where the same item instance appears multiple times - keep the latest
@@ -429,10 +452,23 @@ export function readLogFile(): ParsedLogEntry[] {
   const relevantLines = startIndex === Infinity ? lines : lines.slice(startIndex);
 
   const entries: ParsedLogEntry[] = [];
+  
+  // Track ProtoName context for ItemChange entries
+  let currentProtoName: string | null = null;
 
   for (const line of relevantLines) {
+    // Track ProtoName context
+    const protoName = extractProtoName(line);
+    if (protoName) {
+      if (line.includes(' start')) {
+        currentProtoName = protoName;
+      } else if (line.includes(' end')) {
+        currentProtoName = null;
+      }
+    }
+    
     if (line.includes('ItemChange@') && line.includes('Id=')) {
-      const parsed = parseLogLine(line);
+      const parsed = parseLogLine(line, currentProtoName || undefined);
       if (parsed) entries.push(parsed);
     }
   }

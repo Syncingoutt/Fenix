@@ -22,6 +22,7 @@ let compassBeaconSelectionState: Set<string> | null = null;
 let previousQuantities: Map<string, number> = new Map(); // baseId -> previous quantity
 let hourlyUsage: Map<string, number> = new Map(); // baseId -> quantity used this hour
 let hourlyPurchases: Map<string, number> = new Map(); // baseId -> quantity purchased this hour
+let hourlyAHSales: Map<string, number> = new Map(); // baseId -> quantity sold in auction house (for wealth calculation)
 
 // Hourly buckets
 let hourlyBuckets: HourlyBucket[] = [];
@@ -139,6 +140,14 @@ export function getHourlyPurchases(): Map<string, number> {
 
 export function setHourlyPurchases(purchases: Map<string, number>): void {
   hourlyPurchases = purchases;
+}
+
+export function getHourlyAHSales(): Map<string, number> {
+  return hourlyAHSales;
+}
+
+export function setHourlyAHSales(sales: Map<string, number>): void {
+  hourlyAHSales = sales;
 }
 
 // Hourly buckets getters/setters

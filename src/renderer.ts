@@ -120,7 +120,7 @@ async function loadInventory(): Promise<void> {
   
   // Track compass/beacon consumption if hourly mode is active
   if (getIsHourlyActive() && !getHourlyPaused()) {
-    trackCompassBeaconUsage();
+    await trackCompassBeaconUsage();
   }
   
   // Update previous quantities for tracking

@@ -42,7 +42,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /prices/snapshot/{leagueId} {
+    match /pricesSnapshots/{leagueId} {
       allow read: if request.auth != null;
       allow write: if false;
     }

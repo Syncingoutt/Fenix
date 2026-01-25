@@ -764,10 +764,10 @@ img:not(.header-logo-pic) {
   content: "";
   position: absolute;
   right: 0;
-  top: 50%;
+  top: 65%;
   transform: translateY(-50%);
-  width: calc(8px * var(--scale));
-  height: calc(5px * var(--scale));
+  width: calc(10px * var(--scale));
+  height: calc(10px * var(--scale));
   min-width: 6px;
   min-height: 4px;
   opacity: 0;

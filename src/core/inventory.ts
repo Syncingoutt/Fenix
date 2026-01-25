@@ -16,6 +16,8 @@ export interface InventoryItem {
 export class InventoryManager {
   private inventory = new Map<string, InventoryItem>();
   private priceCache = new Map<string, PriceCacheEntry>();
+  // Track the last ProtoName seen for each baseId (for filtering auction house transactions)
+  private lastProtoName = new Map<string, string>();
 
   constructor(private itemDatabase: ItemDatabase, initialPriceCache: PriceCache = {}) {
     // Load initial price cache
@@ -27,8 +29,24 @@ export class InventoryManager {
   buildInventory(logEntries: ParsedLogEntry[]): Map<string, InventoryItem> {
     const instanceMap = new Map<string, ParsedLogEntry>();
     
+    // Track ProtoName for each entry, keeping the most recent per baseId
+    const protoNameByBaseId = new Map<string, { protoName: string; timestamp: string }>();
+    
     for (const entry of logEntries) {
       instanceMap.set(entry.fullId, entry);
+      
+      // Track ProtoName if present (keep most recent per baseId)
+      if (entry.protoName) {
+        const existing = protoNameByBaseId.get(entry.baseId);
+        if (!existing || entry.timestamp > existing.timestamp) {
+          protoNameByBaseId.set(entry.baseId, { protoName: entry.protoName, timestamp: entry.timestamp });
+        }
+      }
+    }
+    
+    // Update lastProtoName map
+    for (const [baseId, info] of protoNameByBaseId.entries()) {
+      this.lastProtoName.set(baseId, info.protoName);
     }
 
     this.inventory.clear();
@@ -70,6 +88,13 @@ export class InventoryManager {
     }
 
     return this.inventory;
+  }
+  
+  /**
+   * Get the last ProtoName seen for a baseId (used to filter auction house transactions)
+   */
+  getLastProtoName(baseId: string): string | undefined {
+    return this.lastProtoName.get(baseId);
   }
 
   updatePrice(baseId: string, price: number, listingCount?: number, timestamp: number = Date.now()): void {

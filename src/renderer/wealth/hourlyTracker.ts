@@ -19,6 +19,8 @@ import {
   setHourlyUsage,
   getHourlyPurchases,
   setHourlyPurchases,
+  getHourlyAHSales,
+  setHourlyAHSales,
   getHourlyBuckets,
   setHourlyBuckets,
   getCurrentHourStartValue,
@@ -28,7 +30,7 @@ import {
   getWealthMode,
   setWealthMode
 } from '../state/wealthState.js';
-import { getCurrentItems } from '../state/inventoryState.js';
+import { getCurrentItems, getItemDatabase } from '../state/inventoryState.js';
 import { formatTime } from '../utils/formatting.js';
 import { ElectronAPI, HourlyBucket } from '../types.js';
 
@@ -77,11 +79,11 @@ export function initHourlyTracker(
 }
 
 /**
- * Start hourly tracking (shows prompt first)
+ * Start hourly tracking (auto-includes all compasses/beacons, no prompt)
  */
 export function startHourlyTracking(): void {
-  // Show prompt asking if user wants to include compasses/beacons
-  showCompassBeaconPrompt();
+  // Skip prompt and directly start tracking with auto-included compasses/beacons
+  actuallyStartHourlyTracking();
 }
 
 /**
@@ -90,17 +92,34 @@ export function startHourlyTracking(): void {
 export function actuallyStartHourlyTracking(): void {
   
   const currentItems = getCurrentItems();
+  const itemDatabase = getItemDatabase();
   const hourlyStartSnapshot = getHourlyStartSnapshot();
   const previousQuantities = getPreviousQuantities();
   const hourlyUsage = getHourlyUsage();
   const hourlyPurchases = getHourlyPurchases();
   const includedItems = getIncludedItems();
   
+  // Auto-include all compasses, beacons, and resonances (skip selection modal)
+  includedItems.clear();
+  for (const [baseId, itemData] of Object.entries(itemDatabase)) {
+    // Include compasses and beacons
+    if (itemData.group === 'compass' || itemData.group === 'beacon') {
+      includedItems.add(baseId);
+    }
+    // Include Netherrealm Resonance (5028) and Deep Space Resonance (5040)
+    if (baseId === '5028' || baseId === '5040') {
+      includedItems.add(baseId);
+    }
+  }
+  
+  console.log(`[Hourly Tracking] Auto-included ${includedItems.size} compasses/beacons/resonances:`, Array.from(includedItems));
+  
   // Take snapshot of current inventory
   hourlyStartSnapshot.clear();
   previousQuantities.clear();
   hourlyUsage.clear();
   hourlyPurchases.clear();
+  getHourlyAHSales().clear();
   
   for (const item of currentItems) {
     // Snapshot all items normally
@@ -147,13 +166,15 @@ export function actuallyStartHourlyTracking(): void {
 /**
  * Track compass/beacon usage for selected items
  */
-export function trackCompassBeaconUsage(): void {
+export async function trackCompassBeaconUsage(): Promise<void> {
   const currentItems = getCurrentItems();
   const includedItems = getIncludedItems();
   const previousQuantities = getPreviousQuantities();
   const hourlyStartSnapshot = getHourlyStartSnapshot();
   const hourlyUsage = getHourlyUsage();
   const hourlyPurchases = getHourlyPurchases();
+  
+  console.log(`[Compass/Beacon Tracking] Called. Included items: ${includedItems.size}, Current items: ${currentItems.length}`);
   
   // Track usage and purchases separately for selected compasses/beacons
   for (const baseId of includedItems) {
@@ -162,11 +183,28 @@ export function trackCompassBeaconUsage(): void {
     const previousQty = previousQuantities.get(baseId) ?? (hourlyStartSnapshot.get(baseId) ?? currentQty);
     const startQty = hourlyStartSnapshot.get(baseId) ?? currentQty;
     
+    console.log(`[Compass/Beacon Tracking] ${baseId}: currentQty=${currentQty}, previousQty=${previousQty}, startQty=${startQty}, hourlyUsage=${hourlyUsage.get(baseId) || 0}`);
+    
     // Track usage: quantity decreased (used)
     if (currentQty < previousQty) {
-      const used = previousQty - currentQty;
-      const currentUsage = hourlyUsage.get(baseId) || 0;
-      hourlyUsage.set(baseId, currentUsage + used);
+      // Check ProtoName to filter out auction house transactions
+      const lastProtoName = await electronAPI.getLastProtoName(baseId);
+      console.log(`[Compass/Beacon Tracking] ${baseId}: Quantity decreased from ${previousQty} to ${currentQty}, lastProtoName=${lastProtoName}`);
+      
+      // Don't count as usage if it was put in auction house
+      if (lastProtoName === 'XchgForSale') {
+        // Track AH sale for wealth calculation
+        const soldQty = previousQty - currentQty;
+        const hourlyAHSales = getHourlyAHSales();
+        const currentAHSales = hourlyAHSales.get(baseId) || 0;
+        hourlyAHSales.set(baseId, currentAHSales + soldQty);
+        console.log(`[Compass/Beacon Tracking] ${baseId}: Skipping usage count (auction house transaction), tracked ${soldQty} items sold in AH`);
+      } else {
+        const used = previousQty - currentQty;
+        const currentUsage = hourlyUsage.get(baseId) || 0;
+        hourlyUsage.set(baseId, currentUsage + used);
+        console.log(`[Compass/Beacon Tracking] ${baseId}: Used ${used} (previous: ${previousQty}, current: ${currentQty}, total used: ${currentUsage + used})`);
+      }
     }
     
     // Track purchases: quantity increased (bought)
@@ -174,6 +212,7 @@ export function trackCompassBeaconUsage(): void {
       const bought = currentQty - previousQty;
       const currentPurchases = hourlyPurchases.get(baseId) || 0;
       hourlyPurchases.set(baseId, currentPurchases + bought);
+      console.log(`[Compass/Beacon Tracking] ${baseId}: Bought ${bought} (previous: ${previousQty}, current: ${currentQty}, total bought: ${currentPurchases + bought})`);
     }
   }
 }
@@ -229,6 +268,7 @@ export function captureHourlyBucket(): void {
   // Reset usage and purchase tracking for next hour and update previous quantities
   hourlyUsage.clear();
   hourlyPurchases.clear();
+  getHourlyAHSales().clear();
   for (const baseId of includedItems) {
     const currentItem = currentItems.find(item => item.baseId === baseId);
     if (currentItem) {
