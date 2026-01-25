@@ -759,6 +759,12 @@ ipcMain.on('widget-resume-hourly', () => {
   }
 });
 
+ipcMain.on('widget-reset-realtime', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('widget-reset-realtime');
+  }
+});
+
 // Timer control IPC handlers
 ipcMain.on('start-hourly-timer', () => {
   timerState.hourlyActive = true;

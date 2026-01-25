@@ -66,6 +66,7 @@ export interface ElectronAPI {
   updateOverlayWidget: (data: { duration: number; hourly: number; total: number; isHourlyMode: boolean; isPaused: boolean }) => void;
   onWidgetPauseHourly: (callback: () => void) => void;
   onWidgetResumeHourly: (callback: () => void) => void;
+  onWidgetResetRealtime: (callback: () => void) => void;
 }
 
 export interface HourlyBucket {

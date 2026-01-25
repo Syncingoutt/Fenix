@@ -84,5 +84,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onWidgetResumeHourly: (callback: () => void) => {
     ipcRenderer.on('widget-resume-hourly', callback);
+  },
+  onWidgetResetRealtime: (callback: () => void) => {
+    ipcRenderer.on('widget-reset-realtime', callback);
   }
 });

@@ -147,6 +147,12 @@ export function initWealthEvents(
       resumeHourlyTracking();
     }
   });
+
+  electronAPI.onWidgetResetRealtime(() => {
+    if (getWealthMode() === 'realtime') {
+      resetRealtimeTracking();
+    }
+  });
   
   // Compass/Beacon prompt modal event listeners
   document.getElementById('compassBeaconPromptNo')?.addEventListener('click', () => {
