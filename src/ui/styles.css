@@ -215,24 +215,82 @@ img:not(.header-logo-pic) {
   display: block;
 }
 
-.settings-button {
-  cursor: pointer;
-  padding: calc(8px * var(--scale));
+.header-user {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: calc(12px * var(--scale));
+  position: relative;
+}
+
+.my-account-button {
+  display: flex;
+  align-items: center;
+  gap: calc(12px * var(--scale));
+  padding: calc(8px * var(--scale)) calc(12px * var(--scale));
+  background: transparent;
+  border: none;
+  cursor: pointer;
   color: var(--text);
-  transition: color 0.2s, transform 0.2s;
-  border-radius: calc(6px * var(--scale));
+  transition: all 0.2s ease;
+  border-radius: calc(8px * var(--scale));
+  font-family: "Manrope", sans-serif;
+  min-width: calc(240px * var(--scale));
 }
 
-.settings-button:hover {
+.my-account-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.my-account-button.active {
   color: var(--primary);
-  transform: rotate(90deg);
-  background: rgba(222, 92, 11, 0.1);
 }
 
-.settings-menu {
+.my-account-button.active .my-account-arrow {
+  transform: rotate(-90deg);
+}
+
+.my-account-icon {
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.my-account-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(2px * var(--scale));
+  min-width: calc(150px * var(--scale));
+  flex: 1;
+}
+
+.my-account-label {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 500;
+  color: currentColor;
+  line-height: 1.2;
+}
+
+.my-account-username {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 400;
+  color: var(--text);
+  opacity: 0.7;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(150px * var(--scale));
+}
+
+.my-account-arrow {
+  flex-shrink: 0;
+  color: currentColor;
+  transition: transform 0.2s ease;
+  transform: rotate(90deg);
+  margin-left: auto;
+}
+
+.my-account-menu {
   display: none;
   position: absolute;
   top: calc(100% + 8px * var(--scale));
@@ -243,8 +301,91 @@ img:not(.header-logo-pic) {
   min-width: calc(240px * var(--scale));
   box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(0, 0, 0, 0.3);
   z-index: 1000;
-  padding: calc(12px * var(--scale)) 0;
+  padding: calc(8px * var(--scale)) 0;
   animation: slideDown 0.2s ease-out;
+  overflow: hidden;
+}
+
+.my-account-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: calc(12px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(16px * var(--scale));
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-family: "Manrope", sans-serif;
+  text-align: left;
+}
+
+.my-account-menu-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.my-account-menu-item span {
+  flex: 1;
+}
+
+.my-account-menu-icon {
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.my-account-menu-arrow {
+  flex-shrink: 0;
+  color: currentColor;
+  opacity: 0.5;
+}
+
+.my-account-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: calc(8px * var(--scale)) 0;
+}
+
+.my-account-menu-item-static {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.my-account-menu-item-static:hover {
+  background: transparent;
+}
+
+.my-account-version {
+  font-weight: 500;
+  color: var(--text);
+  text-align: right;
+}
+
+.my-account-update-status {
+  padding: calc(8px * var(--scale)) calc(16px * var(--scale));
+  margin-top: calc(4px * var(--scale));
+  font-size: calc(var(--text-small) * var(--text-scale));
+  border-radius: calc(4px * var(--scale));
+}
+
+.my-account-update-status.info {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.my-account-update-status.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.my-account-update-status.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 @keyframes slideDown {

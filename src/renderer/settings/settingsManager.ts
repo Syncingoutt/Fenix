@@ -8,8 +8,9 @@ declare const electronAPI: ElectronAPI;
 let settingsMenuOpen = false;
 let currentUpdateType: 'available' | 'downloaded' | null = null;
 
-const settingsButton = document.getElementById('settingsButton')!;
-const settingsMenu = document.getElementById('settingsMenu')!;
+const myAccountButton = document.getElementById('myAccountButton')!;
+const myAccountMenu = document.getElementById('myAccountMenu')!;
+const myAccountUsername = document.getElementById('myAccountUsername')!;
 const appVersionEl = document.getElementById('appVersion')!;
 const checkUpdatesBtn = document.getElementById('checkUpdatesBtn') as HTMLButtonElement;
 const updateSpinner = document.getElementById('updateSpinner')!;
@@ -26,18 +27,23 @@ export function initSettingsManager(): { open: boolean } {
     }
   });
   
-  // Toggle settings menu
-  settingsButton.addEventListener('click', (e) => {
+  // Load and display username
+  updateUsernameDisplay();
+  
+  // Toggle my account menu
+  myAccountButton.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsMenuOpen = !settingsMenuOpen;
-    settingsMenu.style.display = settingsMenuOpen ? 'block' : 'none';
+    myAccountMenu.style.display = settingsMenuOpen ? 'block' : 'none';
+    myAccountButton.classList.toggle('active', settingsMenuOpen);
   });
   
-  // Close settings menu when clicking outside
+  // Close menu when clicking outside
   document.addEventListener('click', (e) => {
-    if (settingsMenuOpen && !settingsMenu.contains(e.target as Node) && !settingsButton.contains(e.target as Node)) {
+    if (settingsMenuOpen && !myAccountMenu.contains(e.target as Node) && !myAccountButton.contains(e.target as Node)) {
       settingsMenuOpen = false;
-      settingsMenu.style.display = 'none';
+      myAccountMenu.style.display = 'none';
+      myAccountButton.classList.remove('active');
     }
   });
   
@@ -51,14 +57,14 @@ export function initSettingsManager(): { open: boolean } {
       const result = await electronAPI.checkForUpdates();
       if (!result.success) {
         updateStatus.textContent = result.message || 'Failed to check for updates';
-        updateStatus.className = 'update-status error';
+        updateStatus.className = 'my-account-update-status error';
         updateStatus.style.display = 'block';
         checkUpdatesBtn.disabled = false;
         updateSpinner.style.display = 'none';
       }
     } catch (error: any) {
       updateStatus.textContent = error.message || 'Failed to check for updates';
-      updateStatus.className = 'update-status error';
+      updateStatus.className = 'my-account-update-status error';
       updateStatus.style.display = 'block';
       checkUpdatesBtn.disabled = false;
       updateSpinner.style.display = 'none';
@@ -73,11 +79,11 @@ export function initSettingsManager(): { open: boolean } {
     switch (data.status) {
       case 'checking':
         updateStatus.textContent = 'Checking for updates...';
-        updateStatus.className = 'update-status info';
+        updateStatus.className = 'my-account-update-status info';
         break;
       case 'available':
         updateStatus.textContent = `Update available: ${data.version}. Downloading...`;
-        updateStatus.className = 'update-status success';
+        updateStatus.className = 'my-account-update-status success';
         // For manual checks, download starts automatically, so show progress modal
         if (currentUpdateType === null) {
           showUpdateModal('available', data.version || '');
@@ -86,16 +92,16 @@ export function initSettingsManager(): { open: boolean } {
         break;
       case 'not-available':
         updateStatus.textContent = 'You are up to date!';
-        updateStatus.className = 'update-status success';
+        updateStatus.className = 'my-account-update-status success';
         checkUpdatesBtn.disabled = false;
         break;
       case 'downloading':
         updateStatus.textContent = data.message || 'Downloading update...';
-        updateStatus.className = 'update-status info';
+        updateStatus.className = 'my-account-update-status info';
         break;
       case 'downloaded':
         updateStatus.textContent = 'Update downloaded! Restart to install.';
-        updateStatus.className = 'update-status success';
+        updateStatus.className = 'my-account-update-status success';
         checkUpdatesBtn.disabled = false;
         // Transition to install prompt if modal is showing
         const updateModal = document.getElementById('updateModal');
@@ -105,7 +111,7 @@ export function initSettingsManager(): { open: boolean } {
         break;
       case 'error':
         updateStatus.textContent = data.message || 'Error checking for updates';
-        updateStatus.className = 'update-status error';
+        updateStatus.className = 'my-account-update-status error';
         checkUpdatesBtn.disabled = false;
         break;
     }
@@ -121,4 +127,23 @@ export function initSettingsManager(): { open: boolean } {
   });
   
   return { open: settingsMenuOpen };
+}
+
+/**
+ * Update the username display in the header
+ */
+export async function updateUsernameDisplay(): Promise<void> {
+  try {
+    const usernameInfo = await electronAPI.getUsernameInfo();
+    if (usernameInfo.username) {
+      const displayName = usernameInfo.displayName || `${usernameInfo.username}${usernameInfo.tag ? `#${usernameInfo.tag}` : ''}`;
+      myAccountUsername.textContent = displayName;
+      myAccountUsername.style.display = 'block';
+    } else {
+      myAccountUsername.style.display = 'none';
+    }
+  } catch (error) {
+    // If there's an error, hide the username display
+    myAccountUsername.style.display = 'none';
+  }
 }

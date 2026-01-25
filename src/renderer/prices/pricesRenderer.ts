@@ -30,8 +30,8 @@ let itemDatabase: ItemDatabase = {};
 let priceCache: PriceCache = {};
 let allPriceItems: PriceItem[] = [];
 let filteredPriceItems: PriceItem[] = [];
-let sortColumn: string = 'name';
-let sortDirection: 'asc' | 'desc' = 'asc';
+let sortColumn: string = 'price';
+let sortDirection: 'asc' | 'desc' = 'desc';
 let currentGroup: string = 'currency';
 let currentSearchTerm: string = '';
 
@@ -274,6 +274,14 @@ export function renderPrices(): void {
 
   // Sort items
   const sortedItems = sortPriceItems(filteredPriceItems, sortColumn, sortDirection);
+  
+  // Update sort indicators
+  document.querySelectorAll('.prices-table th').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.getAttribute('data-sort') === sortColumn) {
+      th.classList.add(`sort-${sortDirection}`);
+    }
+  });
   
   // Update item count
   const itemCountEl = document.getElementById('pricesItemCount');

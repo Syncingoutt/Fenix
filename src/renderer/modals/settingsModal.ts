@@ -5,6 +5,7 @@ import { getIncludeTax, setIncludeTax } from '../state/settingsState.js';
 import { formatKeybind } from '../utils/formatting.js';
 import { getCurrentItems } from '../state/inventoryState.js';
 import { showSyncDisableConfirmModal } from './syncDisableConfirmModal.js';
+import { updateUsernameDisplay } from '../settings/settingsManager.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -62,9 +63,13 @@ export function initSettingsModal(
   if (openSettingsBtn) {
     openSettingsBtn.addEventListener('click', async () => {
       settingsMenuState.open = false;
-      const settingsMenu = document.getElementById('settingsMenu');
-      if (settingsMenu) {
-        settingsMenu.style.display = 'none';
+      const myAccountMenu = document.getElementById('myAccountMenu');
+      if (myAccountMenu) {
+        myAccountMenu.style.display = 'none';
+      }
+      const myAccountButton = document.getElementById('myAccountButton');
+      if (myAccountButton) {
+        myAccountButton.classList.remove('active');
       }
       
       // Load current settings
@@ -369,6 +374,8 @@ export function initSettingsModal(
             usernameError = usernameResult.error || 'Failed to update username';
           } else {
             currentUsernameInfo = await electronAPI.getUsernameInfo();
+            // Update username display in header
+            updateUsernameDisplay();
           }
         }
       }
