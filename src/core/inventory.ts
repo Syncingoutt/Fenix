@@ -32,7 +32,38 @@ export class InventoryManager {
     // Track ProtoName for each entry, keeping the most recent per baseId
     const protoNameByBaseId = new Map<string, { protoName: string; timestamp: string }>();
     
+    // First pass: process all entries, handling Delete actions
     for (const entry of logEntries) {
+      // Handle Delete entries by removing matching items from instanceMap
+      if (entry.action === 'Delete') {
+        // Remove by fullId if it exists
+        instanceMap.delete(entry.fullId);
+        
+        // Also remove by slotId+pageId+baseId match (in case fullId doesn't match exactly)
+        if (entry.slotId !== null && entry.pageId !== null) {
+          for (const [fullId, existingEntry] of instanceMap.entries()) {
+            if (existingEntry.baseId === entry.baseId &&
+                existingEntry.pageId === entry.pageId &&
+                existingEntry.slotId === entry.slotId) {
+              instanceMap.delete(fullId);
+              break; // Only remove one match (the first one found)
+            }
+          }
+        }
+        
+        // Track ProtoName for Delete entries too
+        if (entry.protoName) {
+          const existing = protoNameByBaseId.get(entry.baseId);
+          if (!existing || entry.timestamp > existing.timestamp) {
+            protoNameByBaseId.set(entry.baseId, { protoName: entry.protoName, timestamp: entry.timestamp });
+          }
+        }
+        
+        // Don't add Delete entries to instanceMap
+        continue;
+      }
+      
+      // For non-Delete entries, add/update in instanceMap
       instanceMap.set(entry.fullId, entry);
       
       // Track ProtoName if present (keep most recent per baseId)
@@ -51,6 +82,7 @@ export class InventoryManager {
 
     this.inventory.clear();
 
+    // Build inventory from remaining entries (Delete entries are already filtered out)
     for (const entry of instanceMap.values()) {
       const itemData = this.itemDatabase[entry.baseId];
       
