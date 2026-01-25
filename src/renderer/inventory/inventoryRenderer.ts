@@ -37,9 +37,14 @@ export function renderInventory(): void {
   const isHourlyActive = getIsHourlyActive();
 
   if (items.length === 0) {
-    const message = (wealthMode === 'hourly' && isHourlyActive) 
-      ? 'No new items gained yet' 
-      : 'No items match your filters';
+    let message: string;
+    if (wealthMode === 'hourly' && !isHourlyActive) {
+      message = 'New drops will appear here after starting the hourly timer';
+    } else if (wealthMode === 'hourly' && isHourlyActive) {
+      message = 'No new items gained yet';
+    } else {
+      message = 'No items match your filters';
+    }
     container.innerHTML = `<div class="loading">${message}</div>`;
     return;
   }

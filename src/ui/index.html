@@ -109,6 +109,15 @@
         <!-- Page: Home -->
         <section id="page-home" class="page active">
         <div class="segmented-wrapper">
+          <button id="overlayWidgetBtn" class="overlay-segmented-btn" title="Toggle Mini Overlay">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+              <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+              <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+              <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <span>Toggle Mini Overlay</span>
+          </button>
           <div class="segmented">
             <div class="segmented-active-bg"></div>
             <label id="realtimeBtn">
@@ -142,7 +151,7 @@
           <div class="container-small" id="timer-container">
             <div id="timer" class="maintext">00:00:00</div>
             <div class="subtext">Duration</div>
-            <button class="timer-btn" id="resetRealtimeBtn" style="display: none; margin-top: 8px;">Reset Timer</button>
+            <button class="timer-btn" id="resetRealtimeBtn" style="display: none;">Reset Timer</button>
             
             <div class="hourly-controls" id="hourlyControls">
               <div class="timer-display">
@@ -171,14 +180,6 @@
               <div id="wealthValue">0</div>
             </div>
             <div class="subtext">Total</div>
-            <button id="overlayWidgetBtn" class="overlay-widget-btn" title="Toggle Mini Overlay">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-                <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-                <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-                <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-              </svg>
-            </button>
           </div>
         </div>
 

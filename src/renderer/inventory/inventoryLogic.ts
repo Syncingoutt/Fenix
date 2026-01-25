@@ -28,48 +28,55 @@ export function getDisplayItems(): InventoryItem[] {
   const wealthMode = getWealthMode();
   const isHourlyActive = getIsHourlyActive();
   
-  if (wealthMode === 'hourly' && isHourlyActive) {
-    const hourlyStartSnapshot = getHourlyStartSnapshot();
-    const includedItems = getIncludedItems();
-    const hourlyUsage = getHourlyUsage();
-    
-    // In hourly mode, show items gained since start
-    // For compasses/beacons:
-    //   - If used: filter out (will show in usage section)
-    //   - If gained but not used: show in main inventory
-    //   - If existed at start and not used: don't show anywhere
-    // Always show Flame Elementium (FE) even if gainedQty is 0 or negative
-    return currentItems
-      .filter(item => {
-        // For compasses/beacons, only filter out if they've been used
-        if (includedItems.has(item.baseId)) {
-          const used = hourlyUsage.get(item.baseId) || 0;
-          // If it has been used, filter it out (it will show in usage section)
-          // If it hasn't been used, keep it (it will show if gainedQty > 0)
-          return used === 0;
-        }
-        return true; // Keep all non-compass/beacon items
-      })
-      .map(item => {
-        const currentQty = item.totalQuantity;
-        const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
-        
-        // Show gained quantity
-        const gainedQty = currentQty - startQty;
-        return {
-          ...item,
-          totalQuantity: gainedQty
-        };
-      })
-      .filter(item => {
-        // Always show Flame Elementium (FE) even if gainedQty is 0 or negative
-        if (item.baseId === FLAME_ELEMENTIUM_ID) return true;
-        // For other items, only show if quantity > 0
-        return item.totalQuantity > 0;
-      });
+  if (wealthMode === 'hourly') {
+    // If hourly mode is active, show items gained since start
+    if (isHourlyActive) {
+      const hourlyStartSnapshot = getHourlyStartSnapshot();
+      const includedItems = getIncludedItems();
+      const hourlyUsage = getHourlyUsage();
+      
+      // In hourly mode, show items gained since start
+      // For compasses/beacons:
+      //   - If used: filter out (will show in usage section)
+      //   - If gained but not used: show in main inventory
+      //   - If existed at start and not used: don't show anywhere
+      // Always show Flame Elementium (FE) even if gainedQty is 0 or negative
+      return currentItems
+        .filter(item => {
+          // For compasses/beacons, only filter out if they've been used
+          if (includedItems.has(item.baseId)) {
+            const used = hourlyUsage.get(item.baseId) || 0;
+            // If it has been used, filter it out (it will show in usage section)
+            // If it hasn't been used, keep it (it will show if gainedQty > 0)
+            return used === 0;
+          }
+          return true; // Keep all non-compass/beacon items
+        })
+        .map(item => {
+          const currentQty = item.totalQuantity;
+          const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
+          
+          // Show gained quantity
+          const gainedQty = currentQty - startQty;
+          return {
+            ...item,
+            totalQuantity: gainedQty
+          };
+        })
+        .filter(item => {
+          // Always show Flame Elementium (FE) even if gainedQty is 0 or negative
+          if (item.baseId === FLAME_ELEMENTIUM_ID) return true;
+          // For other items, only show if quantity > 0
+          return item.totalQuantity > 0;
+        });
+    } else {
+      // If hourly mode is selected but no session is active, show empty inventory
+      // This makes it clear that hourly mode is a timer that hasn't started yet
+      return [];
+    }
   }
   
-  // In realtime mode or when hourly isn't active, show all items
+  // In realtime mode, show all items
   return currentItems;
 }
 

@@ -498,15 +498,16 @@ img:not(.header-logo-pic) {
 
 .segmented-wrapper {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: calc(1rem * var(--scale));
+  justify-content: space-between;
+  align-items: center;
+  margin: calc(2em * var(--scale)) 0 calc(1em * var(--scale)) 0;
 }
 
 .segmented {
   position: relative;
   display: inline-flex;
   border: 1px solid var(--border);
-  border-radius: calc(24px * var(--scale));
+  border-radius: calc(12px * var(--scale));
   overflow: hidden;
   background: var(--bg);
 }
@@ -518,7 +519,7 @@ img:not(.header-logo-pic) {
   width: calc(140px * var(--scale));
   height: calc(40px * var(--scale));
   background: var(--primary);
-  border-radius: calc(24px * var(--scale));
+  border-radius: calc(12px * var(--scale));
   z-index: 0;
   transition: transform 0.25s ease;
   transform: translateX(0);
@@ -578,11 +579,45 @@ img:not(.header-logo-pic) {
 }
 
 .segmented label:first-child .button-label {
-  border-radius: calc(24px * var(--scale)) 0 0 calc(24px * var(--scale));
+  border-radius: calc(12px * var(--scale)) 0 0 calc(12px * var(--scale));
 }
 
 .segmented label:last-child .button-label {
-  border-radius: 0 calc(24px * var(--scale)) calc(24px * var(--scale)) 0;
+  border-radius: 0 calc(12px * var(--scale)) calc(12px * var(--scale)) 0;
+}
+
+.overlay-segmented-btn {
+  position: relative;
+  user-select: none;
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: calc(12px * var(--scale));
+  overflow: hidden;
+  background: var(--primary);
+  padding: 0 calc(18px * var(--scale));
+  height: calc(40px * var(--scale));
+  align-items: center;
+  justify-content: center;
+  gap: calc(10px * var(--scale));
+  color: #ffffff;
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: "Manrope", sans-serif;
+}
+
+.overlay-segmented-btn svg {
+  width: calc(16px * var(--scale));
+  height: calc(16px * var(--scale));
+  min-width: 14px;
+  min-height: 14px;
+  stroke: currentColor;
+  fill: none;
+}
+
+.overlay-segmented-btn:active {
+  background: var(--bg-shade);
 }
 
 /* ============================================
@@ -612,7 +647,7 @@ img:not(.header-logo-pic) {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: calc(20px * var(--scale));
+  gap: calc(15px * var(--scale));
   position: relative;
 }
 
@@ -634,6 +669,10 @@ img:not(.header-logo-pic) {
   justify-content: center;
   transition: all 0.2s;
   padding: 0;
+}
+
+.overlay-widget-container:active {
+  transform: scale(0.95);
 }
 
 .overlay-widget-btn:hover {
@@ -1182,6 +1221,19 @@ img:not(.header-logo-pic) {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(8px * var(--scale));
+}
+
+.timer-btn svg {
+  width: calc(16px * var(--scale));
+  height: calc(16px * var(--scale));
+  min-width: 14px;
+  min-height: 14px;
+  stroke: currentColor;
+  fill: none;
 }
 
 .timer-btn:hover {
@@ -2797,7 +2849,7 @@ body.overlay-widget {
   position: relative;
   background: rgba(22, 22, 22, 0.85);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 10px 14px;
   font-family: 'Segoe UI', 'Manrope', sans-serif;
   color: #fafafa;

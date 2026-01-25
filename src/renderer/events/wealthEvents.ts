@@ -115,8 +115,8 @@ export function initWealthEvents(
       const wealthHourlyEl = document.getElementById('wealthHourly');
       if (wealthValueEl) wealthValueEl.textContent = '0.00';
       if (wealthHourlyEl) wealthHourlyEl.textContent = '0.00';
-      renderInventory(); // Show all items (no active hourly session)
-      renderBreakdown(renderInventory); // Update breakdown (will show 0s if no hourly session)
+      renderInventory(); // Clear inventory (no active hourly session)
+      renderBreakdown(renderInventory); // Clear breakdown (no active hourly session)
     }
     updateGraph();
     

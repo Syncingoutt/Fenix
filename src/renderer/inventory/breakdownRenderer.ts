@@ -47,7 +47,7 @@ export function renderBreakdown(renderInventoryFn: () => void): void {
     .sort((a, b) => b.total - a.total);
 
   if (groups.length === 0) {
-    breakdownEl.innerHTML = '<div class="breakdown-empty">No items with prices</div>';
+    breakdownEl.innerHTML = '';
     return;
   }
 

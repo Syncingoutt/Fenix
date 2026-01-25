@@ -32,6 +32,10 @@ export function renderUsageSection(): void {
       usageSection.style.display = 'none';
       return;
     }
+    
+    // Show the section immediately when hourly tracking starts (even if nothing used yet)
+    usageSection.style.display = 'block';
+    
     const currentItems = getCurrentItems();
     const hourlyStartSnapshot = getHourlyStartSnapshot();
     const hourlyUsage = getHourlyUsage();
@@ -80,15 +84,6 @@ export function renderUsageSection(): void {
         price: item.price || 0 // Always use current price, not cached
       });
     }
-    
-    // Show section if there are items to display
-    if (usageItems.length === 0) {
-      usageSection.style.display = 'none';
-      return;
-    }
-    
-    // Show the section
-    usageSection.style.display = 'block';
   
     // Sort by total cost (highest absolute value first)
     // Selected compasses/beacons: use raw price without tax for sorting
