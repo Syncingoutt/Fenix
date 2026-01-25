@@ -31,13 +31,13 @@ const categorizers: Record<string, CategorizerFunction> = {
     group === 'beacon' && (name.includes('(Timemark 7)') || (!name.includes('(Timemark 8)') && name !== 'Deep Space Beacon')),
   
   probes: (name, group, baseId) => 
-    group === 'compass' && name.includes('Probe'),
+    group === 'probe',
   
   scalpels: (name, group, baseId) => 
-    group === 'compass' && name.includes('Scalpel'),
+    group === 'scalpel',
   
   compasses: (name, group, baseId) => 
-    group === 'compass' && !name.includes('Probe') && !name.includes('Scalpel')
+    group === 'compass'
 };
 
 const groupDefinitions: Omit<ItemGroup, 'items'>[] = [
@@ -109,8 +109,8 @@ export function showCompassBeaconSelection(): void {
   
   // Collect and categorize items
   for (const [baseId, itemData] of Object.entries(itemDatabase)) {
-    // Include compass, beacon, and currency (for resonance items)
-    if (itemData.group === 'compass' || itemData.group === 'beacon' || itemData.group === 'currency') {
+    // Include compass, probe, scalpel, beacon, and currency (for resonance items)
+    if (itemData.group === 'compass' || itemData.group === 'probe' || itemData.group === 'scalpel' || itemData.group === 'beacon' || itemData.group === 'currency') {
       const inventoryItem = currentItems.find(item => item.baseId === baseId);
       const item: CompassBeaconItem = {
         baseId,
