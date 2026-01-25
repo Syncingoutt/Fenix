@@ -89,47 +89,27 @@ export function getHourlyWealthGain(): number {
   
   const hourlyAHSales = getHourlyAHSales();
   const hourlyPurchases = getHourlyPurchases();
+  const hourlyUsage = getHourlyUsage();
   
   for (const baseId of includedItems) {
     // Always get the latest price from currentItems (prices can be updated during session)
     const item = currentItems.find(i => i.baseId === baseId);
     if (!item || item.price === null) continue;
     
-    const currentQty = item.totalQuantity;
-    const startQty = hourlyStartSnapshot.get(baseId) || 0;
-    const netUsage = startQty - currentQty; // Calculate net usage
+    const itemsGained = hourlyPurchases.get(baseId) || 0;
+    const itemsUsed = hourlyUsage.get(baseId) || 0;
+    const ahSalesQty = hourlyAHSales.get(baseId) || 0;
     
-    if (netUsage === 0) continue;
+    // Calculate net impact same as usage section: used - bought
+    // Account for AH sales: items sold in AH reduce the effective "bought" count
+    const effectiveBought = Math.max(0, itemsGained - ahSalesQty);
+    const netUsage = itemsUsed - effectiveBought;
     
-    // Use current price for calculations (may have been updated during session)
-    // Selected compasses/beacons: use raw price without tax
-    
-    if (netUsage > 0) {
-      // Quantity decreased: items were used or sold
-      const ahSalesQty = hourlyAHSales.get(baseId) || 0;
-      const itemsGained = hourlyPurchases.get(baseId) || 0;
-      const hourlyUsage = getHourlyUsage();
-      const itemsUsed = hourlyUsage.get(baseId) || 0;
-      
-      // Only subtract value for items that were gained during the hour (not items at start)
-      // Items sold from hourly inventory = min(ahSalesQty, itemsGained)
-      const itemsSoldFromHourlyInventory = Math.min(ahSalesQty, itemsGained);
-      
-      // Items used from hourly inventory = min(itemsUsed, itemsGained - itemsSoldFromHourlyInventory)
-      // This ensures we don't count more items than were actually gained
-      const itemsUsedFromHourlyInventory = Math.min(itemsUsed, itemsGained - itemsSoldFromHourlyInventory);
-      
-      // Total items from hourly inventory that were used/sold
-      const totalItemsFromHourlyInventory = itemsSoldFromHourlyInventory + itemsUsedFromHourlyInventory;
-      
-      // Only subtract value for items that were gained during the hour
-      const value = totalItemsFromHourlyInventory * item.price;
-      gainedValue -= value;
-    } else {
-      // Bought items: add value (positive impact on FE)
-      const value = Math.abs(netUsage) * item.price;
-      gainedValue += value;
-    }
+    // Apply net impact directly to wealth
+    // Positive netUsage (used > bought) = cost (negative impact) → subtract
+    // Negative netUsage (bought > used) = gain (positive impact) → add
+    const netValue = netUsage * item.price;
+    gainedValue -= netValue;
   }
   
   return gainedValue; // Allow negative values

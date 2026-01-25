@@ -15,13 +15,10 @@ import { getCurrentItems, getItemDatabase } from '../state/inventoryState.js';
  * Render the usage section showing compass/beacon consumption
  */
 export function renderUsageSection(): void {
-  console.log('[Usage Section] renderUsageSection() called');
-  
   const usageSection = document.getElementById('usageSection');
   const usageContent = document.getElementById('usageContent');
   
   if (!usageSection || !usageContent) {
-    console.log('[Usage Section] ERROR: usageSection or usageContent not found in DOM');
     return;
   }
   
@@ -29,13 +26,9 @@ export function renderUsageSection(): void {
   const isHourlyActive = getIsHourlyActive();
   const includedItems = getIncludedItems();
   
-  console.log(`[Usage Section] Rendering. wealthMode=${wealthMode}, isHourlyActive=${isHourlyActive}, includedItems.size=${includedItems.size}`);
-  console.log(`[Usage Section] Included items:`, Array.from(includedItems));
-  
   // Only show in hourly mode when active and items are being tracked
   if (wealthMode === 'hourly' && isHourlyActive) {
     if (includedItems.size === 0) {
-      console.log('[Usage Section] WARNING: includedItems is empty! Section will not show.');
       usageSection.style.display = 'none';
       return;
     }
@@ -45,9 +38,6 @@ export function renderUsageSection(): void {
     const hourlyPurchases = getHourlyPurchases();
     const itemDatabase = getItemDatabase();
     
-    console.log(`[Usage Section] hourlyUsage map:`, Array.from(hourlyUsage.entries()));
-    console.log(`[Usage Section] hourlyPurchases map:`, Array.from(hourlyPurchases.entries()));
-    
     const usageItems: Array<{ baseId: string; itemName: string; netUsage: number; price: number }> = [];
     
     for (const baseId of includedItems) {
@@ -55,13 +45,10 @@ export function renderUsageSection(): void {
       const used = hourlyUsage.get(baseId) || 0;
       const bought = hourlyPurchases.get(baseId) || 0;
       
-      console.log(`[Usage Section] Checking ${baseId}: used=${used}, bought=${bought}`);
-      
       // Only show items that have been used at least once
       // If an item has been used, show it in usage section (including any drops obtained)
       // If an item has never been used, don't show here (drops go to main inventory)
       if (used === 0) {
-        console.log(`[Usage Section] Skipping ${baseId} - never used, drops go to main inventory`);
         continue;
       }
       
@@ -95,15 +82,12 @@ export function renderUsageSection(): void {
     }
     
     // Show section if there are items to display
-    console.log(`[Usage Section] Total usage items found: ${usageItems.length}`);
     if (usageItems.length === 0) {
-      console.log(`[Usage Section] Hiding section - no usage items`);
       usageSection.style.display = 'none';
       return;
     }
     
     // Show the section
-    console.log(`[Usage Section] Showing section with ${usageItems.length} items`);
     usageSection.style.display = 'block';
   
     // Sort by total cost (highest absolute value first)

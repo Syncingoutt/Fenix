@@ -112,8 +112,6 @@ export function actuallyStartHourlyTracking(): void {
     }
   }
   
-  console.log(`[Hourly Tracking] Auto-included ${includedItems.size} compasses/beacons/resonances:`, Array.from(includedItems));
-  
   // Take snapshot of current inventory
   hourlyStartSnapshot.clear();
   previousQuantities.clear();
@@ -174,8 +172,6 @@ export async function trackCompassBeaconUsage(): Promise<void> {
   const hourlyUsage = getHourlyUsage();
   const hourlyPurchases = getHourlyPurchases();
   
-  console.log(`[Compass/Beacon Tracking] Called. Included items: ${includedItems.size}, Current items: ${currentItems.length}`);
-  
   // Track usage and purchases separately for selected compasses/beacons
   for (const baseId of includedItems) {
     const currentItem = currentItems.find(item => item.baseId === baseId);
@@ -183,13 +179,10 @@ export async function trackCompassBeaconUsage(): Promise<void> {
     const previousQty = previousQuantities.get(baseId) ?? (hourlyStartSnapshot.get(baseId) ?? currentQty);
     const startQty = hourlyStartSnapshot.get(baseId) ?? currentQty;
     
-    console.log(`[Compass/Beacon Tracking] ${baseId}: currentQty=${currentQty}, previousQty=${previousQty}, startQty=${startQty}, hourlyUsage=${hourlyUsage.get(baseId) || 0}`);
-    
     // Track usage: quantity decreased (used)
     if (currentQty < previousQty) {
       // Check ProtoName to filter out auction house transactions
       const lastProtoName = await electronAPI.getLastProtoName(baseId);
-      console.log(`[Compass/Beacon Tracking] ${baseId}: Quantity decreased from ${previousQty} to ${currentQty}, lastProtoName=${lastProtoName}`);
       
       // Don't count as usage if it was put in auction house
       if (lastProtoName === 'XchgForSale') {
@@ -198,12 +191,10 @@ export async function trackCompassBeaconUsage(): Promise<void> {
         const hourlyAHSales = getHourlyAHSales();
         const currentAHSales = hourlyAHSales.get(baseId) || 0;
         hourlyAHSales.set(baseId, currentAHSales + soldQty);
-        console.log(`[Compass/Beacon Tracking] ${baseId}: Skipping usage count (auction house transaction), tracked ${soldQty} items sold in AH`);
       } else {
         const used = previousQty - currentQty;
         const currentUsage = hourlyUsage.get(baseId) || 0;
         hourlyUsage.set(baseId, currentUsage + used);
-        console.log(`[Compass/Beacon Tracking] ${baseId}: Used ${used} (previous: ${previousQty}, current: ${currentQty}, total used: ${currentUsage + used})`);
       }
     }
     
@@ -212,7 +203,6 @@ export async function trackCompassBeaconUsage(): Promise<void> {
       const bought = currentQty - previousQty;
       const currentPurchases = hourlyPurchases.get(baseId) || 0;
       hourlyPurchases.set(baseId, currentPurchases + bought);
-      console.log(`[Compass/Beacon Tracking] ${baseId}: Bought ${bought} (previous: ${previousQty}, current: ${currentQty}, total bought: ${currentPurchases + bought})`);
     }
   }
 }
