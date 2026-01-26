@@ -5,9 +5,7 @@ import {
   getWealthMode,
   getIsHourlyActive,
   getHourlyStartSnapshot,
-  getIncludedItems,
-  getHourlyUsage,
-  getHourlyPurchases
+  getIncludedItems
 } from '../state/wealthState.js';
 import { getCurrentItems, getItemDatabase } from '../state/inventoryState.js';
 
@@ -27,40 +25,24 @@ export function renderUsageSection(): void {
   const includedItems = getIncludedItems();
   
   // Only show in hourly mode when active and items are being tracked
-  if (wealthMode === 'hourly' && isHourlyActive) {
-    if (includedItems.size === 0) {
-      usageSection.style.display = 'none';
-      return;
-    }
-    
-    // Show the section immediately when hourly tracking starts (even if nothing used yet)
+  if (wealthMode === 'hourly' && isHourlyActive && includedItems.size > 0) {
     usageSection.style.display = 'block';
     
     const currentItems = getCurrentItems();
     const hourlyStartSnapshot = getHourlyStartSnapshot();
-    const hourlyUsage = getHourlyUsage();
-    const hourlyPurchases = getHourlyPurchases();
     const itemDatabase = getItemDatabase();
     
     const usageItems: Array<{ baseId: string; itemName: string; netUsage: number; price: number }> = [];
     
     for (const baseId of includedItems) {
-      // Get tracked usage and purchases (purchases includes drops obtained in map)
-      const used = hourlyUsage.get(baseId) || 0;
-      const bought = hourlyPurchases.get(baseId) || 0;
-      
-      // Only show items that have been used at least once
-      // If an item has been used, show it in usage section (including any drops obtained)
-      // If an item has never been used, don't show here (drops go to main inventory)
-      if (used === 0) {
-        continue;
-      }
-      
-      // Calculate net usage: positive = used more than obtained, negative = obtained more than used
-      const netUsage = used - bought;
-      
       // Always get the latest item data and price from currentItems (prices can be updated during session)
       const item = currentItems.find(i => i.baseId === baseId);
+      const currentQty = item ? item.totalQuantity : 0;
+      const startQty = hourlyStartSnapshot.get(baseId) || 0;
+      
+      // Calculate net usage for display: (startQty - currentQty)
+      // Positive means used, negative means bought
+      const netUsage = startQty - currentQty;
       
       if (!item) {
         // If item not in inventory, try to get from database
@@ -76,6 +58,7 @@ export function renderUsageSection(): void {
         continue;
       }
       
+      // Always include tracked items, even if netUsage is 0
       // Use current price (may have been updated during session)
       usageItems.push({
         baseId,
@@ -83,6 +66,11 @@ export function renderUsageSection(): void {
         netUsage,
         price: item.price || 0 // Always use current price, not cached
       });
+    }
+    
+    if (usageItems.length === 0) {
+      usageSection.style.display = 'none';
+      return;
     }
   
     // Sort by total cost (highest absolute value first)
@@ -100,12 +88,12 @@ export function renderUsageSection(): void {
       const unitPrice = price > 0 ? price : 0;
       const totalPrice = price > 0 ? Math.abs(netUsage) * price : 0;
       
-      // Calculate contribution to total
+      // Calculate contribution to total (negative if used more, positive if gained more)
       if (netUsage > 0) {
-        // Used more than obtained: subtract from total (negative impact)
+        // Used more: subtract from total
         totalUsageCost -= totalPrice; // No tax
       } else if (netUsage < 0) {
-        // Obtained more than used: add to total (positive impact, but still in usage section since item was used)
+        // Gained more: add to total
         totalUsageCost += totalPrice; // No tax
       }
       

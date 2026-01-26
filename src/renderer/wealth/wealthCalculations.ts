@@ -3,7 +3,7 @@
 import { InventoryItem } from '../types.js';
 import { FLAME_ELEMENTIUM_ID } from '../constants.js';
 import { getCurrentItems, getMinPriceFilter, getMaxPriceFilter } from '../state/inventoryState.js';
-import { getHourlyStartSnapshot, getIncludedItems, getHourlyAHSales, getHourlyPurchases, getHourlyUsage } from '../state/wealthState.js';
+import { getHourlyStartSnapshot, getIncludedItems } from '../state/wealthState.js';
 import { applyTax } from '../utils/tax.js';
 import { passesPriceFilters } from '../utils/filters.js';
 
@@ -87,29 +87,28 @@ export function getHourlyWealthGain(): number {
   // netUsage < 0: bought items → add value (positive impact)
   // Selected compasses/beacons: do NOT apply tax (use raw price)
   
-  const hourlyAHSales = getHourlyAHSales();
-  const hourlyPurchases = getHourlyPurchases();
-  const hourlyUsage = getHourlyUsage();
-  
   for (const baseId of includedItems) {
     // Always get the latest price from currentItems (prices can be updated during session)
     const item = currentItems.find(i => i.baseId === baseId);
     if (!item || item.price === null) continue;
     
-    const itemsGained = hourlyPurchases.get(baseId) || 0;
-    const itemsUsed = hourlyUsage.get(baseId) || 0;
-    const ahSalesQty = hourlyAHSales.get(baseId) || 0;
+    const currentQty = item.totalQuantity;
+    const startQty = hourlyStartSnapshot.get(baseId) || 0;
+    const netUsage = startQty - currentQty; // Calculate net usage
     
-    // Calculate net impact same as usage section: used - bought
-    // Account for AH sales: items sold in AH reduce the effective "bought" count
-    const effectiveBought = Math.max(0, itemsGained - ahSalesQty);
-    const netUsage = itemsUsed - effectiveBought;
+    if (netUsage === 0) continue;
     
-    // Apply net impact directly to wealth
-    // Positive netUsage (used > bought) = cost (negative impact) → subtract
-    // Negative netUsage (bought > used) = gain (positive impact) → add
-    const netValue = netUsage * item.price;
-    gainedValue -= netValue;
+    // Use current price for calculations (may have been updated during session)
+    // Selected compasses/beacons: use raw price without tax
+    const value = Math.abs(netUsage) * item.price;
+    
+    if (netUsage > 0) {
+      // Used items: subtract cost (negative impact on FE)
+      gainedValue -= value;
+    } else {
+      // Bought items: add value (positive impact on FE)
+      gainedValue += value;
+    }
   }
   
   return gainedValue; // Allow negative values

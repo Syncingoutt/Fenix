@@ -690,9 +690,6 @@ ipcMain.handle('get-price-cache', () => {
   return inventoryManager.getPriceCacheAsObject();
 });
 
-ipcMain.handle('get-last-protoname', (_event, baseId: string) => {
-  return inventoryManager.getLastProtoName(baseId);
-});
 
 ipcMain.on('minimize-window', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {

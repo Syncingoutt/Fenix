@@ -9,7 +9,6 @@ export interface ParsedLogEntry {
   bagNum: number;
   slotId: number | null;
   pageId: number | null;
-  protoName?: string; // ProtoName context (e.g., 'XchgForSale', 'Spv3Open')
 }
 
 // Default path (will be overridden by user selection)
@@ -173,15 +172,7 @@ function parseInitBagDataLine(line: string): ParsedLogEntry | null {
   };
 }
 
-/**
- * Extract ProtoName from a line if it contains ItemChange@ ProtoName=...
- */
-function extractProtoName(line: string): string | null {
-  const protoMatch = line.match(/ItemChange@\s+ProtoName=(\w+)/);
-  return protoMatch ? protoMatch[1] : null;
-}
-
-export function parseLogLine(line: string, protoName?: string): ParsedLogEntry | null {
+export function parseLogLine(line: string): ParsedLogEntry | null {
   const idMatch = line.match(/Id=([^\s]+)/);
   if (!idMatch) return null;
   
@@ -226,8 +217,7 @@ export function parseLogLine(line: string, protoName?: string): ParsedLogEntry |
     baseId,
     bagNum,
     slotId,
-    pageId,
-    protoName
+    pageId
   };
 }
 
@@ -367,9 +357,6 @@ export function readLogFile(): ParsedLogEntry[] {
       }
     }
     
-    // Track ProtoName context for ItemChange entries
-    let currentProtoName: string | null = null;
-    
     // ALSO collect all ItemChange entries after the ResetItemsLayout end
     // This includes PickItems events and other item updates that happen after sorting
     for (let i = lastResetItemsLayoutEnd; i < lines.length; i++) {
@@ -380,73 +367,40 @@ export function readLogFile(): ParsedLogEntry[] {
         break;
       }
       
-      // Track ProtoName context
-      const protoName = extractProtoName(line);
-      if (protoName) {
-        if (line.includes(' start')) {
-          currentProtoName = protoName;
-        } else if (line.includes(' end')) {
-          currentProtoName = null;
-        }
-      }
-      
-      // Parse ItemChange entries (Add, Update, Remove, Delete) that come after the sort
+      // Parse ItemChange entries (Add, Update, Remove) that come after the sort
       if (line.includes('ItemChange@') && line.includes('Id=')) {
-        const parsed = parseLogLine(line, currentProtoName || undefined);
+        const parsed = parseLogLine(line);
         if (parsed) {
-          // For Delete entries, remove matching entries instead of replacing
-          if (parsed.action === 'Delete') {
-            // Remove by fullId if it exists
-            const duplicateIndex = entries.findIndex(e => e.fullId === parsed.fullId);
-            if (duplicateIndex >= 0) {
-              entries.splice(duplicateIndex, 1);
-            } else if (parsed.slotId !== null) {
-              // Also remove by slotId+pageId+baseId match (in case fullId doesn't match exactly)
+          // First, check if we already have this exact fullId (for ItemChange entries)
+          // This handles cases where the same item instance appears multiple times - keep the latest
+          const duplicateIndex = entries.findIndex(e => e.fullId === parsed.fullId);
+          if (duplicateIndex >= 0) {
+            // Replace with newer entry (same fullId, but might have updated quantity)
+            entries[duplicateIndex] = parsed;
+          } else {
+            // If this ItemChange entry corresponds to a slot we already have (from InitBagData or another ItemChange),
+            // prefer the ItemChange entry (it's more recent and accurate)
+            // Match by baseId + pageId + slotId to identify the same physical item stack
+            // This handles cases where InitBagData shows quantity 600, then ItemChange@ Update shows quantity 664
+            // Also handles multiple ItemChange updates for the same slot (replace older with newer)
+            if (parsed.slotId !== null) {
               const existingIndex = entries.findIndex(e => 
                 e.baseId === parsed.baseId &&
-                e.pageId === parsed.pageId &&
-                e.slotId === parsed.slotId &&
+                e.pageId === parsed.pageId && 
+                e.slotId === parsed.slotId && 
                 e.slotId !== null
               );
               if (existingIndex >= 0) {
-                entries.splice(existingIndex, 1);
-              }
-            }
-            // Always add Delete entry to entries array so buildInventory can process it
-            entries.push(parsed);
-          } else {
-            // For non-Delete entries, use existing replacement logic
-            // First, check if we already have this exact fullId (for ItemChange entries)
-            // This handles cases where the same item instance appears multiple times - keep the latest
-            const duplicateIndex = entries.findIndex(e => e.fullId === parsed.fullId);
-            if (duplicateIndex >= 0) {
-              // Replace with newer entry (same fullId, but might have updated quantity)
-              entries[duplicateIndex] = parsed;
-            } else {
-              // If this ItemChange entry corresponds to a slot we already have (from InitBagData or another ItemChange),
-              // prefer the ItemChange entry (it's more recent and accurate)
-              // Match by baseId + pageId + slotId to identify the same physical item stack
-              // This handles cases where InitBagData shows quantity 600, then ItemChange@ Update shows quantity 664
-              // Also handles multiple ItemChange updates for the same slot (replace older with newer)
-              if (parsed.slotId !== null) {
-                const existingIndex = entries.findIndex(e => 
-                  e.baseId === parsed.baseId &&
-                  e.pageId === parsed.pageId &&
-                  e.slotId === parsed.slotId &&
-                  e.slotId !== null
-                );
-                if (existingIndex >= 0) {
-                  // Replace existing entry (InitBagData or older ItemChange) with more recent ItemChange entry
-                  // The ItemChange entry has the updated quantity (or represents a new state)
-                  entries[existingIndex] = parsed;
-                } else {
-                  // This is a new item instance (not in InitBagData, not in same slot, not a duplicate ItemChange)
-                  entries.push(parsed);
-                }
+                // Replace existing entry (InitBagData or older ItemChange) with more recent ItemChange entry
+                // The ItemChange entry has the updated quantity (or represents a new state)
+                entries[existingIndex] = parsed;
               } else {
-                // ItemChange entry without slotId - add it if not already present (rare case)
+                // This is a new item instance (not in InitBagData, not in same slot, not a duplicate ItemChange)
                 entries.push(parsed);
               }
+            } else {
+              // ItemChange entry without slotId - add it if not already present (rare case)
+              entries.push(parsed);
             }
           }
         }
@@ -485,22 +439,9 @@ export function readLogFile(): ParsedLogEntry[] {
 
   const entries: ParsedLogEntry[] = [];
   
-  // Track ProtoName context for ItemChange entries
-  let currentProtoName: string | null = null;
-
   for (const line of relevantLines) {
-    // Track ProtoName context
-    const protoName = extractProtoName(line);
-    if (protoName) {
-      if (line.includes(' start')) {
-        currentProtoName = protoName;
-      } else if (line.includes(' end')) {
-        currentProtoName = null;
-      }
-    }
-    
     if (line.includes('ItemChange@') && line.includes('Id=')) {
-      const parsed = parseLogLine(line, currentProtoName || undefined);
+      const parsed = parseLogLine(line);
       if (parsed) entries.push(parsed);
     }
   }

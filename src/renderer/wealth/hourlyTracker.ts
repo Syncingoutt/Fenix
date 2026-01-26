@@ -19,8 +19,6 @@ import {
   setHourlyUsage,
   getHourlyPurchases,
   setHourlyPurchases,
-  getHourlyAHSales,
-  setHourlyAHSales,
   getHourlyBuckets,
   setHourlyBuckets,
   getCurrentHourStartValue,
@@ -30,7 +28,7 @@ import {
   getWealthMode,
   setWealthMode
 } from '../state/wealthState.js';
-import { getCurrentItems, getItemDatabase } from '../state/inventoryState.js';
+import { getCurrentItems } from '../state/inventoryState.js';
 import { formatTime } from '../utils/formatting.js';
 import { ElectronAPI, HourlyBucket } from '../types.js';
 
@@ -79,11 +77,11 @@ export function initHourlyTracker(
 }
 
 /**
- * Start hourly tracking (auto-includes all compasses/beacons, no prompt)
+ * Start hourly tracking (shows prompt first)
  */
 export function startHourlyTracking(): void {
-  // Skip prompt and directly start tracking with auto-included compasses/beacons
-  actuallyStartHourlyTracking();
+  // Show prompt asking if user wants to include compasses/beacons
+  showCompassBeaconPrompt();
 }
 
 /**
@@ -92,32 +90,17 @@ export function startHourlyTracking(): void {
 export function actuallyStartHourlyTracking(): void {
   
   const currentItems = getCurrentItems();
-  const itemDatabase = getItemDatabase();
   const hourlyStartSnapshot = getHourlyStartSnapshot();
   const previousQuantities = getPreviousQuantities();
   const hourlyUsage = getHourlyUsage();
   const hourlyPurchases = getHourlyPurchases();
   const includedItems = getIncludedItems();
   
-  // Auto-include all compasses, beacons, and resonances (skip selection modal)
-  includedItems.clear();
-  for (const [baseId, itemData] of Object.entries(itemDatabase)) {
-    // Include compasses and beacons
-    if (itemData.group === 'compass' || itemData.group === 'beacon') {
-      includedItems.add(baseId);
-    }
-    // Include Netherrealm Resonance (5028) and Deep Space Resonance (5040)
-    if (baseId === '5028' || baseId === '5040') {
-      includedItems.add(baseId);
-    }
-  }
-  
   // Take snapshot of current inventory
   hourlyStartSnapshot.clear();
   previousQuantities.clear();
   hourlyUsage.clear();
   hourlyPurchases.clear();
-  getHourlyAHSales().clear();
   
   for (const item of currentItems) {
     // Snapshot all items normally
@@ -164,7 +147,7 @@ export function actuallyStartHourlyTracking(): void {
 /**
  * Track compass/beacon usage for selected items
  */
-export async function trackCompassBeaconUsage(): Promise<void> {
+export function trackCompassBeaconUsage(): void {
   const currentItems = getCurrentItems();
   const includedItems = getIncludedItems();
   const previousQuantities = getPreviousQuantities();
@@ -181,21 +164,9 @@ export async function trackCompassBeaconUsage(): Promise<void> {
     
     // Track usage: quantity decreased (used)
     if (currentQty < previousQty) {
-      // Check ProtoName to filter out auction house transactions
-      const lastProtoName = await electronAPI.getLastProtoName(baseId);
-      
-      // Don't count as usage if it was put in auction house
-      if (lastProtoName === 'XchgForSale') {
-        // Track AH sale for wealth calculation
-        const soldQty = previousQty - currentQty;
-        const hourlyAHSales = getHourlyAHSales();
-        const currentAHSales = hourlyAHSales.get(baseId) || 0;
-        hourlyAHSales.set(baseId, currentAHSales + soldQty);
-      } else {
-        const used = previousQty - currentQty;
-        const currentUsage = hourlyUsage.get(baseId) || 0;
-        hourlyUsage.set(baseId, currentUsage + used);
-      }
+      const used = previousQty - currentQty;
+      const currentUsage = hourlyUsage.get(baseId) || 0;
+      hourlyUsage.set(baseId, currentUsage + used);
     }
     
     // Track purchases: quantity increased (bought)
@@ -258,7 +229,6 @@ export function captureHourlyBucket(): void {
   // Reset usage and purchase tracking for next hour and update previous quantities
   hourlyUsage.clear();
   hourlyPurchases.clear();
-  getHourlyAHSales().clear();
   for (const baseId of includedItems) {
     const currentItem = currentItems.find(item => item.baseId === baseId);
     if (currentItem) {

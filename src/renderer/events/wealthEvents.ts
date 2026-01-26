@@ -83,6 +83,9 @@ export function initWealthEvents(
     hourlyBtn.classList.remove('active');
     hourlyControls.classList.remove('active');
     
+    // Don't clear includedItems when switching modes - it's needed for the usage section
+    // when switching back to hourly mode if tracking is still active
+    
     // Show realtime timer and reset button
     timerEl.style.display = 'block';
     resetRealtimeBtn.style.display = 'block';
