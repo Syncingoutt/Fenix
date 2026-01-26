@@ -26,14 +26,20 @@ export class InventoryManager {
 
   buildInventory(logEntries: ParsedLogEntry[]): Map<string, InventoryItem> {
     const instanceMap = new Map<string, ParsedLogEntry>();
+    const deletedItems = new Set<string>();
     
-    // Simple Delete handling: skip Delete entries (they indicate item removal)
+    // Track deleted items first
     for (const entry of logEntries) {
       if (entry.action === 'Delete') {
-        // Skip Delete entries - they indicate the item was removed from inventory
+        deletedItems.add(entry.fullId);
         continue;
       }
       instanceMap.set(entry.fullId, entry);
+    }
+    
+    // Remove deleted items from instanceMap
+    for (const deletedId of deletedItems) {
+      instanceMap.delete(deletedId);
     }
 
     this.inventory.clear();

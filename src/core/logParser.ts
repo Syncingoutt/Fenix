@@ -179,15 +179,13 @@ export function parseLogLine(line: string): ParsedLogEntry | null {
   const fullId = idMatch[1];
   const baseId = extractBaseId(fullId);
 
-  // Detect action first to handle Delete entries (which may not have BagNum)
   let action = 'Unknown';
   if (line.includes('ItemChange@ Add')) action = 'Add';
   else if (line.includes('ItemChange@ Update')) action = 'Update';
   else if (line.includes('ItemChange@ Remove')) action = 'Remove';
   else if (line.includes('ItemChange@ Delete')) action = 'Delete';
 
-  // For Delete entries, BagNum is optional (default to 0)
-  // For other entries, BagNum is required
+  // Delete entries may not have BagNum (default to 0)
   const bagMatch = line.match(/BagNum=(\d+)/);
   let bagNum = 0;
   if (bagMatch) {
@@ -368,9 +366,10 @@ export function readLogFile(): ParsedLogEntry[] {
       }
       
       // Parse ItemChange entries (Add, Update, Remove) that come after the sort
+      // Delete entries are skipped - they indicate items removed and should not be in final inventory
       if (line.includes('ItemChange@') && line.includes('Id=')) {
         const parsed = parseLogLine(line);
-        if (parsed) {
+        if (parsed && parsed.action !== 'Delete') {
           // First, check if we already have this exact fullId (for ItemChange entries)
           // This handles cases where the same item instance appears multiple times - keep the latest
           const duplicateIndex = entries.findIndex(e => e.fullId === parsed.fullId);
@@ -442,7 +441,7 @@ export function readLogFile(): ParsedLogEntry[] {
   for (const line of relevantLines) {
     if (line.includes('ItemChange@') && line.includes('Id=')) {
       const parsed = parseLogLine(line);
-      if (parsed) entries.push(parsed);
+      if (parsed && parsed.action !== 'Delete') entries.push(parsed);
     }
   }
 
