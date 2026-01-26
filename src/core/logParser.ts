@@ -195,7 +195,8 @@ export function parseLogLine(line: string): ParsedLogEntry | null {
     return null;
   }
 
-  const pageMatch = line.match(/PageId=(\d+)/);
+  // Match both "PageId=" and "in PageId=" formats
+  const pageMatch = line.match(/in\s+PageId\s*=\s*(\d+)/);
   const pageId = pageMatch ? parseInt(pageMatch[1]) : null;
   
   if (pageId !== 102 && pageId !== 103) {
@@ -205,7 +206,8 @@ export function parseLogLine(line: string): ParsedLogEntry | null {
   const timestampMatch = line.match(/\[([\d\.\-:]+)\]/);
   const timestamp = timestampMatch ? timestampMatch[1] : 'unknown';
 
-  const slotMatch = line.match(/SlotId=(\d+)/);
+  // Match both "SlotId=" and "in SlotId=" formats
+  const slotMatch = line.match(/SlotId\s*=\s*(\d+)/);
   const slotId = slotMatch ? parseInt(slotMatch[1]) : null;
 
   return {
@@ -365,11 +367,11 @@ export function readLogFile(): ParsedLogEntry[] {
         break;
       }
       
-      // Parse ItemChange entries (Add, Update, Remove) that come after the sort
-      // Delete entries are skipped - they indicate items removed and should not be in final inventory
+      // Parse ItemChange entries (Add, Update, Remove, Delete) that come after the sort
+      // Delete entries are included so the inventory manager can properly handle deletions
       if (line.includes('ItemChange@') && line.includes('Id=')) {
         const parsed = parseLogLine(line);
-        if (parsed && parsed.action !== 'Delete') {
+        if (parsed) {
           // First, check if we already have this exact fullId (for ItemChange entries)
           // This handles cases where the same item instance appears multiple times - keep the latest
           const duplicateIndex = entries.findIndex(e => e.fullId === parsed.fullId);
@@ -441,7 +443,7 @@ export function readLogFile(): ParsedLogEntry[] {
   for (const line of relevantLines) {
     if (line.includes('ItemChange@') && line.includes('Id=')) {
       const parsed = parseLogLine(line);
-      if (parsed && parsed.action !== 'Delete') entries.push(parsed);
+      if (parsed) entries.push(parsed);
     }
   }
 
