@@ -491,8 +491,8 @@ app.whenReady().then(async () => {
   initLogParser(app.getPath('userData'));
   
   // Now that log parser is initialized, we can safely check log size limits
-  ensureLogSizeLimit(500);
-  setInterval(() => ensureLogSizeLimit(500), 60 * 60 * 1000);
+  ensureLogSizeLimit(300);
+  setInterval(() => ensureLogSizeLimit(300), 60 * 60 * 1000);
   
   itemDatabase = loadItemDatabase();
 
@@ -1014,7 +1014,7 @@ ipcMain.handle('test-keybind', (event, keybind: string) => {
 function watchLogFile() {
   // Check log size limit frequently (every 500ms) to prevent file from growing too large
   // The function will return early if size is OK, so this is efficient
-  ensureLogSizeLimit(500);
+  ensureLogSizeLimit(300);
 
   // Get current size after potential truncation
   const currentSize = getLogSize();

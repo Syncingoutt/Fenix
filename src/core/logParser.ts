@@ -469,7 +469,7 @@ export function readLogFromPosition(start: number, end: number): string {
   return buffer.toString('utf-8');
 }
 
-export function ensureLogSizeLimit(maxSizeMB = 500): void {
+export function ensureLogSizeLimit(maxSizeMB = 300): void {
   try {
     const logPath = getLogPath();
     if (!logPath || !fs.existsSync(logPath)) return;
@@ -479,17 +479,60 @@ export function ensureLogSizeLimit(maxSizeMB = 500): void {
 
     if (stats.size <= maxBytes) return;
 
-    const KEEP_BYTES = 5 * 1024 * 1024;
-    const start = Math.max(0, stats.size - KEEP_BYTES);
-
     console.warn(`Log file is ${Math.round(stats.size / 1024 / 1024)}MB — truncating...`);
 
-    const fd = fs.openSync(logPath, 'r+');
-    const buffer = Buffer.alloc(stats.size - start);
-    fs.readSync(fd, buffer, 0, stats.size - start, start);
-    fs.ftruncateSync(fd, 0);
-    fs.writeSync(fd, buffer, 0, buffer.length, 0);
+    // Read the log file to find the last ResetItemsLayout start event
+    const fd = fs.openSync(logPath, 'r');
+    const buffer = Buffer.alloc(stats.size);
+    fs.readSync(fd, buffer, 0, stats.size, 0);
     fs.closeSync(fd);
+
+    const logContent = buffer.toString('utf-8');
+    const lines = logContent.split('\n');
+
+    // Find the last ResetItemsLayout start event
+    let lastResetStartIndex = -1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].includes('ItemChange@ ProtoName=ResetItemsLayout start')) {
+        lastResetStartIndex = i;
+        break;
+      }
+    }
+
+    let start = 0;
+    let truncationMessage = '';
+
+    if (lastResetStartIndex !== -1) {
+      // Calculate byte position of the ResetItemsLayout start line
+      let byteOffset = 0;
+      for (let i = 0; i < lastResetStartIndex; i++) {
+        byteOffset += lines[i].length + 1; // +1 for newline character
+      }
+      start = byteOffset;
+      truncationMessage = `truncating to last inventory sort (line ${lastResetStartIndex})`;
+    } else {
+      // Fallback to keeping the last maxSizeMB if no sort event found
+      const KEEP_BYTES = maxSizeMB * 1024 * 1024;
+      start = Math.max(0, stats.size - KEEP_BYTES);
+      truncationMessage = `no inventory sort found, keeping last ${maxSizeMB}MB`;
+    }
+
+    console.warn(`Log file truncation: ${truncationMessage}, keeping ${Math.round((stats.size - start) / 1024 / 1024)}MB`);
+
+    // Write the truncated content
+    // Note: This uses two file descriptors which can cause issues
+    // Consider using fs.writeFileSync with a buffer.slice() for atomic operations
+    const writeFd = fs.openSync(logPath, 'r+');
+    const writeBuffer = Buffer.alloc(stats.size - start);
+    // Read from the start position
+    const readFd = fs.openSync(logPath, 'r');
+    fs.readSync(readFd, writeBuffer, 0, stats.size - start, start);
+    fs.closeSync(readFd);
+    
+    // Truncate and write
+    fs.ftruncateSync(writeFd, 0);
+    fs.writeSync(writeFd, writeBuffer, 0, writeBuffer.length, 0);
+    fs.closeSync(writeFd);
 
   } catch (error: any) {
     console.error(`Failed to truncate log file: ${error.message || error}`);
