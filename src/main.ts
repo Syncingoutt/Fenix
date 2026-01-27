@@ -1191,7 +1191,6 @@ function watchLogFile() {
     // This can cause renderer to capture incomplete inventory state, corrupting hourly snapshots
     if ((inventoryChanged || priceUpdated) && mainWindow) {
       if (Date.now() - lastSentInventoryUpdate > 100) {
-        console.log(`[INVENTORY-UPDATE] Sending inventory-updated. Reason: inventoryChanged=${inventoryChanged}, priceUpdated=${priceUpdated}, debounce=${Date.now() - lastSentInventoryUpdate}ms`);
         mainWindow.webContents.send('inventory-updated');
         lastSentInventoryUpdate = Date.now();
       }

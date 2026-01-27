@@ -225,15 +225,13 @@ export function readLogFile(): ParsedLogEntry[] {
   const logPath = getLogPath();
   
   if (!logPath || !fs.existsSync(logPath)) {
-    console.error(`Log file not found at: ${logPath || 'not configured'}`);
     return [];
   }
 
   const stats = fs.statSync(logPath);
   const fileSize = stats.size;
 
-  const MAX_READ_BYTES = 100 * 1024 * 1024; // 100 MB
-  const startPosition = fileSize > MAX_READ_BYTES ? fileSize - MAX_READ_BYTES : 0;
+  const startPosition = 0;
 
   const fd = fs.openSync(logPath, 'r');
   const buffer = Buffer.alloc(fileSize - startPosition);
