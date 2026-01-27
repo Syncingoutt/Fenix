@@ -41,6 +41,7 @@ export interface ElectronAPI {
   onUpdateProgress: (callback: (percent: number) => void) => void;
   onShowUpdateDialog: (callback: (data: { type: 'available' | 'downloaded'; version: string; currentVersion?: string }) => void) => void;
   onUpdateDownloadedTransition: (callback: (data: { version: string }) => void) => void;
+  onShowUpdatePanel: (callback: (data: { version: string }) => void) => void;
   sendUpdateDialogResponse: (response: 'download' | 'restart' | 'later') => void;
   isLogPathConfigured: () => Promise<boolean>;
   getLogPath: () => Promise<string>;

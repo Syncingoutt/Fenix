@@ -309,6 +309,7 @@ function createTray() {
       label: 'Check for Updates',
       click: () => {
         if (app.isPackaged) {
+          isManualCheck = true;
           autoUpdater.checkForUpdatesAndNotify();
         }
       }
@@ -396,6 +397,7 @@ autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
 let isManualCheck = false; // Track if update check was triggered manually
+let isAppLaunch = true; // Track if this is the initial launch vs mid-session
 
 autoUpdater.on('checking-for-update', () => {
   if (mainWindow && isManualCheck) {
@@ -416,12 +418,20 @@ autoUpdater.on('update-available', (info) => {
     });
     autoUpdater.downloadUpdate();
   } else if (mainWindow && !isManualCheck) {
-    // For automatic checks, show custom modal
-    mainWindow.webContents.send('show-update-dialog', {
-      type: 'available',
-      version: info.version,
-      currentVersion: app.getVersion()
-    });
+    if (isAppLaunch) {
+      // Launch-time: Show modal
+      mainWindow.webContents.send('show-update-dialog', {
+        type: 'available',
+        version: info.version,
+        currentVersion: app.getVersion()
+      });
+      isAppLaunch = false;
+    } else {
+      // Mid-session: Show passive panel
+      mainWindow.webContents.send('show-update-panel', {
+        version: info.version
+      });
+    }
   }
 });
 
@@ -481,10 +491,6 @@ autoUpdater.on('update-downloaded', (info) => {
   }
 });
 
-if (app.isPackaged) {
-  autoUpdater.checkForUpdatesAndNotify();
-}
-
 app.whenReady().then(async () => {
   // Menu.setApplicationMenu(null);
 
@@ -525,6 +531,11 @@ app.whenReady().then(async () => {
       const syncStatus = priceSyncService.getSyncStatus();
       if (syncStatus.consent === 'pending') {
         mainWindow?.webContents.send('show-sync-consent');
+      }
+
+      // Initial update check - runs after window is ready
+      if (app.isPackaged) {
+        autoUpdater.checkForUpdates();
       }
     });
   }
@@ -606,6 +617,13 @@ app.whenReady().then(async () => {
       }
     }
   }, PRICE_SYNC_INTERVAL_MS);
+
+  // Periodic update check - every 120 minutes (7,200,000ms)
+  setInterval(() => {
+    if (app.isPackaged) {
+      autoUpdater.checkForUpdates();
+    }
+  }, 120 * 60 * 1000);
 
   // Load settings and register keybind
   const settings = getSettings();
