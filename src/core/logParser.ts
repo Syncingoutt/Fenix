@@ -196,7 +196,7 @@ export function parseLogLine(line: string): ParsedLogEntry | null {
   }
 
   // Match both "PageId=" and "in PageId=" formats
-  const pageMatch = line.match(/in\s+PageId\s*=\s*(\d+)/);
+  const pageMatch = line.match(/in\s+PageId\s*=\s*(\d+)/) || line.match(/PageId\s*=\s*(\d+)/);
   const pageId = pageMatch ? parseInt(pageMatch[1]) : null;
   
   if (pageId !== 102 && pageId !== 103) {
