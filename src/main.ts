@@ -39,6 +39,7 @@ let priceSyncService: PriceSyncService;
 let itemDatabase: ReturnType<typeof loadItemDatabase>;
 let lastLogPosition = 0;
 let lastSendBaseId: string | null = null; // Track the most recent SEND message's baseId across log reads
+let lastSentInventoryUpdate = 0; // Prevent duplicate inventory-updated events
 const WATCH_INTERVAL = 500;
 let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
 let fullscreenMode: boolean = false; // Default to windowed mode
@@ -1185,8 +1186,15 @@ function watchLogFile() {
       inventoryManager.buildInventory(logEntries);
     }
 
+    // FIX: Debounce inventory-updated to prevent race conditions
+    // When multiple updates happen rapidly, we might send duplicate events
+    // This can cause renderer to capture incomplete inventory state, corrupting hourly snapshots
     if ((inventoryChanged || priceUpdated) && mainWindow) {
-      mainWindow.webContents.send('inventory-updated');
+      if (Date.now() - lastSentInventoryUpdate > 100) {
+        console.log(`[INVENTORY-UPDATE] Sending inventory-updated. Reason: inventoryChanged=${inventoryChanged}, priceUpdated=${priceUpdated}, debounce=${Date.now() - lastSentInventoryUpdate}ms`);
+        mainWindow.webContents.send('inventory-updated');
+        lastSentInventoryUpdate = Date.now();
+      }
     }
 
     lastLogPosition = currentSize;
