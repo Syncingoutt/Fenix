@@ -474,62 +474,92 @@ export function ensureLogSizeLimit(maxSizeMB = 300): void {
 
     const stats = fs.statSync(logPath);
     const maxBytes = maxSizeMB * 1024 * 1024;
+    // Add 5MB buffer - start truncating at 295MB to prevent hitting 300MB limit
+    // This gives us headroom and prevents crashes from reading huge files
+    const TRUNCATE_THRESHOLD = maxBytes - (5 * 1024 * 1024);
 
-    if (stats.size <= maxBytes) return;
+    if (stats.size <= TRUNCATE_THRESHOLD) return;
 
     console.warn(`Log file is ${Math.round(stats.size / 1024 / 1024)}MB — truncating...`);
 
-    // Read the log file to find the last ResetItemsLayout start event
+    // Re-check file size right before reading to avoid race condition where file grows
+    // between size check and read (game is actively writing)
+    const currentStats = fs.statSync(logPath);
+    const currentSize = currentStats.size;
+
+    // Search backwards from the end of the file in chunks to find ResetItemsLayout start event
+    // We need to search ALL the way back to find it, even if it's at the beginning
+    // This prevents deleting items - we search in 50MB chunks for memory efficiency
+    const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB chunks
     const fd = fs.openSync(logPath, 'r');
-    const buffer = Buffer.alloc(stats.size);
-    fs.readSync(fd, buffer, 0, stats.size, 0);
-    fs.closeSync(fd);
-
-    const logContent = buffer.toString('utf-8');
-    const lines = logContent.split('\n');
-
-    // Find the last ResetItemsLayout start event
-    let lastResetStartIndex = -1;
-    for (let i = lines.length - 1; i >= 0; i--) {
-      if (lines[i].includes('ItemChange@ ProtoName=ResetItemsLayout start')) {
-        lastResetStartIndex = i;
-        break;
+    
+    let lastResetStartPosition = -1;
+    // Start searching from the end and work backwards to the beginning
+    let searchEnd = currentSize;
+    const searchStart = 0; // Search all the way to the beginning
+    
+    // Search backwards in chunks until we find the event or reach the beginning
+    while (searchEnd > searchStart && lastResetStartPosition === -1) {
+      // Calculate chunk boundaries (searching backwards)
+      const chunkEnd = searchEnd;
+      const chunkStart = Math.max(searchStart, chunkEnd - CHUNK_SIZE);
+      const chunkSize = chunkEnd - chunkStart;
+      
+      const chunkBuffer = Buffer.alloc(chunkSize);
+      fs.readSync(fd, chunkBuffer, 0, chunkSize, chunkStart);
+      
+      const chunkContent = chunkBuffer.toString('utf-8');
+      const chunkLines = chunkContent.split('\n');
+      
+      // Search backwards through this chunk
+      for (let i = chunkLines.length - 1; i >= 0; i--) {
+        if (chunkLines[i].includes('ItemChange@ ProtoName=ResetItemsLayout start')) {
+          // Found it! Calculate the exact byte position
+          let byteOffsetInChunk = 0;
+          for (let j = 0; j < i; j++) {
+            byteOffsetInChunk += chunkLines[j].length + 1; // +1 for newline
+          }
+          lastResetStartPosition = chunkStart + byteOffsetInChunk;
+          break;
+        }
+      }
+      
+      // Move to next chunk backwards
+      if (lastResetStartPosition === -1) {
+        searchEnd = chunkStart;
       }
     }
+    
+    fs.closeSync(fd);
 
     let start = 0;
     let truncationMessage = '';
 
-    if (lastResetStartIndex !== -1) {
-      // Calculate byte position of the ResetItemsLayout start line
-      let byteOffset = 0;
-      for (let i = 0; i < lastResetStartIndex; i++) {
-        byteOffset += lines[i].length + 1; // +1 for newline character
-      }
-      start = byteOffset;
-      truncationMessage = `truncating to last inventory sort (line ${lastResetStartIndex})`;
+    if (lastResetStartPosition !== -1) {
+      start = lastResetStartPosition;
+      truncationMessage = `truncating to last inventory sort (found at ${Math.round(start / 1024 / 1024)}MB)`;
     } else {
-      // Fallback to keeping the last maxSizeMB if no sort event found
-      const KEEP_BYTES = maxSizeMB * 1024 * 1024;
-      start = Math.max(0, stats.size - KEEP_BYTES);
-      truncationMessage = `no inventory sort found, keeping last ${maxSizeMB}MB`;
+      // Fallback to keeping the last (maxSizeMB - 10MB) if no sort event found
+      // This ensures file ends up well below threshold to prevent immediate re-trigger
+      const KEEP_BYTES = (maxSizeMB - 10) * 1024 * 1024;
+      start = Math.max(0, currentSize - KEEP_BYTES);
+      truncationMessage = `no inventory sort found in last 250MB, keeping last ${maxSizeMB - 10}MB`;
     }
 
-    console.warn(`Log file truncation: ${truncationMessage}, keeping ${Math.round((stats.size - start) / 1024 / 1024)}MB`);
+    console.warn(`Log file truncation: ${truncationMessage}, keeping ${Math.round((currentSize - start) / 1024 / 1024)}MB`);
 
-    // Write the truncated content
-    // Note: This uses two file descriptors which can cause issues
-    // Consider using fs.writeFileSync with a buffer.slice() for atomic operations
-    const writeFd = fs.openSync(logPath, 'r+');
-    const writeBuffer = Buffer.alloc(stats.size - start);
-    // Read from the start position
+    // Read only the portion we want to keep (from start to end)
+    // This is much more memory-efficient than reading the entire file
+    const keepSize = currentSize - start;
     const readFd = fs.openSync(logPath, 'r');
-    fs.readSync(readFd, writeBuffer, 0, stats.size - start, start);
+    const keepBuffer = Buffer.alloc(keepSize);
+    fs.readSync(readFd, keepBuffer, 0, keepSize, start);
     fs.closeSync(readFd);
     
-    // Truncate and write
+    // Write the truncated content
+    const writeFd = fs.openSync(logPath, 'r+');
     fs.ftruncateSync(writeFd, 0);
-    fs.writeSync(writeFd, writeBuffer, 0, writeBuffer.length, 0);
+    fs.writeSync(writeFd, keepBuffer, 0, keepBuffer.length, 0);
     fs.closeSync(writeFd);
 
   } catch (error: any) {
