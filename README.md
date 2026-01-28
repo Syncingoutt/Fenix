@@ -13,7 +13,8 @@
 1. Open Torchlight, go to the "Other" section, and click "Enable Log".
 <br><br>
 <img width="1000" height="800" alt="Torchlight settings menu with 'enable log' button highlighted" src="https://github.com/user-attachments/assets/7a75b5b8-90b2-4db1-9584-199047a8f80b" />
-<br><br>
+<br>
+<b> Note: You will have to enable the log every time you launch the game, as the game does not remember you enabled logs </b><br><br>
 2. Download the latest <a href="https://github.com/Syncingoutt/Fenix/releases">Fenix-setup.exe</a><br>
 3. Install the application (you may be prompted by Windows Defender as the app is not code-signed)<br>
 4. Open the application.<br>
