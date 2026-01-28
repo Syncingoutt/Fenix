@@ -62,6 +62,7 @@ export interface ElectronAPI {
   closeWindow: () => void;
   onMaximizeStateChanged: (callback: (isMaximized: boolean) => void) => void;
   getMaximizeState: () => Promise<boolean>;
+  openExternal: (url: string) => void;
   toggleOverlayWidget: () => void;
   updateOverlayWidget: (data: { duration: number; hourly: number; total: number; isHourlyMode: boolean; isPaused: boolean }) => void;
   onWidgetPauseHourly: (callback: () => void) => void;

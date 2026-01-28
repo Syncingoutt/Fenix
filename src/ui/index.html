@@ -321,36 +321,6 @@
       </div>
     </div>
 
-    <!-- Update Modal -->
-    <div class="update-modal" id="updateModal">
-      <div class="update-modal-content">
-        <div class="update-modal-header">
-          <div class="update-modal-title" id="updateModalTitle">Update Available</div>
-          <div class="update-modal-subtitle" id="updateModalSubtitle"></div>
-        </div>
-        
-        <div class="update-modal-body">
-          <div class="update-modal-message" id="updateModalMessage"></div>
-          <div id="updateModalChangelog" class="update-modal-changelog" style="display: none;">
-            Check out the <a href="https://github.com/Syncingoutt/Fenix/releases" target="_blank">Changelog</a>
-          </div>
-          
-          <!-- Progress bar (shown during download) -->
-          <div class="update-progress-container" id="updateProgressContainer" style="display: none;">
-            <div class="update-progress-bar">
-              <div class="update-progress-fill" id="updateProgressFill"></div>
-            </div>
-            <div class="update-progress-text" id="updateProgressText">0%</div>
-          </div>
-        </div>
-
-        <div class="update-modal-actions">
-          <button class="update-btn update-btn-primary" id="updateBtnPrimary">Download Now</button>
-          <button class="update-btn update-btn-secondary" id="updateBtnSecondary">Later</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Log Path Setup Modal (First Launch) -->
     <div class="setup-modal" id="setupModal">
       <div class="setup-modal-content">
@@ -614,6 +584,7 @@
           <div class="update-panel-text">
             <span class="update-panel-message">New update available – <span id="updatePanelVersion">v1.0.0</span></span>
             <span class="update-panel-status" id="updatePanelStatus"></span>
+            <a class="update-panel-changelog" href="https://github.com/Syncingoutt/Fenix/releases" target="_blank">Check out the changelog</a>
           </div>
         </div>
         <div class="update-panel-actions">

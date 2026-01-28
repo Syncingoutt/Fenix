@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, crashReporter, globalShortcut, Menu, screen, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, crashReporter, globalShortcut, Menu, screen, Tray, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
@@ -397,7 +397,6 @@ autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
 let isManualCheck = false; // Track if update check was triggered manually
-let isAppLaunch = true; // Track if this is the initial launch vs mid-session
 
 autoUpdater.on('checking-for-update', () => {
   if (mainWindow && isManualCheck) {
@@ -418,20 +417,10 @@ autoUpdater.on('update-available', (info) => {
     });
     autoUpdater.downloadUpdate();
   } else if (mainWindow && !isManualCheck) {
-    if (isAppLaunch) {
-      // Launch-time: Show modal
-      mainWindow.webContents.send('show-update-dialog', {
-        type: 'available',
-        version: info.version,
-        currentVersion: app.getVersion()
-      });
-      isAppLaunch = false;
-    } else {
-      // Mid-session: Show passive panel
-      mainWindow.webContents.send('show-update-panel', {
-        version: info.version
-      });
-    }
+    // For automatic checks (launch-time and mid-session), show passive panel
+    mainWindow.webContents.send('show-update-panel', {
+      version: info.version
+    });
   }
 });
 
@@ -734,6 +723,11 @@ ipcMain.on('close-window', () => {
       mainWindow.close();
     }
   }
+});
+
+// Open external links in default browser
+ipcMain.on('open-external', (_event, url: string) => {
+  shell.openExternal(url);
 });
 
 ipcMain.handle('get-maximize-state', () => {

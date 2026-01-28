@@ -77,6 +77,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('maximize-state-changed', (_event, isMaximized) => callback(isMaximized));
   },
   getMaximizeState: () => ipcRenderer.invoke('get-maximize-state'),
+  openExternal: (url: string) => ipcRenderer.send('open-external', url),
   // Overlay widget methods
   toggleOverlayWidget: () => ipcRenderer.send('toggle-overlay-widget'),
   updateOverlayWidget: (data: { duration: number; hourly: number; total: number; isHourlyMode: boolean; isPaused: boolean }) => 

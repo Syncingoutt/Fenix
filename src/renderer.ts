@@ -26,7 +26,7 @@ import { initGraph, pushRealtimePoint, pushPoint, updateGraph } from './renderer
 // Modals
 import { showBreakdownModal, initBreakdownModal, closeBreakdownModal } from './renderer/modals/breakdownModal.js';
 import { showCompassBeaconPrompt, hideCompassBeaconPrompt, showCompassBeaconSelection, hideCompassBeaconSelection, handleCompassBeaconSelectionConfirm } from './renderer/modals/compassBeaconModal.js';
-import { initUpdateModal } from './renderer/modals/updateModal.js';
+import { initUpdatePanel } from './renderer/updates/updatePanel.js';
 import { initSettingsModal, closeSettingsModal } from './renderer/modals/settingsModal.js';
 import { initSyncConsentModal } from './renderer/modals/syncConsentModal.js';
 import { initSyncDisableConfirmModal } from './renderer/modals/syncDisableConfirmModal.js';
@@ -143,7 +143,7 @@ async function initialize(): Promise<void> {
   
   // Initialize modals
   initBreakdownModal(renderInventory, () => renderBreakdown(renderInventory));
-  initUpdateModal();
+  initUpdatePanel();
   initSetupModal(loadInventory);
   initSyncConsentModal();
   initSyncDisableConfirmModal();
