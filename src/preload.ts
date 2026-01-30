@@ -90,5 +90,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onWidgetResetRealtime: (callback: () => void) => {
     ipcRenderer.on('widget-reset-realtime', callback);
-  }
+  },
+  // Hourly history methods
+  saveHourlySession: (buckets: any[]) => ipcRenderer.invoke('save-hourly-session', buckets),
+  loadHourlySessions: () => ipcRenderer.invoke('load-hourly-sessions'),
+  deleteHourlySession: (sessionId: string) => ipcRenderer.invoke('delete-hourly-session', sessionId),
+  clearAllHistory: () => ipcRenderer.invoke('clear-all-history'),
+  deleteBucketsByDateAndHour: (dateStr: string, hourNumber: number) => ipcRenderer.invoke('delete-buckets-by-date-hour', dateStr, hourNumber)
 });

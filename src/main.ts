@@ -8,6 +8,7 @@ import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
 import { PriceSyncService } from './core/priceSync';
+import { saveHourlySession, loadHourlySessions, deleteHourlySession, clearAllHistory, deleteBucketsByDateAndHour } from './core/hourlyHistory';
 
 // Single instance lock - prevent multiple instances (CRITICAL for packaged apps)
 const gotTheLock = app.requestSingleInstanceLock();
@@ -1021,6 +1022,27 @@ ipcMain.handle('test-keybind', (event, keybind: string) => {
   }
   
   return { success: false, error: 'Keybind is already in use or invalid' };
+});
+
+// Hourly history IPC handlers
+ipcMain.handle('save-hourly-session', async (_event, buckets) => {
+  return saveHourlySession(buckets);
+});
+
+ipcMain.handle('load-hourly-sessions', async () => {
+  return loadHourlySessions();
+});
+
+ipcMain.handle('delete-hourly-session', async (_event, sessionId) => {
+  return deleteHourlySession(sessionId);
+});
+
+ipcMain.handle('clear-all-history', async () => {
+  return clearAllHistory();
+});
+
+ipcMain.handle('delete-buckets-by-date-hour', async (_event, dateStr: string, hourNumber: number) => {
+  return deleteBucketsByDateAndHour(dateStr, hourNumber);
 });
 
 // Log file watcher

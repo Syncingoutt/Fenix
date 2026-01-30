@@ -68,6 +68,18 @@ export interface ElectronAPI {
   onWidgetPauseHourly: (callback: () => void) => void;
   onWidgetResumeHourly: (callback: () => void) => void;
   onWidgetResetRealtime: (callback: () => void) => void;
+  saveHourlySession: (buckets: HourlyBucket[]) => Promise<void>;
+  loadHourlySessions: () => Promise<SavedHourlySession[]>;
+  deleteHourlySession: (sessionId: string) => Promise<void>;
+  clearAllHistory: () => Promise<void>;
+  deleteBucketsByDateAndHour: (dateStr: string, hourNumber: number) => Promise<void>;
+}
+
+export interface SavedHourlySession {
+  sessionId: string;
+  startTime: number;
+  endTime: number;
+  buckets: HourlyBucket[];
 }
 
 export interface HourlyBucket {
@@ -76,6 +88,13 @@ export interface HourlyBucket {
   endValue: number;
   earnings: number;
   history: { time: number; value: number }[];
+  // NEW FIELDS:
+  timestamp: number; // Unix timestamp when hour completed
+  duration: number; // Total duration in seconds
+  inventorySnapshot: string; // HTML string of rendered inventory div
+  pricesSnapshot: PriceCache; // Complete price cache at hour end
+  includedItems: string[]; // Array of baseIds for tracked compasses/beacons
+  usageSnapshot: { [baseId: string]: { used: number; purchased: number } }; // Compass/beacon usage (use object for JSON serialization)
 }
 
 export interface ItemDatabase {

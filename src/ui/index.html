@@ -355,7 +355,16 @@
             <div class="history-content">
               <!-- Sidebar for Date Selection -->
               <div class="history-sidebar">
-                <div class="history-sidebar-title">Dates</div>
+                <div class="history-sidebar-header">
+                  <div class="history-sidebar-title">Dates</div>
+                  <button id="clearHistoryBtn" class="clear-history-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Clear
+                  </button>
+                </div>
                 <div class="history-sidebar-dates" id="historySidebarDates">
                   <!-- Date items will be populated by JavaScript -->
                 </div>
@@ -363,14 +372,48 @@
 
               <!-- Main Content with Inventory -->
               <div class="history-main">
-                <!-- Hour Dropdown -->
-                <div class="history-hour-selector">
-                  <label for="historyHourSelect" class="history-hour-label">Hour:</label>
-                  <select id="historyHourSelect" class="history-hour-select">
-                    <option value="">All Hours</option>
-                    <!-- Hour options will be populated by JavaScript -->
+              <!-- Hour Dropdown -->
+              <div class="history-hour-selector">
+                <label for="historyHourSelect" class="history-hour-label">Hour:</label>
+                <select id="historyHourSelect" class="history-hour-select">
+                  <option value="">All Hours</option>
+                  <!-- Hour options will be populated by JavaScript -->
+                </select>
+                <button id="editHoursToggleBtn" class="edit-hours-toggle-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18.5 2.50023C18.8978 2.1024 19.5374 2.1024 19.9352 2.50023L21.4998 4.06479C21.8976 4.46261 21.8976 5.10217 21.4998 5.5L12 15L8 16L9 12L18.5 2.50023Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Edit
+                </button>
+                <div class="history-price-comparison">
+                  <label class="history-comparison-toggle">
+                    <input type="checkbox" id="compareWithToday" style="display: none;" />
+                    <span class="toggle-slider"></span>
+                    <span>Compare with today's prices</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Edit Mode Dropdown -->
+              <div class="history-edit-selector" id="historyEditSelector" style="display: none;">
+                <div class="edit-mode-header">
+                  <label for="editHourSelect" class="edit-mode-label">Select Hours to Delete:</label>
+                  <button id="exitEditModeBtn" class="edit-mode-exit-btn">Exit Edit</button>
+                </div>
+                <div class="edit-mode-select-wrapper">
+                  <select id="editHourSelect" class="edit-mode-select" multiple>
+                    <!-- Hour options with checkboxes will be populated by JavaScript -->
                   </select>
                 </div>
+                <button id="deleteSelectedHoursBtn" class="delete-selected-hours-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Delete Selected Hours
+                </button>
+              </div>
 
                 <!-- Inventory Section -->
                 <div class="history-inventory">
@@ -535,6 +578,43 @@
           </div>
         </div>
         <button class="compass-beacon-confirm-btn" id="compassBeaconSelectionConfirm" style="display: none;">Confirm</button>
+      </div>
+    </div>
+
+    <!-- Clear History Confirmation Modal -->
+    <div class="clear-history-modal" id="clearHistoryModal">
+      <div class="clear-history-modal-content">
+        <div class="clear-history-modal-header">
+          <div class="clear-history-modal-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 9V14" stroke="#E74C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="17" r="1" fill="#E74C3C"/>
+              <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#E74C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="clear-history-modal-title">Clear All History?</div>
+          <div class="clear-history-modal-subtitle">This action cannot be undone</div>
+        </div>
+
+        <div class="clear-history-modal-body">
+          <div class="clear-history-modal-message">
+            Are you sure you want to delete all historical data? This will permanently remove:
+            <ul>
+              <li>All date entries</li>
+              <li>All hourly buckets and earnings data</li>
+              <li>Inventory snapshots</li>
+              <li>Price history</li>
+            </ul>
+          </div>
+          <div class="clear-history-modal-note">
+            Your current inventory and settings will not be affected.
+          </div>
+        </div>
+
+        <div class="clear-history-modal-actions">
+          <button class="clear-history-modal-btn secondary" id="clearHistoryCancelBtn">Cancel</button>
+          <button class="clear-history-modal-btn danger" id="clearHistoryConfirmBtn">Clear All History</button>
+        </div>
       </div>
     </div>
 

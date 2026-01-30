@@ -30,7 +30,7 @@ import {
 } from '../state/wealthState.js';
 import { getCurrentItems } from '../state/inventoryState.js';
 import { formatTime } from '../utils/formatting.js';
-import { ElectronAPI, HourlyBucket } from '../types.js';
+import { ElectronAPI, HourlyBucket, PriceCache } from '../types.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -88,33 +88,35 @@ export function startHourlyTracking(): void {
  * Actually start hourly tracking after user confirms
  */
 export function actuallyStartHourlyTracking(): void {
-  
+
   const currentItems = getCurrentItems();
   const hourlyStartSnapshot = getHourlyStartSnapshot();
   const previousQuantities = getPreviousQuantities();
   const hourlyUsage = getHourlyUsage();
   const hourlyPurchases = getHourlyPurchases();
   const includedItems = getIncludedItems();
-  
+
   // Take snapshot of current inventory
   hourlyStartSnapshot.clear();
   previousQuantities.clear();
   hourlyUsage.clear();
   hourlyPurchases.clear();
-  
+
   for (const item of currentItems) {
     // Snapshot all items normally
     hourlyStartSnapshot.set(item.baseId, item.totalQuantity);
-    
+
     // For tracked compasses/beacons, initialize previous quantity
     if (includedItems.has(item.baseId)) {
       previousQuantities.set(item.baseId, item.totalQuantity);
     }
   }
-  
-  setHourlyStartTime(Date.now());
+
+  const startTime = Date.now();
+  setHourlyStartTime(startTime);
   setHourlyHistory([]);
-  setHourlyBuckets([]);
+  // Don't clear buckets when starting new session - preserve existing buckets
+  // setHourlyBuckets([]);
   setCurrentHourStartValue(0);
   
   // Start with 0 gain
@@ -198,9 +200,8 @@ export function updatePreviousQuantities(): void {
 /**
  * Capture hourly bucket at end of each hour
  */
-export function captureHourlyBucket(): void {
+export async function captureHourlyBucket(): Promise<void> {
   const currentValue = getHourlyWealthGain();
-  const hourNumber = Math.floor(getHourlyElapsedSeconds() / 3600);
   const currentHourStartValue = getCurrentHourStartValue();
   const hourlyHistory = getHourlyHistory();
   const hourlyBuckets = getHourlyBuckets();
@@ -210,22 +211,50 @@ export function captureHourlyBucket(): void {
   const previousQuantities = getPreviousQuantities();
   const hourlyUsage = getHourlyUsage();
   const hourlyPurchases = getHourlyPurchases();
-  
+  const hourlyStartTime = getHourlyStartTime();
+
+  // Calculate hour number based on actual clock time, not elapsed time
+  const startDate = new Date(hourlyStartTime);
+  const endDate = new Date();
+  const hourNumber = startDate.getHours();
+
+  // Capture inventory HTML (before any further changes)
+  const inventoryContainer = document.querySelector('#inventory');
+  const inventorySnapshot = inventoryContainer?.outerHTML || '';
+
+  // Capture current prices
+  const priceCache = await electronAPI.getPriceCache();
+
+  // Capture usage data
+  const includedItemsArray = Array.from(includedItems);
+  const usageSnapshot: { [baseId: string]: { used: number; purchased: number } } = {};
+
+  for (const [baseId, used] of hourlyUsage) {
+    usageSnapshot[baseId] = { used, purchased: hourlyPurchases.get(baseId) || 0 };
+  }
+
   const bucket: HourlyBucket = {
     hourNumber,
     startValue: currentHourStartValue,
     endValue: currentValue,
     earnings: currentValue - currentHourStartValue,
-    history: [...hourlyHistory] // Copy current history
+    history: [...hourlyHistory],
+    timestamp: hourlyStartTime, // Use session start time, not current time
+    duration: hourlyElapsedSeconds,
+    inventorySnapshot,
+    pricesSnapshot: priceCache,
+    includedItems: includedItemsArray,
+    usageSnapshot
   };
-  
+
   hourlyBuckets.push(bucket);
   setHourlyBuckets(hourlyBuckets);
   
   // Reset for next hour
   setCurrentHourStartValue(currentValue);
   setHourlyHistory([{ time: Date.now(), value: currentValue }]);
-  
+  setHourlyStartTime(Date.now()); // Update start time for next hour
+
   // Reset usage and purchase tracking for next hour and update previous quantities
   hourlyUsage.clear();
   hourlyPurchases.clear();
@@ -285,29 +314,58 @@ export function resumeHourlyTracking(): void {
 /**
  * Stop hourly tracking
  */
-export function stopHourlyTracking(): void {
-  
+export async function stopHourlyTracking(): Promise<void> {
+
   // Tell main process to stop timer
   electronAPI.stopHourlyTimer();
-  
+
   const finalGain = getHourlyWealthGain();
   const hourlyBuckets = getHourlyBuckets();
   const hourlyHistory = getHourlyHistory();
   const currentHourStartValue = getCurrentHourStartValue();
   const hourlyElapsedSeconds = getHourlyElapsedSeconds();
-  
-  // Always capture the current hour as a complete bucket, regardless of time elapsed
-  const currentHourNumber = hourlyBuckets.length + 1;
-  
+  const hourlyStartTime = getHourlyStartTime();
+
+  // Capture inventory HTML (snapshot before ending session)
+  const inventoryContainer = document.querySelector('#inventory');
+  const inventorySnapshot = inventoryContainer?.outerHTML || '';
+
+  // Capture current prices
+  const priceCache = await electronAPI.getPriceCache();
+
+  // Calculate hour number based on session start time (actual clock hour)
+  const startDate = new Date(hourlyStartTime);
+  const hourNumber = startDate.getHours();
+
+  // Capture usage data
+  const includedItems = getIncludedItems();
+  const includedItemsArray = Array.from(includedItems);
+  const hourlyUsage = getHourlyUsage();
+  const hourlyPurchases = getHourlyPurchases();
+  const usageSnapshot: { [baseId: string]: { used: number; purchased: number } } = {};
+
+  for (const [baseId, used] of hourlyUsage) {
+    usageSnapshot[baseId] = { used, purchased: hourlyPurchases.get(baseId) || 0 };
+  }
+
   const bucket: HourlyBucket = {
-    hourNumber: currentHourNumber,
+    hourNumber,
     startValue: currentHourStartValue,
     endValue: finalGain,
     earnings: finalGain - currentHourStartValue,
-    history: [...hourlyHistory]
+    history: [...hourlyHistory],
+    timestamp: hourlyStartTime, // Use session start time, not current time
+    duration: hourlyElapsedSeconds,
+    inventorySnapshot,
+    pricesSnapshot: priceCache,
+    includedItems: includedItemsArray,
+    usageSnapshot
   };
   hourlyBuckets.push(bucket);
   setHourlyBuckets(hourlyBuckets);
+  
+  // Save complete session to disk
+  await electronAPI.saveHourlySession(hourlyBuckets);
   
   // Show breakdown modal
   showBreakdownModal();
