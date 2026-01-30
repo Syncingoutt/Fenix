@@ -113,8 +113,18 @@
             </svg>
             <span>Toggle Mini Overlay</span>
           </button>
-          <div class="segmented">
-            <div class="segmented-active-bg"></div>
+          <div class="mode-controls">
+            <button id="historyBtn" class="overlay-segmented-btn" title="History">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 8V4L8 8L12 8Z" fill="currentColor"/>
+                <path d="M12 16V20L8 16L12 16Z" fill="currentColor"/>
+                <path d="M4 15C4 18.866 7.13401 22 11 22C14.866 22 18 18.866 18 15C18 11.134 14.866 8 11 8C9.29531 8 7.75457 8.64414 6.59096 9.69136" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 8L4.5 12.5L9 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>History</span>
+            </button>
+            <div class="segmented">
+              <div class="segmented-active-bg"></div>
             <label id="realtimeBtn">
               <input type="radio" name="mode" value="first" checked>
               <div class="button-label">
@@ -134,6 +144,7 @@
                 Hourly
               </div>
             </label>
+          </div>
           </div>
         </div>
         
@@ -297,6 +308,85 @@
             <div class="strategies-message-box">
               <p>This feature is currently in development.</p>
               <p>Come back later.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page: History -->
+        <section id="page-history" class="page">
+          <div class="history-container">
+            <!-- Back Button -->
+            <button id="historyBackBtn" class="history-back-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Back</span>
+            </button>
+
+            <!-- Overview Section with Graph Background -->
+            <div class="history-overview-wrapper">
+              <div class="history-graph-background">
+                <canvas id="historyOverviewGraph" class="history-overview-graph"></canvas>
+              </div>
+              <div class="history-overview">
+                <h1 class="history-overview-title">Overview</h1>
+                <div class="history-overview-stats">
+                  <div class="history-stat-item">
+                    <div class="history-stat-label">Total Duration:</div>
+                    <div class="history-stat-value" id="historyTotalDuration">00:00:00</div>
+                  </div>
+                  <div class="history-stat-item">
+                    <div class="history-stat-label">FE per Hour:</div>
+                    <div class="history-stat-value" id="historyFePerHour">0</div>
+                  </div>
+                  <div class="history-stat-item">
+                    <div class="history-stat-label">Total FE Collected:</div>
+                    <div class="history-stat-value" id="historyTotalFe">0</div>
+                  </div>
+                  <div class="history-stat-item" id="historyBucketsItem" style="display: none;">
+                    <div class="history-stat-label">Hourly Buckets:</div>
+                    <div class="history-stat-value" id="historyBucketsCount">0</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="history-content">
+              <!-- Sidebar for Date Selection -->
+              <div class="history-sidebar">
+                <div class="history-sidebar-title">Dates</div>
+                <div class="history-sidebar-dates" id="historySidebarDates">
+                  <!-- Date items will be populated by JavaScript -->
+                </div>
+              </div>
+
+              <!-- Main Content with Inventory -->
+              <div class="history-main">
+                <!-- Hour Dropdown -->
+                <div class="history-hour-selector">
+                  <label for="historyHourSelect" class="history-hour-label">Hour:</label>
+                  <select id="historyHourSelect" class="history-hour-select">
+                    <option value="">All Hours</option>
+                    <!-- Hour options will be populated by JavaScript -->
+                  </select>
+                </div>
+
+                <!-- Inventory Section -->
+                <div class="history-inventory">
+                  <div class="history-inventory-header">
+                    <div class="history-inventory-header-row">
+                      <div class="history-inventory-col-name">Name</div>
+                      <div class="history-inventory-col-quantity">Quantity</div>
+                      <div class="history-inventory-col-price">Price</div>
+                      <div class="history-inventory-col-total">Total</div>
+                    </div>
+                  </div>
+                  <div class="history-inventory-content" id="historyInventoryContent">
+                    <!-- Inventory items will be populated by JavaScript -->
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>

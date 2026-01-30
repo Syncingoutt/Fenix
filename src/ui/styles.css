@@ -147,6 +147,14 @@ img:not(.header-logo-pic) {
   margin-bottom: calc(0.7rem * var(--scale));
 }
 
+.header.hidden {
+  display: none !important;
+}
+
+.header:not(.hidden) {
+  display: flex !important;
+}
+
 .header-logo {
   display: flex;
   align-items: center;
@@ -501,6 +509,20 @@ img:not(.header-logo-pic) {
   justify-content: space-between;
   align-items: center;
   margin: calc(2em * var(--scale)) 0 calc(1em * var(--scale)) 0;
+}
+
+.mode-controls {
+  display: inline-flex;
+  gap: calc(15px * var(--scale));
+  align-items: center;
+}
+#historyBtn {
+  display: none;
+}
+
+/* Show history button when hourly mode is selected */
+.mode-controls:has(input[value="second"]:checked) #historyBtn {
+  display: flex;
 }
 
 .segmented {
@@ -3502,4 +3524,322 @@ body.overlay-widget {
 
 #page-prices {
   margin-top: calc(40px * var(--scale));
+}
+
+/* ============================================
+   HISTORY PAGE
+   ============================================ */
+
+#page-history {
+  padding: 0;
+  margin: 0;
+}
+
+.history-container {
+  display: flex;
+  flex-direction: column;
+  gap: calc(1rem * var(--scale));
+  margin-top: calc(1rem * var(--scale));
+}
+
+/* Back Button - Styled like overlay-segmented-btn but secondary */
+.history-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(8px * var(--scale));
+  padding: 0 calc(16px * var(--scale));
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: calc(12px * var(--scale));
+  color: var(--text);
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-family: "Manrope", sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: calc(40px * var(--scale));
+  width: fit-content;
+}
+
+.history-back-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.history-back-btn svg {
+  width: calc(16px * var(--scale));
+  height: calc(16px * var(--scale));
+}
+
+/* Overview Section with Graph Background */
+.history-overview-wrapper {
+  position: relative;
+  background: var(--bg-shade);
+  border-radius: calc(8px * var(--scale));
+  padding: calc(1.5rem * var(--scale)) calc(2rem * var(--scale));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  height: calc(200px * var(--scale));
+  min-height: calc(180px * var(--scale));
+}
+
+.history-graph-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.history-overview-graph {
+  width: 100%;
+  height: 100%;
+}
+
+.history-overview {
+  position: relative;
+  z-index: 1;
+  height: 70%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.history-overview-title {
+  font-size: calc(var(--text-title-large) * var(--text-scale));
+  color: var(--text);
+  margin: 0 0 calc(1rem * var(--scale)) 0;
+  font-family: "Manrope", sans-serif;
+}
+
+.history-overview-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: calc(1rem * var(--scale));
+}
+
+.history-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--scale));
+}
+
+.history-stat-label {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--text);
+  opacity: 0.7;
+  font-weight: 500;
+  font-family: "Manrope", sans-serif;
+}
+
+.history-stat-value {
+  font-size: calc(var(--text-title) * var(--text-scale));
+  font-weight: 700;
+  color: var(--primary);
+  font-family: "Manrope", sans-serif;
+}
+
+/* Main Content Area */
+.history-content {
+  display: flex;
+  gap: calc(1rem * var(--scale));
+  align-items: flex-start;
+}
+
+/* Sidebar */
+.history-sidebar {
+  width: calc(220px * var(--scale));
+  flex-shrink: 0;
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  padding: calc(1rem * var(--scale));
+  max-height: calc(600px * var(--scale));
+  overflow-y: auto;
+}
+
+.history-sidebar-title {
+  font-size: calc(var(--text-medium) * var(--text-scale));
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: calc(0.75rem * var(--scale));
+  font-family: "Manrope", sans-serif;
+}
+
+.history-sidebar-dates {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6px * var(--scale));
+}
+
+.history-sidebar-date-item {
+  padding: calc(0.75rem * var(--scale)) calc(1rem * var(--scale));
+  background: transparent;
+  border: 1px solid var(--border-shade);
+  border-radius: calc(6px * var(--scale));
+  color: var(--text);
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-family: "Manrope", sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.history-sidebar-date-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border);
+}
+
+.history-sidebar-date-item.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+/* Main Content */
+.history-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: calc(0.75rem * var(--scale));
+  min-width: 0;
+}
+
+/* Hour Selector */
+.history-hour-selector {
+  display: flex;
+  align-items: center;
+  gap: calc(12px * var(--scale));
+  padding: calc(0.75rem * var(--scale));
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  border-radius: calc(8px * var(--scale));
+}
+
+.history-hour-label {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--text);
+  font-weight: 500;
+  font-family: "Manrope", sans-serif;
+}
+
+.history-hour-select {
+  flex: 1;
+  max-width: calc(200px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(12px * var(--scale));
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: calc(6px * var(--scale));
+  color: var(--text);
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-family: "Manrope", sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-hour-select:hover {
+  border-color: var(--primary);
+}
+
+.history-hour-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Inventory Section */
+.history-inventory {
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  overflow: hidden;
+}
+
+.history-inventory-header {
+  padding: calc(0.75rem * var(--scale)) calc(1rem * var(--scale));
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.history-inventory-header-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: calc(1rem * var(--scale));
+  align-items: center;
+}
+
+.history-inventory-col-name,
+.history-inventory-col-quantity,
+.history-inventory-col-price,
+.history-inventory-col-total {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.8;
+  font-family: "Manrope", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.history-inventory-content {
+  max-height: calc(500px * var(--scale));
+  overflow-y: auto;
+}
+
+.history-inventory-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: calc(1rem * var(--scale));
+  padding: calc(0.75rem * var(--scale)) calc(1rem * var(--scale));
+  border-bottom: 1px solid var(--border-shade);
+  align-items: center;
+  transition: background 0.2s ease;
+}
+
+.history-inventory-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.history-inventory-item:last-child {
+  border-bottom: none;
+}
+
+.history-inventory-item-name {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--scale));
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--text);
+  font-family: "Manrope", sans-serif;
+}
+
+.history-inventory-item-icon {
+  width: calc(32px * var(--scale));
+  height: calc(32px * var(--scale));
+  object-fit: contain;
+}
+
+.history-inventory-item-quantity,
+.history-inventory-item-price,
+.history-inventory-item-total {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--text);
+  font-family: "Manrope", sans-serif;
+}
+
+.history-inventory-item-total {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Empty State */
+.history-empty-state {
+  padding: calc(3rem * var(--scale));
+  text-align: center;
+  color: var(--text);
+  opacity: 0.5;
+  font-size: calc(var(--text-body) * var(--text-scale));
+  font-family: "Manrope", sans-serif;
 }

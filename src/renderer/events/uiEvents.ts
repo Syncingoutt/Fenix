@@ -2,6 +2,7 @@
 
 import { ElectronAPI } from '../types.js';
 import { customTitleBar, titleBarMinimize, titleBarMaximize, titleBarClose } from '../dom/domElements.js';
+import { renderHistoryPage } from '../history/historyRenderer.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -80,17 +81,27 @@ export function initUIEvents(
   // SPA Navigation handlers
   const navItems = document.querySelectorAll('.nav-item');
   const pages = document.querySelectorAll('.page');
-  
+  const header = document.querySelector('.header'); // Target the .header div, not <header>
+
   function navigateToPage(pageId: string): void {
     // Update nav active state
     navItems.forEach(item => item.classList.remove('active'));
     const activeNav = document.getElementById(`nav-${pageId}`);
     if (activeNav) activeNav.classList.add('active');
-    
+
     // Update page visibility
     pages.forEach(page => page.classList.remove('active'));
     const activePage = document.getElementById(`page-${pageId}`);
     if (activePage) activePage.classList.add('active');
+
+    // Hide header for history page using CSS class
+    if (pageId === 'history' && header) {
+      header.classList.add('hidden');
+      // Render history page when navigating to it
+      renderHistoryPage();
+    } else if (header) {
+      header.classList.remove('hidden');
+    }
   }
   
   // Add click handlers to nav items
@@ -100,4 +111,20 @@ export function initUIEvents(
       navigateToPage(pageId);
     });
   });
+  
+  // History button navigation
+  const historyBtn = document.getElementById('historyBtn');
+  if (historyBtn) {
+    historyBtn.addEventListener('click', () => {
+      navigateToPage('history');
+    });
+  }
+  
+  // History back button navigation
+  const historyBackBtn = document.getElementById('historyBackBtn');
+  if (historyBackBtn) {
+    historyBackBtn.addEventListener('click', () => {
+      navigateToPage('home');
+    });
+  }
 }
