@@ -3843,8 +3843,8 @@ body.overlay-widget {
 .history-price-comparison {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: calc(0.5rem * var(--scale));
   align-items: center;
+  margin-left: auto;
 }
 
 .history-comparison-toggle {

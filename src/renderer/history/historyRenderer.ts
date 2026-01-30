@@ -12,6 +12,7 @@ import {
   HistoryDate
 } from '../state/historyState.js';
 import { ElectronAPI } from '../types.js';
+import { FLAME_ELEMENTIUM_ID } from '../constants.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -345,7 +346,7 @@ function renderInventory(): void {
   }
 
   // Render aggregated inventory
-  renderAggregatedInventory(aggregatedItems).then(html => {
+  renderAggregatedInventory(aggregatedItems, data.date).then(html => {
     inventoryContent.innerHTML = html;
   });
 }
@@ -377,8 +378,8 @@ function aggregateBuckets(buckets: { inventorySnapshot: string }[]): { [baseId: 
     itemRows.forEach(row => {
       const nameEl = row.querySelector('.item-name, .history-inventory-item-name span');
       const qtyEl = row.querySelector('.item-quantity, .history-inventory-item-quantity');
-      const priceEl = row.querySelector('.item-price, .history-inventory-item-price');
-      const totalEl = row.querySelector('.item-total, .history-inventory-item-total');
+      const priceEl = row.querySelector('.price-single, .history-inventory-item-price');
+      const totalEl = row.querySelector('.price-total, .history-inventory-item-total');
       const iconEl = row.querySelector('.item-icon, .history-inventory-item-icon');
 
       if (nameEl) {
@@ -410,23 +411,67 @@ function aggregateBuckets(buckets: { inventorySnapshot: string }[]): { [baseId: 
 /**
  * Render aggregated inventory items
  */
-async function renderAggregatedInventory(items: { [baseId: string]: { name: string; quantity: number; price: number; total: number; iconPath?: string } }): Promise<string> {
-  let priceCache: { [baseId: string]: { price: number; timestamp: number } } | null = null;
+async function renderAggregatedInventory(items: { [baseId: string]: { name: string; quantity: number; price: number; total: number; iconPath?: string } }, selectedDate: string): Promise<string> {
+  // Always load price cache to access price history
+  const priceCache = await electronAPI.getPriceCache();
 
-  if (compareWithToday) {
-    priceCache = await electronAPI.getPriceCache();
-  }
+  // Check if selected date is today (using local date, not UTC)
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const isToday = selectedDate === today;
+
+  console.log('[History] Today:', today, 'Selected:', selectedDate, 'isToday:', isToday, 'compareWithToday:', compareWithToday);
 
   return Object.entries(items)
     .map(([baseId, item]) => {
-      let price = item.price;
+      let price: number;
+      let total: number;
 
-      if (compareWithToday && priceCache && priceCache[baseId]) {
-        price = priceCache[baseId].price;
+      // Log cache entry for this item
+      const cacheEntry = priceCache[baseId];
+      if (cacheEntry) {
+        console.log(`[History] Cache entry for ${item.name}:`, {
+          currentPrice: cacheEntry.price,
+          hasHistory: !!cacheEntry.history,
+          historyLength: cacheEntry.history?.length
+        });
       }
 
-      const total = price * item.quantity;
+      // Flame Elementium is the currency, always has price 1
+      if (baseId === FLAME_ELEMENTIUM_ID) {
+        price = 1;
+        total = item.quantity;
+      } else if (compareWithToday && priceCache[baseId]) {
+        // Compare with today's prices is checked - use current price from cache
+        price = priceCache[baseId].price;
+        total = price * item.quantity;
+        console.log(`[History] ${item.name}: Compare mode, using price ${price} from cache`);
+      } else if (isToday && priceCache[baseId]) {
+        // Selected date is today - use current price from cache
+        price = priceCache[baseId].price;
+        total = price * item.quantity;
+        console.log(`[History] ${item.name}: Today selected, using price ${price} from cache`);
+      } else if (priceCache[baseId]?.history) {
+        // Historical date - get the last price of that day from history
+        const history = priceCache[baseId].history;
+        const dayHistory = history.filter(h => h.date.startsWith(selectedDate));
 
+        if (dayHistory.length > 0) {
+          // Use the last price of the day (most recent check)
+          price = dayHistory[dayHistory.length - 1].price;
+          total = price * item.quantity;
+        } else {
+          // No history for this day - fallback to average from snapshots
+          price = item.quantity > 0 ? item.total / item.quantity : 0;
+          total = item.total;
+        }
+      } else {
+        // No price data at all - fallback to average from snapshots
+        price = item.quantity > 0 ? item.total / item.quantity : 0;
+        total = item.total;
+      }
+
+      console.log(`[History] ${item.name} (${baseId}): price=${price}, total=${total}`);
       return `
         <div class="history-inventory-item">
           <div class="history-inventory-item-name">
