@@ -2500,8 +2500,8 @@ img:not(.header-logo-pic) {
   border: calc(2px * var(--scale)) solid var(--border);
   border-radius: calc(16px * var(--scale));
   padding: calc(40px * var(--scale));
-  max-width: calc(600px * var(--scale));
-  width: 90%;
+  max-width: calc(700px * var(--scale));
+  width: 100%;
   animation: slideUp 0.4s ease-out;
   position: relative;
   padding-bottom: calc(12px * var(--scale));
@@ -2538,9 +2538,7 @@ img:not(.header-logo-pic) {
 .compass-beacon-prompt-header,
 .compass-beacon-selection-header {
   text-align: center;
-  margin-bottom: calc(24px * var(--scale));
   padding-bottom: calc(20px * var(--scale));
-  border-bottom: calc(2px * var(--scale)) solid var(--border);
 }
 
 .compass-beacon-prompt-title,
@@ -2620,7 +2618,7 @@ img:not(.header-logo-pic) {
   margin: 0;
   font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-small) * var(--text-scale));
-  color: var(--border);
+  color: var(--text);
   cursor: pointer;
   transition: color 0.2s;
 }
@@ -2769,7 +2767,7 @@ img:not(.header-logo-pic) {
 .compass-beacon-confirm-btn {
   position: absolute;
   bottom: calc(60px * var(--scale));
-  right: calc(60px * var(--scale));
+  right: calc(70px * var(--scale));
   padding: calc(12px * var(--scale)) calc(24px * var(--scale));
   border: none;
   border-radius: calc(8px * var(--scale));
