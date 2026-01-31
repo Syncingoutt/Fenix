@@ -13,7 +13,7 @@ import { formatTime } from './renderer/utils/formatting.js';
 
 // Wealth
 import { getCurrentTotalValue, getHourlyWealthGain } from './renderer/wealth/wealthCalculations.js';
-import { initRealtimeTracker, initRealtimeTracking, updateRealtimeWealth, resetRealtimeTracking, initRealtimeTimer as initRealtimeTimerFn } from './renderer/wealth/realtimeTracker.js';
+import { initRealtimeTracker, initRealtimeTracking, updateRealtimeWealth, resetRealtimeTracking, updateAverageTimePerMap, initRealtimeTimer as initRealtimeTimerFn } from './renderer/wealth/realtimeTracker.js';
 import { initHourlyTracker, startHourlyTracking, stopHourlyTracking, pauseHourlyTracking, resumeHourlyTracking, actuallyStartHourlyTracking, trackCompassBeaconUsage, updatePreviousQuantities, updateHourlyWealth, captureHourlyBucket } from './renderer/wealth/hourlyTracker.js';
 
 // Inventory
@@ -36,13 +36,17 @@ import { initSetupModal } from './renderer/modals/setupModal.js';
 import { initSettingsManager } from './renderer/settings/settingsManager.js';
 
 // DOM & Events
-import { initUIState, wealthValueEl, wealthHourlyEl, timerEl, hourlyTimerEl, startHourlyBtn, stopHourlyBtn, pauseHourlyBtn, resumeHourlyBtn } from './renderer/dom/domElements.js';
+import { initUIState, wealthValueEl, wealthHourlyEl, timerEl, avgTimePerMapEl, hourlyTimerEl, startHourlyBtn, stopHourlyBtn, pauseHourlyBtn, resumeHourlyBtn } from './renderer/dom/domElements.js';
 import { initInventoryEvents } from './renderer/events/inventoryEvents.js';
 import { initWealthEvents } from './renderer/events/wealthEvents.js';
 import { initUIEvents } from './renderer/events/uiEvents.js';
 
 // Prices
 import { initPrices } from './renderer/prices/pricesRenderer.js';
+
+// Map History
+import { renderMapHistoryPage } from './renderer/mapHistory/mapHistoryRenderer.js';
+import { initializeMapTracking, processMapEvents, setOnMapEndCallback } from './renderer/mapHistory/mapTracker.js';
 
 declare const electronAPI: ElectronAPI;
 declare const Chart: any;
@@ -157,6 +161,7 @@ async function initialize(): Promise<void> {
     wealthValueEl,
     wealthHourlyEl,
     timerEl,
+    avgTimePerMapEl!,
     updateOverlayWidgetData,
     pushRealtimePoint
   );
@@ -205,6 +210,10 @@ async function initialize(): Promise<void> {
   // Initialize prices page
   initPrices();
 
+  // Initialize map tracking and register callback for average time update
+  initializeMapTracking();
+  setOnMapEndCallback(updateAverageTimePerMap);
+
 // Listen to timer ticks from main process
 electronAPI.onTimerTick((data) => {
   if (data.type === 'realtime') {
@@ -244,6 +253,8 @@ electronAPI.onTimerTick((data) => {
   // Listen for inventory updates
 electronAPI.onInventoryUpdate(() => {
       loadInventory();
+      // Process map events when inventory updates
+      processMapEvents();
   });
   
   // Load tax preference on startup and initialize

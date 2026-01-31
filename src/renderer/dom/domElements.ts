@@ -11,6 +11,7 @@ export const pauseHourlyBtn = document.getElementById('pauseHourly') as HTMLButt
 export const resumeHourlyBtn = document.getElementById('resumeHourly') as HTMLButtonElement;
 export const hourlyTimerEl = document.getElementById('hourlyTimer')!;
 export const timerEl = document.getElementById('timer')!;
+export const avgTimePerMapEl = document.getElementById('avgTimePerMap');
 export const resetRealtimeBtn = document.getElementById('resetRealtimeBtn') as HTMLButtonElement;
 export const overlayWidgetBtn = document.getElementById('overlayWidgetBtn');
 export const minPriceInput = document.getElementById('minPriceInput') as HTMLInputElement;

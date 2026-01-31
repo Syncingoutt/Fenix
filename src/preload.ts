@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getInventory: () => ipcRenderer.invoke('get-inventory'),
   getItemDatabase: () => ipcRenderer.invoke('get-item-database'),
   getPriceCache: () => ipcRenderer.invoke('get-price-cache'),
+  getMapEvents: () => ipcRenderer.invoke('get-map-events'),
   onInventoryUpdate: (callback: () => void) => {
     ipcRenderer.on('inventory-updated', callback);
   },

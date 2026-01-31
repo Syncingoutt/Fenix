@@ -3,7 +3,7 @@
 import { ElectronAPI } from '../types.js';
 import { customTitleBar, titleBarMinimize, titleBarMaximize, titleBarClose } from '../dom/domElements.js';
 import { renderHistoryPage } from '../history/historyRenderer.js';
-import { renderMapHistoryPage } from '../mapHistory/mapHistoryRenderer.js';
+import { renderMapHistoryPage, cleanupMapHistoryPage } from '../mapHistory/mapHistoryRenderer.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -85,6 +85,11 @@ export function initUIEvents(
   const header = document.querySelector('.header'); // Target the .header div, not <header>
 
   function navigateToPage(pageId: string): void {
+    // Cleanup map history page if navigating away from it
+    if (pageId !== 'mapHistory') {
+      cleanupMapHistoryPage();
+    }
+    
     // Update nav active state
     navItems.forEach(item => item.classList.remove('active'));
     const activeNav = document.getElementById(`nav-${pageId}`);

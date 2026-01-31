@@ -164,7 +164,7 @@
               </svg>
             </button>
             <div id="timer" class="maintext">00:00:00</div>
-            <div class="subtext">Avg time per map: 00:00</div>
+            <div class="subtext" id="avgTimePerMap">Avg time per map: 00:00</div>
             <button class="timer-btn" id="resetRealtimeBtn" style="display: none;">Reset Timer</button>
             
             <div class="hourly-controls" id="hourlyControls">
@@ -469,25 +469,6 @@
               </svg>
               <span>Back</span>
             </button>
-
-            <!-- Overview Section -->
-            <div class="map-history-overview">
-              <h1 class="map-history-title">Map History</h1>
-              <div class="map-history-stats">
-                <div class="map-history-stat-item">
-                  <div class="map-history-stat-label">Total Maps:</div>
-                  <div class="map-history-stat-value" id="mapHistoryTotalMaps">0</div>
-                </div>
-                <div class="map-history-stat-item">
-                  <div class="map-history-stat-label">Avg Duration:</div>
-                  <div class="map-history-stat-value" id="mapHistoryAvgDuration">0:00</div>
-                </div>
-                <div class="map-history-stat-item">
-                  <div class="map-history-stat-label">Total Profit:</div>
-                  <div class="map-history-stat-value" id="mapHistoryTotalProfit">0</div>
-                </div>
-              </div>
-            </div>
 
             <!-- Main Content -->
             <div class="map-history-content" id="mapHistoryContent">

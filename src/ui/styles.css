@@ -4729,6 +4729,178 @@ body.overlay-widget {
   height: calc(18px * var(--scale));
 }
 
+/* Map Stats Grid */
+.map-stats {
+  margin-bottom: calc(1.5rem * var(--scale));
+}
+
+.map-stats h2 {
+  font-size: calc(var(--text-title) * var(--text-scale));
+  color: var(--text);
+  margin: 0 0 calc(1rem * var(--scale)) 0;
+  font-family: "Manrope", sans-serif;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: calc(1rem * var(--scale));
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: calc(6px * var(--scale));
+  padding: calc(1rem * var(--scale));
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--scale));
+}
+
+.stat-label {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.stat-value {
+  font-size: calc(var(--text-title) * var(--text-scale));
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.stat-value.positive {
+  color: #4ade80;
+}
+
+.stat-value.negative {
+  color: #f87171;
+}
+
+/* Current Map Info */
+.current-map {
+  margin-bottom: calc(1.5rem * var(--scale));
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: calc(6px * var(--scale));
+  padding: calc(1rem * var(--scale));
+}
+
+.current-map h2 {
+  font-size: calc(var(--text-title) * var(--text-scale));
+  color: var(--text);
+  margin: 0 0 calc(1rem * var(--scale)) 0;
+  font-family: "Manrope", sans-serif;
+}
+
+.current-map-info {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--scale));
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(4px * var(--scale)) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: calc(var(--text-body) * var(--text-scale));
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.info-value {
+  font-size: calc(var(--text-body) * var(--text-scale));
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Map History List */
+.map-history-list {
+  margin-top: calc(1rem * var(--scale));
+}
+
+.map-history-list h2 {
+  font-size: calc(var(--text-title) * var(--text-scale));
+  color: var(--text);
+  margin: 0 0 calc(1rem * var(--scale)) 0;
+  font-family: "Manrope", sans-serif;
+}
+
+.empty-history {
+  text-align: center;
+  padding: calc(2rem * var(--scale));
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.map-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.map-table th {
+  text-align: left;
+  padding: calc(8px * var(--scale));
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--text);
+  opacity: 0.7;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.map-table td {
+  padding: calc(8px * var(--scale));
+  font-size: calc(var(--text-body) * var(--text-scale));
+  color: var(--text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.map-table tr:last-child td {
+  border-bottom: none;
+}
+
+.map-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.map-table .positive {
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.map-table .negative {
+  color: #f87171;
+  font-weight: 500;
+}
+
+/* Map Name Cell */
+.map-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--scale));
+}
+
+.zone-display-name {
+  font-weight: 500;
+}
+
+.zone-raw-path {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--text);
+  opacity: 0.5;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
 .container-small .subtext {
   opacity: 0.85;
 }

@@ -11,6 +11,17 @@ export interface ParsedLogEntry {
   pageId: number | null;
 }
 
+export interface MapEvent {
+  timestamp: string;
+  eventType: 'map_start' | 'map_end' | 'beacon_used';
+  zonePath?: string;
+  levelId?: number;
+  beaconBaseId?: string;
+  beaconName?: string;
+  zoneEnglishName?: string;
+  isHideout?: boolean; // Tag hideout events
+}
+
 // Default path (will be overridden by user selection)
 const DEFAULT_LOG_PATH = '';
 
@@ -566,4 +577,130 @@ export function ensureLogSizeLimit(maxSizeMB = 300): void {
     console.error(`Failed to truncate log file: ${error.message || error}`);
     // Don't throw - we want the app to continue running even if truncation fails
   }
+}
+
+/**
+ * Parse LevelId from a log line
+ * Format: LevelId = 110
+ */
+function parseLevelId(line: string): number | undefined {
+  const match = line.match(/LevelId\s*=\s*(\d+)/);
+  return match ? parseInt(match[1]) : undefined;
+}
+
+/**
+ * Parse zone path from a log line
+ * Format: /Game/Art/Maps/01SD/XZ_YuJinZhiXiBiNanSuo200/...
+ */
+function parseZonePath(line: string): string | undefined {
+  // Look for InMainLevelPath = /Game/Art/Maps/... pattern
+  const pathMatch = line.match(/InMainLevelPath\s*=\s*(\/Game\/Art\/Maps\/[^\s]+)/);
+  if (pathMatch) {
+    // Extract the zone path (remove trailing World' prefix if present)
+    let path = pathMatch[1];
+    path = path.replace(/^World'/, '');
+    return path;
+  }
+  return undefined;
+}
+
+/**
+ * Parse beacon usage from ItemChange line
+ * Format: ItemChange@ Add Id=400006_... ConfigBaseId=400006 ... ProtoName=ItemUseItem
+ */
+function parseBeaconUsage(line: string): { baseId: string | undefined, timestamp: string | undefined } {
+  if (!line.includes('ItemChange@ Add') && !line.includes('ItemChange@ Update')) {
+    return { baseId: undefined, timestamp: undefined };
+  }
+
+  const baseIdMatch = line.match(/ConfigBaseId\s*=\s*(\d+)/);
+  const timestampMatch = line.match(/\[([\d\.\-:]+)\]/);
+
+  // Check if this is a beacon item (400006, 400007, 400008, etc.)
+  const baseId = baseIdMatch ? baseIdMatch[1] : undefined;
+  const beaconBaseIds = ['400006', '400007', '400008', '400014', '400015', '400021', '400022', '400027', '400028'];
+  
+  if (baseId && beaconBaseIds.includes(baseId)) {
+    return {
+      baseId,
+      timestamp: timestampMatch ? timestampMatch[1] : undefined
+    };
+  }
+
+  return { baseId: undefined, timestamp: undefined };
+}
+
+/**
+ * Parse map-related events from the log file
+ * Returns an array of map events (map start/end/beacon usage)
+ */
+export function parseMapEvents(): MapEvent[] {
+  const logPath = getLogPath();
+  
+  if (!logPath || !fs.existsSync(logPath)) {
+    return [];
+  }
+
+  const stats = fs.statSync(logPath);
+  const fileSize = stats.size;
+
+  const startPosition = 0;
+
+  const fd = fs.openSync(logPath, 'r');
+  const buffer = Buffer.alloc(fileSize - startPosition);
+  fs.readSync(fd, buffer, 0, fileSize - startPosition, startPosition);
+  fs.closeSync(fd);
+
+  const logContent = buffer.toString('utf-8');
+  const lines = logContent.split('\n');
+
+  const mapEvents: MapEvent[] = [];
+
+  // Hideout/hub zone patterns
+  const HIDEOUT_PATTERNS = ['XZ_YuJinZhiXiBiNanSuo', 'DD_ShengTingZhuangYuan', 'UIMainLevel'];
+
+  for (const line of lines) {
+    if (!line.trim()) continue;
+
+    const timestampMatch = line.match(/\[([\d\.\-:]+)\]/);
+    const timestamp = timestampMatch ? timestampMatch[1] : 'unknown';
+
+    // Detect map start events: OpenMainWorld END
+    if (line.includes('OpenMainWorld END!') && line.includes('InMainLevelPath')) {
+      const zonePath = parseZonePath(line);
+      const levelId = parseLevelId(line);
+      
+      // Check if this is a hideout/hub zone
+      const isHideout = HIDEOUT_PATTERNS.some(pattern => zonePath && zonePath.includes(pattern));
+      
+      if (isHideout) {
+        // Entering hideout - end current map first
+        mapEvents.push({
+          timestamp,
+          eventType: 'map_end'
+        });
+      }
+      
+      // Always log the map start (even for hideouts)
+      mapEvents.push({
+        timestamp,
+        eventType: 'map_start',
+        zonePath,
+        levelId,
+        isHideout // Tag hideout events
+      });
+    }
+
+    // Detect beacon usage events
+    const { baseId, timestamp: beaconTimestamp } = parseBeaconUsage(line);
+    if (baseId && beaconTimestamp) {
+      mapEvents.push({
+        timestamp: beaconTimestamp,
+        eventType: 'beacon_used',
+        beaconBaseId: baseId
+      });
+    }
+  }
+
+  return mapEvents;
 }

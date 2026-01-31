@@ -27,6 +27,7 @@ export interface ElectronAPI {
   getInventory: () => Promise<InventoryItem[]>;
   getItemDatabase: () => Promise<Record<string, { name: string; tradable?: boolean; group?: string }>>;
   getPriceCache: () => Promise<PriceCache>;
+  getMapEvents: () => Promise<MapEvent[]>;
   onInventoryUpdate: (callback: () => void) => void;
   startHourlyTimer: () => void;
   pauseHourlyTimer: () => void;
@@ -111,3 +112,14 @@ export type WealthMode = 'realtime' | 'hourly';
 export type SortBy = 'priceUnit' | 'priceTotal';
 export type SortOrder = 'asc' | 'desc';
 export type UpdateType = 'available' | 'downloaded';
+
+export interface MapEvent {
+  timestamp: string;
+  eventType: 'map_start' | 'map_end' | 'beacon_used';
+  zonePath?: string;
+  levelId?: number;
+  beaconBaseId?: string;
+  beaconName?: string;
+  zoneEnglishName?: string;
+  isHideout?: boolean; // Tag hideout events
+}
