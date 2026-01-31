@@ -4706,7 +4706,7 @@ body.overlay-widget {
   justify-content: center;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--primary);
   cursor: pointer;
   padding: calc(6px * var(--scale));
   border-radius: calc(4px * var(--scale));

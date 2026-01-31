@@ -20,7 +20,6 @@ export interface MapEntry {
 export const ZONE_NAMES: Record<string, string> = {
   // Hideouts / Hubs
   "XZ_YuJinZhiXiBiNanSuo": "Hideout - Ember's Rest",
-  "DD_ShengTingZhuangYuan": "Hideout - Sacred Court Manor",
 
   // Voidlands (entries with number suffixes must come before generic ones)
   "DD_ShengTingZhuangYuan000": "Voidlands - Mundane Palace",
@@ -98,6 +97,7 @@ export const ZONE_NAMES: Record<string, string> = {
   "YJ_YongZhouHuiLang": "Voidlands - Gallery of Stars",
   "JH_YinNiShengTang": "Voidlands - Yesterday Chamber",
   "DiaoLingWangYu": "Voidlands - Dreamless Abyss",
+  "DD_ShengTingZhuangYuan": "Voidlands - Sacred Court Manor",
 };
 
 // Ambiguous zones that appear in multiple regions with same path

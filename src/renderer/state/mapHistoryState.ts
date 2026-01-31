@@ -2,12 +2,14 @@
 
 import { MapEntry } from '../mapHistory/zoneMappings.js';
 import { getItemDatabase } from './inventoryState.js';
+import { FLAME_ELEMENTIUM_ID } from '../constants.js';
 
 // Map history storage
 let mapHistory: MapEntry[] = [];
 let currentMap: MapEntry | null = null;
 let mapStartInventory: Map<string, number> = new Map(); // baseId -> quantity at map start
 let mapEndInventory: Map<string, number> = new Map(); // baseId -> quantity at map end
+let mapPriceCache: any = null; // Price cache at the time of the map
 
 /**
  * Parse timestamp string to Date object
@@ -77,10 +79,11 @@ export function startMap(startTime: string, zonePath?: string, levelId?: number)
     zonePath,
     levelId
   };
-  
+
   // Reset inventory tracking for this map
   mapStartInventory.clear();
   mapEndInventory.clear();
+  mapPriceCache = null;
 }
 
 /**
@@ -103,18 +106,22 @@ export function endMap(endTime: string): void {
   if (!isHideout) {
     addMapEntry({ ...currentMap });
   }
-  
+
   // Clear current map
   currentMap = null;
   mapStartInventory.clear();
   mapEndInventory.clear();
+  mapPriceCache = null;
 }
 
 /**
  * Set inventory snapshot at map start
  */
-export function setMapStartInventory(inventory: Map<string, number>): void {
+export function setMapStartInventory(inventory: Map<string, number>, priceCache?: any): void {
   mapStartInventory = new Map(inventory);
+  if (priceCache) {
+    mapPriceCache = priceCache;
+  }
 }
 
 /**
@@ -126,20 +133,52 @@ export function setMapEndInventory(inventory: Map<string, number>): void {
 
 /**
  * Calculate profit for the current map based on inventory changes
- * This is a simplified calculation that could be enhanced with price data
+ * Profit is calculated by finding items that increased in quantity and
+ * multiplying the quantity gain by the item's price from the price cache
  */
 function calculateMapProfit(): number | null {
+  if (!mapPriceCache || mapPriceCache === null) {
+    return null;
+  }
+
   if (mapStartInventory.size === 0 && mapEndInventory.size === 0) {
     return null; // Not enough data
   }
 
-  // For now, return 0 - this would be enhanced with actual item prices later
-  // Future implementation would:
-  // 1. Get price data from price tracker
-  // 2. Calculate value of items at start
-  // 3. Calculate value of items at end
-  // 4. Return the difference
-  return 0;
+  let profit = 0;
+
+  // Check all items that were present at start OR are present at end
+  const allBaseIds = new Set([...mapStartInventory.keys(), ...mapEndInventory.keys()]);
+
+  for (const baseId of allBaseIds) {
+    const startQty = mapStartInventory.get(baseId) || 0;
+    const endQty = mapEndInventory.get(baseId) || 0;
+    const quantityChange = endQty - startQty;
+
+    // Only count gains (positive changes)
+    if (quantityChange > 0) {
+      let itemPrice: number | null = null;
+
+      // Flame Elementium (FE) is currency, always has price 1
+      if (baseId === FLAME_ELEMENTIUM_ID) {
+        itemPrice = 1;
+      } else {
+        const priceEntry = mapPriceCache[baseId];
+        if (priceEntry && priceEntry.price) {
+          itemPrice = priceEntry.price;
+        } else {
+          continue; // Skip items without price
+        }
+      }
+
+      if (itemPrice !== null) {
+        const itemProfit = quantityChange * itemPrice;
+        profit += itemProfit;
+      }
+    }
+  }
+
+  return profit;
 }
 
 /**
@@ -150,6 +189,7 @@ export function clearMapHistory(): void {
   currentMap = null;
   mapStartInventory.clear();
   mapEndInventory.clear();
+  mapPriceCache = null;
 }
 
 /**

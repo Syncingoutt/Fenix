@@ -244,12 +244,7 @@ function formatTimestamp(timestampStr: string): string {
  * Format currency value
  */
 function formatCurrency(value: number): string {
-  if (Math.abs(value) >= 1000000) {
-    return `${(value / 1000000).toFixed(1)}M`;
-  } else if (Math.abs(value) >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`;
-  }
-  return value.toFixed(0);
+  return value.toFixed(2);
 }
 
 /**

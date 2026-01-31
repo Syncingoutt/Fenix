@@ -1,9 +1,11 @@
 // Map tracker service for tracking map runs from log file
 
-import { MapEvent } from '../types.js';
-import { startMap, endMap, getCurrentMap } from '../state/mapHistoryState.js';
+import { MapEvent, ElectronAPI } from '../types.js';
+import { startMap, endMap, getCurrentMap, setMapStartInventory, setMapEndInventory } from '../state/mapHistoryState.js';
 import { getZoneDisplayName } from './zoneMappings.js';
 import { getCurrentItems } from '../state/inventoryState.js';
+
+declare const electronAPI: ElectronAPI;
 
 // Callback for when a map ends and average time should be updated
 let onMapEndCallback: (() => void) | null = null;
@@ -24,10 +26,6 @@ let isMapTrackingInitialized = false;
 let lastProcessedEventIndex = -1; // Track by index instead of timestamp
 let cachedMapEvents: MapEvent[] = [];
 
-declare const electronAPI: {
-  getMapEvents: () => Promise<MapEvent[]>;
-};
-
 /**
  * Initialize map tracking
  */
@@ -35,21 +33,19 @@ export async function initializeMapTracking(): Promise<void> {
   if (isMapTrackingInitialized) {
     return;
   }
-  
-  console.log('[MapTracker] Initializing map tracking');
-  
+
   // Read initial position from local storage
   const savedPosition = localStorage.getItem('mapTrackingLastPosition');
   if (savedPosition) {
     lastReadPosition = parseInt(savedPosition, 10);
   }
-  
+
   // Load map events from main process
   await refreshMapEvents();
-  
+
   // Process existing log entries to build initial state
   processMapEvents(true);
-  
+
   isMapTrackingInitialized = true;
 }
 
@@ -73,21 +69,21 @@ export async function processMapEvents(initialSetup: boolean = false): Promise<v
   try {
     // Refresh events from main process
     await refreshMapEvents();
-    
+
     if (cachedMapEvents.length === 0) {
       return;
     }
-    
+
     // Process events starting from where we left off
     const startIndex = lastProcessedEventIndex + 1;
-    
+
     for (let i = startIndex; i < cachedMapEvents.length; i++) {
       const event = cachedMapEvents[i];
-      
-      processMapEvent(event, initialSetup);
+
+      await processMapEvent(event, initialSetup);
       lastProcessedEventIndex = i;
     }
-    
+
   } catch (error) {
     console.error('[MapTracker] Error processing map events:', error);
   }
@@ -96,16 +92,16 @@ export async function processMapEvents(initialSetup: boolean = false): Promise<v
 /**
  * Process a single map event
  */
-function processMapEvent(event: MapEvent, initialSetup: boolean): void {
+async function processMapEvent(event: MapEvent, initialSetup: boolean): Promise<void> {
   const currentMap = getCurrentMap();
-  
+
   switch (event.eventType) {
     case 'map_start':
-      handleMapStart(event, initialSetup);
+      await handleMapStart(event, initialSetup);
       break;
-      
+
     case 'map_end':
-      handleMapEnd(event, initialSetup);
+      await handleMapEnd(event, initialSetup);
       break;
   }
 }
@@ -113,15 +109,14 @@ function processMapEvent(event: MapEvent, initialSetup: boolean): void {
 /**
  * Handle map start event
  */
-function handleMapStart(event: MapEvent, initialSetup: boolean): void {
+async function handleMapStart(event: MapEvent, initialSetup: boolean): Promise<void> {
   const currentMap = getCurrentMap();
-  
+
   // Check if this is a hideout/hub zone
   const isHideout = event.isHideout || false;
-  
+
   // If there's a current map without an end time, end it now
   if (currentMap && !currentMap.endTime) {
-    console.log('[MapTracker] Ending previous map without end event');
     if (!initialSetup) {
       endMap(event.timestamp);
     } else {
@@ -130,16 +125,15 @@ function handleMapStart(event: MapEvent, initialSetup: boolean): void {
       getCurrentMap; // Force check
     }
   }
-  
+
   // Start a new map (hideouts are tracked but not saved to history)
   if (!initialSetup) {
-    const zoneName = event.zonePath 
+    const zoneName = event.zonePath
       ? getZoneDisplayName(event.zonePath, event.levelId)
       : 'Unknown Zone';
-    
-    console.log(`[MapTracker] Starting ${isHideout ? 'hideout' : 'map'}: ${zoneName}`);
+
     startMap(event.timestamp, event.zonePath, event.levelId);
-    
+
     // Mark hideout maps so we can exclude them from history
     if (isHideout) {
       const currentMap = getCurrentMap();
@@ -147,13 +141,16 @@ function handleMapStart(event: MapEvent, initialSetup: boolean): void {
         (currentMap as any).isHideout = true;
       }
     }
+
+    // Capture inventory snapshot at map start
+    await captureInventorySnapshot('start');
   }
 }
 
 /**
  * Handle map end event
  */
-function handleMapEnd(event: MapEvent, initialSetup: boolean): void {
+async function handleMapEnd(event: MapEvent, initialSetup: boolean): Promise<void> {
   const currentMap = getCurrentMap();
 
   if (currentMap && !currentMap.endTime) {
@@ -162,7 +159,9 @@ function handleMapEnd(event: MapEvent, initialSetup: boolean): void {
         ? getZoneDisplayName(currentMap.zonePath, currentMap.levelId)
         : 'Unknown Zone';
 
-      console.log(`[MapTracker] Ending map: ${zoneName}, duration: ${currentMap.duration || 'unknown'}`);
+      // Capture inventory snapshot at map end before ending the map
+      await captureInventorySnapshot('end');
+
       endMap(event.timestamp);
 
       // Call callback to update average time per map display
@@ -173,6 +172,37 @@ function handleMapEnd(event: MapEvent, initialSetup: boolean): void {
       // During initial setup, skip ending maps
       // We'll rebuild map history later
     }
+  }
+}
+
+/**
+ * Capture inventory snapshot for map tracking
+ * @param when - 'start' or 'end' to indicate when the snapshot is being taken
+ */
+async function captureInventorySnapshot(when: 'start' | 'end'): Promise<void> {
+  try {
+    const currentItems = getCurrentItems();
+
+    // Convert inventory to a Map of baseId -> totalQuantity
+    const inventorySnapshot = new Map<string, number>();
+    for (const item of currentItems) {
+      inventorySnapshot.set(item.baseId, item.totalQuantity);
+    }
+
+    // Get price cache (only needed at map start)
+    let priceCache = null;
+    if (when === 'start') {
+      priceCache = await electronAPI.getPriceCache();
+    }
+
+    // Store the snapshot
+    if (when === 'start') {
+      setMapStartInventory(inventorySnapshot, priceCache);
+    } else {
+      setMapEndInventory(inventorySnapshot);
+    }
+  } catch (error) {
+    // Silent fail - if we can't capture inventory, skip it
   }
 }
 

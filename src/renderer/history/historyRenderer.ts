@@ -721,8 +721,6 @@ async function renderAggregatedInventory(items: { [baseId: string]: { name: stri
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const isToday = selectedDate === today;
 
-  console.log('[History] Today:', today, 'Selected:', selectedDate, 'isToday:', isToday, 'compareWithToday:', compareWithToday);
-
   // First, calculate all prices and totals for filtering
   const itemsWithPrices = Object.entries(items).map(([baseId, item]) => {
     let price: number;
@@ -776,7 +774,6 @@ async function renderAggregatedInventory(items: { [baseId: string]: { name: stri
   });
 
   return filteredItems.map(({ baseId, item, price, total }) => {
-    console.log(`[History] ${item.name} (${baseId}): price=${price}, total=${total}`);
     return `
       <div class="history-inventory-item">
         <div class="history-inventory-item-name">
@@ -1094,8 +1091,6 @@ async function makeLabelEditable(label: HTMLElement): Promise<void> {
 
     // Update hour selector dropdown options (without closing edit mode)
     updateHourSelectorOptions();
-
-    console.log(`Updated hour ${hourNumber} name to: ${bucket.customName}`);
   };
 
   // Save on Enter key
