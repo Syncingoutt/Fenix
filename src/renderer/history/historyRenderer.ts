@@ -31,20 +31,64 @@ let eventListenersInitialized = false;
 // Track if dropdown listeners have been initialized
 let dropdownListenersInitialized = false;
 
+// Track if this is initial page load (for animation)
+let isInitialLoad = true;
+
+// Track if we've played the animation when switching from "All Hours" to a specific hour
+let hasPlayedFirstHourAnimation = false;
+
+// Track last selected date and hour to detect what changed
+let lastSelectedDate: string | null = null;
+let lastSelectedHour: number | null = null;
+
 /**
  * Initialize and render the history page
  */
 export async function renderHistoryPage(): Promise<void> {
   await loadHistoryData();
 
+  // Reset tracking variables on initial load to detect first change properly
+  if (isInitialLoad) {
+    lastSelectedDate = null;
+    lastSelectedHour = null;
+  }
+
+  // Get current selections
+  const currentSelectedDate = getSelectedDate();
+  const currentSelectedHour = getSelectedHour();
+
+  // Detect what changed
+  const dateChanged = lastSelectedDate !== currentSelectedDate;
+  const hourChanged = lastSelectedHour !== currentSelectedHour;
+
+  // Detect transition from "All Hours" (null) to a specific hour (BEFORE updating tracking)
+  const isTransitioningFromAllHoursToHour = !hasPlayedFirstHourAnimation && hourChanged && lastSelectedHour === null && currentSelectedHour !== null;
+
+  // Reset first hour animation flag when changing dates
+  if (dateChanged) {
+    hasPlayedFirstHourAnimation = false;
+  }
+
+  // Update tracking
+  lastSelectedDate = currentSelectedDate;
+  lastSelectedHour = currentSelectedHour;
+
   // Auto-select the latest date if no date is currently selected
   const dates = getHistoryDates();
-  if (dates.length > 0 && getSelectedDate() === null) {
+  if (dates.length > 0 && currentSelectedDate === null) {
     setSelectedDate(dates[0].date);
   }
 
+  // Animate on: initial load OR first transition from "All Hours" to specific hour OR hour change (but NOT on date change)
+  const shouldAnimate = isInitialLoad || isTransitioningFromAllHoursToHour || (!dateChanged && hourChanged);
+
+  // Mark that we've played the first hour animation
+  if (isTransitioningFromAllHoursToHour) {
+    hasPlayedFirstHourAnimation = true;
+  }
+
   renderDateSidebar();
-  renderOverview();
+  renderOverview(shouldAnimate);
   renderHourSelector();
   renderInventory();
   renderPriceComparison();
@@ -55,6 +99,8 @@ export async function renderHistoryPage(): Promise<void> {
     initializeEventListeners();
     eventListenersInitialized = true;
   }
+
+  isInitialLoad = false;
 }
 
 /**
@@ -226,8 +272,13 @@ function renderDateSidebar(): void {
 /**
  * Render the overview section
  */
-function renderOverview(): void {
+function renderOverview(animate: boolean = true): void {
   const stats = getOverviewStats();
+
+  // Trigger animation on initial load or when switching hours (not on date change)
+  if (animate) {
+    triggerOverviewAnimation();
+  }
 
   // Update DOM elements
   const totalDurationEl = document.getElementById('historyTotalDuration');
@@ -256,6 +307,35 @@ function renderOverview(): void {
 
   // Render graph in background
   renderOverviewGraph();
+}
+
+/**
+ * Trigger the overview animation by removing and re-adding animation classes
+ */
+function triggerOverviewAnimation(): void {
+  const overview = document.querySelector('.history-overview') as HTMLElement;
+  const title = document.querySelector('.history-overview-title') as HTMLElement;
+  const statItems = document.querySelectorAll('.history-stat-item') as NodeListOf<HTMLElement>;
+
+  // Remove animations first
+  if (overview) {
+    overview.style.animation = 'none';
+    // Force reflow
+    void overview.offsetWidth;
+    overview.style.animation = '';
+  }
+
+  if (title) {
+    title.style.animation = 'none';
+    void title.offsetWidth;
+    title.style.animation = '';
+  }
+
+  statItems.forEach(item => {
+    item.style.animation = 'none';
+    void item.offsetWidth;
+    item.style.animation = '';
+  });
 }
 
 /**
