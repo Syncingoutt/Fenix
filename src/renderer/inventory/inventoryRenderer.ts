@@ -1,7 +1,7 @@
 // Inventory list rendering
 
 import { InventoryItem } from '../types.js';
-import { getSortedAndFilteredItems, getPageLabel } from './inventoryLogic.js';
+import { getSortedAndFilteredItems } from './inventoryLogic.js';
 import { getWealthMode, getIsHourlyActive } from '../state/wealthState.js';
 import { getCurrentSortBy, getCurrentSortOrder } from '../state/inventoryState.js';
 import { applyTax } from '../utils/tax.js';
@@ -49,20 +49,18 @@ export function renderInventory(): void {
       const totalValue = item.price !== null ? item.price * item.totalQuantity : null;
       // Apply tax to total value (but not to base price)
       const totalValueAfterTax = totalValue !== null ? applyTax(totalValue, item.baseId) : null;
-      const pageLabel = getPageLabel(item);
 
       const priceAgeClass = getPriceAgeClass(item.priceTimestamp);
-      
+
       return `
       <div class="item-row">
         <div class="item-name">
-          <img src="../../assets/${item.baseId}.webp" 
-               alt="${item.itemName}" 
+          <img src="../../assets/${item.baseId}.webp"
+               alt="${item.itemName}"
                class="item-icon"
                onerror="this.style.display='none'">
           <div class="item-name-content">
             <div class="item-label">${item.itemName}</div>
-            ${pageLabel ? `<div class="page-label">${pageLabel}</div>` : ''}
           </div>
         </div>
         <div class="item-quantity">${item.totalQuantity.toLocaleString()}</div>

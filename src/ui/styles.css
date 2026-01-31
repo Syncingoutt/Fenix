@@ -811,6 +811,12 @@ img:not(.header-logo-pic) {
   border-top: none;
 }
 
+/* Hide inventory border on History page */
+.history-inventory-content #inventory {
+  border: none !important;
+  max-width: calc(1165px * var(--scale)) !important;
+}
+
 /* ============================================
    ITEM ROWS
    ============================================ */
@@ -3869,7 +3875,6 @@ body.overlay-widget {
 }
 
 .history-inventory-content {
-  max-height: calc(500px * var(--scale));
   overflow-y: auto;
   /* Hide scrollbar but allow scrolling */
   scrollbar-width: none;
