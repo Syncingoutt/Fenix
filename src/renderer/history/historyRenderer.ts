@@ -18,6 +18,13 @@ declare const electronAPI: ElectronAPI;
 
 let compareWithToday = false;
 
+// Search state
+let historySearchQuery: string = '';
+
+// Sort state
+let historySortBy: 'priceUnit' | 'priceTotal' = 'priceTotal';
+let historySortOrder: 'asc' | 'desc' = 'desc';
+
 // Track if event listeners have been initialized
 let eventListenersInitialized = false;
 
@@ -38,6 +45,7 @@ export async function renderHistoryPage(): Promise<void> {
   renderHourSelector();
   renderInventory();
   renderPriceComparison();
+  updateSortIndicators();
 
   // Initialize event listeners once
   if (!eventListenersInitialized) {
@@ -83,6 +91,45 @@ function initializeEventListeners(): void {
     checkbox.addEventListener('change', () => {
       compareWithToday = checkbox.checked;
       renderInventory();
+    });
+  }
+
+  // Search input handler
+  const searchInput = document.getElementById('historySearchInput') as HTMLInputElement;
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      historySearchQuery = searchInput.value.trim().toLowerCase();
+      renderInventory();
+    });
+  }
+
+  // Sort header click handlers
+  const priceSingleSort = document.querySelector('.history-inventory-price-single[data-sort]') as HTMLElement;
+  const priceTotalSort = document.querySelector('.history-inventory-price-total[data-sort]') as HTMLElement;
+
+  if (priceSingleSort) {
+    priceSingleSort.addEventListener('click', () => {
+      if (historySortBy === 'priceUnit') {
+        historySortOrder = historySortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        historySortBy = 'priceUnit';
+        historySortOrder = 'desc';
+      }
+      renderInventory();
+      updateSortIndicators();
+    });
+  }
+
+  if (priceTotalSort) {
+    priceTotalSort.addEventListener('click', () => {
+      if (historySortBy === 'priceTotal') {
+        historySortOrder = historySortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        historySortBy = 'priceTotal';
+        historySortOrder = 'desc';
+      }
+      renderInventory();
+      updateSortIndicators();
     });
   }
 
@@ -349,6 +396,9 @@ function renderInventory(): void {
   renderAggregatedInventory(aggregatedItems, data.date).then(html => {
     inventoryContent.innerHTML = html;
   });
+
+  // Update sort indicators
+  updateSortIndicators();
 }
 
 /**
@@ -376,14 +426,15 @@ function aggregateBuckets(buckets: { inventorySnapshot: string }[]): { [baseId: 
     const itemRows = tempDiv.querySelectorAll('.item-row, .history-inventory-item');
 
     itemRows.forEach(row => {
-      const nameEl = row.querySelector('.item-name, .history-inventory-item-name span');
+      const nameEl = row.querySelector('.item-name-content, .history-inventory-item-name-content');
       const qtyEl = row.querySelector('.item-quantity, .history-inventory-item-quantity');
-      const priceEl = row.querySelector('.price-single, .history-inventory-item-price');
-      const totalEl = row.querySelector('.price-total, .history-inventory-item-total');
+      const priceEl = row.querySelector('.price-single, .history-inventory-item-price-single');
+      const totalEl = row.querySelector('.price-total, .history-inventory-item-price-total');
       const iconEl = row.querySelector('.item-icon, .history-inventory-item-icon');
 
       if (nameEl) {
-        const name = nameEl.textContent.trim();
+        const labelEl = nameEl.querySelector('.item-label, .history-inventory-item-label');
+        const name = labelEl ? labelEl.textContent.trim() : '';
         const quantity = parseFloat(qtyEl?.textContent?.replace(/,/g, '') || '0');
         const price = parseFloat(priceEl?.textContent?.replace(/,/g, '') || '0');
         const total = parseFloat(totalEl?.textContent?.replace(/,/g, '') || '0');
@@ -422,69 +473,77 @@ async function renderAggregatedInventory(items: { [baseId: string]: { name: stri
 
   console.log('[History] Today:', today, 'Selected:', selectedDate, 'isToday:', isToday, 'compareWithToday:', compareWithToday);
 
-  return Object.entries(items)
-    .map(([baseId, item]) => {
-      let price: number;
-      let total: number;
+  // First, calculate all prices and totals for filtering
+  const itemsWithPrices = Object.entries(items).map(([baseId, item]) => {
+    let price: number;
+    let total: number;
 
-      // Log cache entry for this item
-      const cacheEntry = priceCache[baseId];
-      if (cacheEntry) {
-        console.log(`[History] Cache entry for ${item.name}:`, {
-          currentPrice: cacheEntry.price,
-          hasHistory: !!cacheEntry.history,
-          historyLength: cacheEntry.history?.length
-        });
-      }
+    const cacheEntry = priceCache[baseId];
 
-      // Flame Elementium is the currency, always has price 1
-      if (baseId === FLAME_ELEMENTIUM_ID) {
-        price = 1;
-        total = item.quantity;
-      } else if (compareWithToday && priceCache[baseId]) {
-        // Compare with today's prices is checked - use current price from cache
-        price = priceCache[baseId].price;
+    // Flame Elementium is the currency, always has price 1
+    if (baseId === FLAME_ELEMENTIUM_ID) {
+      price = 1;
+      total = item.quantity;
+    } else if (compareWithToday && priceCache[baseId]) {
+      price = priceCache[baseId].price;
+      total = price * item.quantity;
+    } else if (isToday && priceCache[baseId]) {
+      price = priceCache[baseId].price;
+      total = price * item.quantity;
+    } else if (priceCache[baseId]?.history) {
+      const history = priceCache[baseId].history;
+      const dayHistory = history.filter(h => h.date.startsWith(selectedDate));
+
+      if (dayHistory.length > 0) {
+        price = dayHistory[dayHistory.length - 1].price;
         total = price * item.quantity;
-        console.log(`[History] ${item.name}: Compare mode, using price ${price} from cache`);
-      } else if (isToday && priceCache[baseId]) {
-        // Selected date is today - use current price from cache
-        price = priceCache[baseId].price;
-        total = price * item.quantity;
-        console.log(`[History] ${item.name}: Today selected, using price ${price} from cache`);
-      } else if (priceCache[baseId]?.history) {
-        // Historical date - get the last price of that day from history
-        const history = priceCache[baseId].history;
-        const dayHistory = history.filter(h => h.date.startsWith(selectedDate));
-
-        if (dayHistory.length > 0) {
-          // Use the last price of the day (most recent check)
-          price = dayHistory[dayHistory.length - 1].price;
-          total = price * item.quantity;
-        } else {
-          // No history for this day - fallback to average from snapshots
-          price = item.quantity > 0 ? item.total / item.quantity : 0;
-          total = item.total;
-        }
       } else {
-        // No price data at all - fallback to average from snapshots
         price = item.quantity > 0 ? item.total / item.quantity : 0;
         total = item.total;
       }
+    } else {
+      price = item.quantity > 0 ? item.total / item.quantity : 0;
+      total = item.total;
+    }
 
-      console.log(`[History] ${item.name} (${baseId}): price=${price}, total=${total}`);
-      return `
-        <div class="history-inventory-item">
-          <div class="history-inventory-item-name">
-            <img src="${item.iconPath}" alt="${item.name}" class="history-inventory-item-icon" onerror="this.style.display='none'">
-            <span>${item.name}</span>
+    return { baseId, item, price, total };
+  });
+
+  // Filter by search query
+  const filteredItems = itemsWithPrices.filter(({ item }) => {
+    if (historySearchQuery && !item.name.toLowerCase().includes(historySearchQuery)) {
+      return false;
+    }
+    return true;
+  });
+
+  // Sort items
+  filteredItems.sort((a, b) => {
+    const aValue = historySortBy === 'priceUnit' ? a.price : a.total;
+    const bValue = historySortBy === 'priceUnit' ? b.price : b.total;
+    const comparison = aValue - bValue;
+    return historySortOrder === 'desc' ? -comparison : comparison;
+  });
+
+  return filteredItems.map(({ baseId, item, price, total }) => {
+    console.log(`[History] ${item.name} (${baseId}): price=${price}, total=${total}`);
+    return `
+      <div class="history-inventory-item">
+        <div class="history-inventory-item-name">
+          <img src="${item.iconPath}" alt="${item.name}" class="history-inventory-item-icon" onerror="this.style.display='none'">
+          <div class="history-inventory-item-name-content">
+            <div class="history-inventory-item-label">${item.name}</div>
           </div>
-          <div class="history-inventory-item-quantity">${formatNumber(item.quantity)}</div>
-          <div class="history-inventory-item-price ${compareWithToday ? 'highlighted' : ''}">${formatNumber(price)}</div>
-          <div class="history-inventory-item-total">${formatNumber(total)}</div>
         </div>
-      `;
-    })
-    .join('');
+        <div class="history-inventory-item-quantity">${formatInteger(item.quantity)}</div>
+        <div class="history-inventory-item-price">
+          <div class="history-inventory-item-price-single">${price.toFixed(2)}</div>
+          <div class="history-inventory-item-price-total">${total.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+  })
+  .join('');
 }
 
 /**
@@ -519,6 +578,37 @@ function formatHour(hour: number): string {
  */
 function formatNumber(num: number): string {
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Format integer (for quantity) - no decimals
+ */
+function formatInteger(num: number): string {
+  return Math.floor(num).toLocaleString('en-US');
+}
+
+/**
+ * Update sort indicators in the UI
+ */
+function updateSortIndicators(): void {
+  const priceSingleSort = document.querySelector('.history-inventory-price-single[data-sort]') as HTMLElement;
+  const priceTotalSort = document.querySelector('.history-inventory-price-total[data-sort]') as HTMLElement;
+
+  if (priceSingleSort) {
+    priceSingleSort.classList.remove('sort-active', 'sort-asc', 'sort-desc');
+    if (historySortBy === 'priceUnit') {
+      priceSingleSort.classList.add('sort-active');
+      priceSingleSort.classList.add(historySortOrder === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  }
+
+  if (priceTotalSort) {
+    priceTotalSort.classList.remove('sort-active', 'sort-asc', 'sort-desc');
+    if (historySortBy === 'priceTotal') {
+      priceTotalSort.classList.add('sort-active');
+      priceTotalSort.classList.add(historySortOrder === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  }
 }
 
 /**
