@@ -616,8 +616,21 @@ function renderInventory(): void {
   }
 
   // If single hour selected, use saved inventory snapshot from bucket
+  // But if compareWithToday is enabled, parse and re-render with updated prices
   if (selectedHour !== null && bucketsToShow.length > 0) {
-    inventoryContent.innerHTML = bucketsToShow[0].inventorySnapshot;
+    if (compareWithToday) {
+      // Parse the inventory snapshot to extract items and re-render with latest prices
+      const aggregatedItems = aggregateBuckets(bucketsToShow);
+      if (Object.keys(aggregatedItems).length === 0) {
+        inventoryContent.innerHTML = '<div class="history-empty-state">No items found</div>';
+      } else {
+        renderAggregatedInventory(aggregatedItems, data.date).then(html => {
+          inventoryContent.innerHTML = html;
+        });
+      }
+    } else {
+      inventoryContent.innerHTML = bucketsToShow[0].inventorySnapshot;
+    }
     return;
   }
 

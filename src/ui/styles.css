@@ -4231,7 +4231,7 @@ body.overlay-widget {
 
 .edit-mode-label {
   font-size: calc(var(--text-body) * var(--text-scale));
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text);
   font-family: "Manrope", sans-serif;
 }
