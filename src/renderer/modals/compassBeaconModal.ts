@@ -155,27 +155,6 @@ export function showCompassBeaconSelection(): void {
     });
   };
   
-  // Helper: Update confirm button visibility
-  const updateConfirmButtonVisibility = (): void => {
-    const confirmBtn = document.getElementById('compassBeaconSelectionConfirm');
-    if (confirmBtn) {
-      const hasOtherSelections = Array.from(checkedItemsSet).some(id => id !== '5028');
-      if (hasOtherSelections) {
-        confirmBtn.style.display = 'block';
-        setTimeout(() => {
-          confirmBtn.classList.add('visible');
-        }, 10);
-      } else {
-        confirmBtn.classList.remove('visible');
-        setTimeout(() => {
-          if (!confirmBtn.classList.contains('visible')) {
-            confirmBtn.style.display = 'none';
-          }
-        }, 300);
-      }
-    }
-  };
-  
   // Helper: Update checked state when checkbox changes
   const handleCheckboxChange = (baseId: string, checked: boolean): void => {
     if (checked) {
@@ -183,7 +162,6 @@ export function showCompassBeaconSelection(): void {
     } else {
       checkedItemsSet.delete(baseId);
     }
-    updateConfirmButtonVisibility();
   };
   
   // Helper: Create checkbox element for an item
@@ -305,8 +283,7 @@ export function showCompassBeaconSelection(): void {
     clearBtn.onclick = () => {
       checkedItemsSet.clear();
       checkedItemsSet.add('5028');
-      updateConfirmButtonVisibility();
-      
+
       const currentQuery = searchInput?.value.trim() || '';
       if (currentQuery === '') {
         renderItems(allItemGroups, true);
@@ -316,38 +293,40 @@ export function showCompassBeaconSelection(): void {
       }
     };
   }
-  
+
   // Add Restore Last Selection handler
-  const restoreBtn = document.getElementById('compassBeaconRestore');
-  if (restoreBtn) {
-    restoreBtn.onclick = () => {
-      const lastSelectionJson = localStorage.getItem('lastCompassBeaconSelection');
-      if (lastSelectionJson) {
-        try {
-          const lastSelection = JSON.parse(lastSelectionJson) as string[];
-          
-          checkedItemsSet.clear();
-          lastSelection.forEach(baseId => {
-            checkedItemsSet.add(baseId);
-          });
-          
-          updateConfirmButtonVisibility();
-          
-          const currentQuery = searchInput?.value.trim() || '';
-          if (currentQuery === '') {
-            renderItems(allItemGroups, true);
-          } else {
-            const filteredGroups = allItemGroups.map(group => filterGroupItems(group, currentQuery));
-            renderItems(filteredGroups, true);
+  const restoreCheckbox = document.getElementById('compassBeaconRestore') as HTMLInputElement;
+  if (restoreCheckbox) {
+    restoreCheckbox.addEventListener('change', () => {
+      if (restoreCheckbox.checked) {
+        const lastSelectionJson = localStorage.getItem('lastCompassBeaconSelection');
+        if (lastSelectionJson) {
+          try {
+            const lastSelection = JSON.parse(lastSelectionJson) as string[];
+
+            checkedItemsSet.clear();
+            lastSelection.forEach(baseId => {
+              checkedItemsSet.add(baseId);
+            });
+
+            const currentQuery = searchInput?.value.trim() || '';
+            if (currentQuery === '') {
+              renderItems(allItemGroups, true);
+            } else {
+              const filteredGroups = allItemGroups.map(group => filterGroupItems(group, currentQuery));
+              renderItems(filteredGroups, true);
+            }
+          } catch (e) {
+            console.error('Failed to restore last selection:', e);
+            restoreCheckbox.checked = false;
           }
-        } catch (e) {
-          console.error('Failed to restore last selection:', e);
+        } else {
+          restoreCheckbox.checked = false;
         }
       }
-    };
+    });
   }
-  
-  updateConfirmButtonVisibility();
+
   modal.classList.add('active');
 }
 

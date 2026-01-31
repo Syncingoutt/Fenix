@@ -2608,8 +2608,17 @@ img:not(.header-logo-pic) {
   text-align: center;
 }
 
+.compass-beacon-header-row {
+  display: flex;
+  align-items: center;
+  gap: calc(16px * var(--scale));
+  margin-bottom: calc(16px * var(--scale));
+}
+
 .compass-beacon-search-container {
   position: relative;
+  flex: 1;
+  max-width: calc(85% * var(--scale));
 }
 
 .compass-beacon-search-container .search-icon {
@@ -2646,26 +2655,27 @@ img:not(.header-logo-pic) {
 }
 
 .compass-beacon-helper-actions {
-  margin-bottom: calc(16px * var(--scale));
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  white-space: nowrap;
 }
 
-.compass-beacon-restore-link {
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
+.compass-beacon-restore-checkbox {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--scale));
   font-family: "Manrope", sans-serif;
-  font-size: calc(var(--text-small) * var(--text-scale));
+  font-size: calc(var(--text-medium) * var(--scale));
   color: var(--text);
   cursor: pointer;
-  transition: color 0.2s;
+  user-select: none;
 }
 
-.compass-beacon-restore-link:hover {
-  color: var(--primary);
-  text-decoration-color: var(--primary);
+.compass-beacon-restore-checkbox input[type="checkbox"] {
+  width: calc(18px * var(--scale));
+  height: calc(18px * var(--scale));
+  cursor: pointer;
+  accent-color: var(--primary);
 }
 
 .compass-beacon-clear-btn {
@@ -2819,25 +2829,16 @@ img:not(.header-logo-pic) {
   cursor: pointer;
   z-index: 10;
   box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(0, 0, 0, 0.15);
-  opacity: 0;
-  transform: translateX(calc(100px * var(--scale)));
-  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-  pointer-events: none;
-}
-
-.compass-beacon-confirm-btn.visible {
-  opacity: 1;
-  transform: translateX(0);
-  pointer-events: all;
+  transition: background 0.2s, transform 0.2s;
 }
 
 .compass-beacon-confirm-btn:hover {
   background: #c24f09;
-  transform: translateX(0) translateY(calc(-2px * var(--scale)));
+  transform: translateY(calc(-2px * var(--scale)));
 }
 
 .compass-beacon-confirm-btn:active {
-  transform: translateX(0) translateY(0);
+  transform: translateY(0);
 }
 
 .compass-beacon-btn-primary {
@@ -4605,4 +4606,8 @@ body.overlay-widget {
 
 .delete-hours-modal-btn.danger:active {
   transform: scale(0.98);
+}
+
+.container-small .subtext {
+  opacity: 0.85;
 }

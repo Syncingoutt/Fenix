@@ -156,7 +156,7 @@
             </div>
           <div class="container-small" id="timer-container">
             <div id="timer" class="maintext">00:00:00</div>
-            <div class="subtext">Duration</div>
+            <div class="subtext">Avg time per map: 00:00</div>
             <button class="timer-btn" id="resetRealtimeBtn" style="display: none;">Reset Timer</button>
             
             <div class="hourly-controls" id="hourlyControls">
@@ -579,22 +579,27 @@
           <div class="compass-beacon-selection-title">Select Compasses & Beacons</div>
         </div>
         <div class="compass-beacon-selection-body">
-          <div class="compass-beacon-search-container">
-            <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="#7E7E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M19 19L14.65 14.65" stroke="#7E7E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <input type="text" id="compassBeaconSearch" class="compass-beacon-search" placeholder="Search compasses and beacons...">
-          </div>
-          <div class="compass-beacon-helper-actions" id="compassBeaconHelperActions" style="display: none;">
-            <button class="compass-beacon-restore-link" id="compassBeaconRestore">Reapply last selection</button>
+          <div class="compass-beacon-header-row">
+            <div class="compass-beacon-search-container">
+              <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="#7E7E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 19L14.65 14.65" stroke="#7E7E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <input type="text" id="compassBeaconSearch" class="compass-beacon-search" placeholder="Search compasses and beacons...">
+            </div>
+            <div class="compass-beacon-helper-actions" id="compassBeaconHelperActions" style="display: none;">
+              <label class="compass-beacon-restore-checkbox">
+                <input type="checkbox" id="compassBeaconRestore">
+                <span>Reapply last selection</span>
+              </label>
+            </div>
           </div>
           <button class="compass-beacon-clear-btn" id="compassBeaconSelectionClear">Clear Selection</button>
           <div class="compass-beacon-checkboxes" id="compassBeaconCheckboxes">
             <!-- Will be populated by JavaScript -->
           </div>
         </div>
-        <button class="compass-beacon-confirm-btn" id="compassBeaconSelectionConfirm" style="display: none;">Confirm</button>
+        <button class="compass-beacon-confirm-btn" id="compassBeaconSelectionConfirm">Confirm</button>
       </div>
     </div>
 
