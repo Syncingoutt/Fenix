@@ -188,13 +188,6 @@ export function initWealthEvents(
     }
   });
   
-  document.getElementById('compassBeaconSelectionModal')?.addEventListener('click', (e) => {
-    if (e.target === document.getElementById('compassBeaconSelectionModal')) {
-      const includedItems = getIncludedItems();
-      includedItems.clear();
-      hideCompassBeaconSelection();
-    }
-  });
   
   // Breakdown modal close button
   document.getElementById('closeBreakdown')?.addEventListener('click', closeBreakdownModal);
