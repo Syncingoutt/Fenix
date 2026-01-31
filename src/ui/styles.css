@@ -1295,7 +1295,8 @@ img:not(.header-logo-pic) {
   gap: calc(8px * var(--scale));
 }
 
-.container-small#timer {
+.container-small#timer-container {
+  position: relative;
   display: flex;
   flex-direction: column;
 }
@@ -4606,6 +4607,126 @@ body.overlay-widget {
 
 .delete-hours-modal-btn.danger:active {
   transform: scale(0.98);
+}
+
+/* ============================================
+   MAP HISTORY PAGE
+   ============================================ */
+
+#page-mapHistory {
+  padding: 0;
+  margin: 0;
+}
+
+.map-history-container {
+  display: flex;
+  flex-direction: column;
+  gap: calc(1rem * var(--scale));
+  margin-top: calc(1rem * var(--scale));
+}
+
+.map-history-overview {
+  background: var(--bg-shade);
+  padding: calc(1.5rem * var(--scale)) calc(2rem * var(--scale));
+  border: 1px solid var(--border);
+  border-radius: calc(8px * var(--scale));
+}
+
+.map-history-title {
+  font-size: calc(var(--text-title-large) * var(--text-scale));
+  color: var(--text);
+  margin: 0 0 calc(1rem * var(--scale)) 0;
+  font-family: "Manrope", sans-serif;
+}
+
+.map-history-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: calc(1rem * var(--scale));
+}
+
+.map-history-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--scale));
+}
+
+.map-history-stat-label {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.map-history-stat-value {
+  font-size: calc(var(--text-title) * var(--text-scale));
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.map-history-content {
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  padding: calc(1.5rem * var(--scale));
+  min-height: calc(300px * var(--scale));
+}
+
+.map-history-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(300px * var(--scale));
+  gap: calc(1rem * var(--scale));
+}
+
+.placeholder-text {
+  opacity: 0.7;
+  margin-bottom: calc(0.5rem * var(--scale));
+}
+
+.placeholder-list {
+  list-style: none;
+  text-align: left;
+}
+
+.placeholder-list li {
+  padding: calc(4px * var(--scale)) 0;
+  opacity: 0.5;
+  font-size: calc(var(--text-body) * var(--text-scale));
+}
+
+/* Map History Icon Button */
+.map-history-icon-btn {
+  position: absolute;
+  top: calc(8px * var(--scale));
+  right: calc(8px * var(--scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  padding: calc(6px * var(--scale));
+  border-radius: calc(4px * var(--scale));
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.map-history-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.map-history-icon-btn:active {
+  transform: scale(0.95);
+}
+
+.map-history-icon-btn svg {
+  width: calc(18px * var(--scale));
+  height: calc(18px * var(--scale));
 }
 
 .container-small .subtext {

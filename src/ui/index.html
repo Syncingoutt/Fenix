@@ -155,6 +155,14 @@
               <canvas class="wealth-graph" id="wealth-graph"></canvas> 
             </div>
           <div class="container-small" id="timer-container">
+            <button id="mapHistoryBtn" class="map-history-icon-btn" title="View Map History">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 4H8C6.89543 4 6 4.89543 6 6V18C6 19.1046 6.89543 20 8 20H16C17.1046 20 18 19.1046 18 18V6C18 4.89543 17.1046 4 16 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 16H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 8H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
             <div id="timer" class="maintext">00:00:00</div>
             <div class="subtext">Avg time per map: 00:00</div>
             <button class="timer-btn" id="resetRealtimeBtn" style="display: none;">Reset Timer</button>
@@ -447,6 +455,43 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page: Map History -->
+        <section id="page-mapHistory" class="page">
+          <div class="map-history-container">
+            <!-- Back Button -->
+            <button id="mapHistoryBackBtn" class="history-back-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Back</span>
+            </button>
+
+            <!-- Overview Section -->
+            <div class="map-history-overview">
+              <h1 class="map-history-title">Map History</h1>
+              <div class="map-history-stats">
+                <div class="map-history-stat-item">
+                  <div class="map-history-stat-label">Total Maps:</div>
+                  <div class="map-history-stat-value" id="mapHistoryTotalMaps">0</div>
+                </div>
+                <div class="map-history-stat-item">
+                  <div class="map-history-stat-label">Avg Duration:</div>
+                  <div class="map-history-stat-value" id="mapHistoryAvgDuration">0:00</div>
+                </div>
+                <div class="map-history-stat-item">
+                  <div class="map-history-stat-label">Total Profit:</div>
+                  <div class="map-history-stat-value" id="mapHistoryTotalProfit">0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="map-history-content" id="mapHistoryContent">
+              <!-- Map history data will be populated by JavaScript -->
             </div>
           </div>
         </section>

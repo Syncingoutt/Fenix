@@ -3,6 +3,7 @@
 import { ElectronAPI } from '../types.js';
 import { customTitleBar, titleBarMinimize, titleBarMaximize, titleBarClose } from '../dom/domElements.js';
 import { renderHistoryPage } from '../history/historyRenderer.js';
+import { renderMapHistoryPage } from '../mapHistory/mapHistoryRenderer.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -94,11 +95,15 @@ export function initUIEvents(
     const activePage = document.getElementById(`page-${pageId}`);
     if (activePage) activePage.classList.add('active');
 
-    // Hide header for history page using CSS class
-    if (pageId === 'history' && header) {
+    // Hide header for history and mapHistory pages using CSS class
+    if ((pageId === 'history' || pageId === 'mapHistory') && header) {
       header.classList.add('hidden');
       // Render history page when navigating to it
-      renderHistoryPage();
+      if (pageId === 'history') {
+        renderHistoryPage();
+      } else if (pageId === 'mapHistory') {
+        renderMapHistoryPage();
+      }
     } else if (header) {
       header.classList.remove('hidden');
     }
@@ -124,6 +129,22 @@ export function initUIEvents(
   const historyBackBtn = document.getElementById('historyBackBtn');
   if (historyBackBtn) {
     historyBackBtn.addEventListener('click', () => {
+      navigateToPage('home');
+    });
+  }
+
+  // Map history button navigation
+  const mapHistoryBtn = document.getElementById('mapHistoryBtn');
+  if (mapHistoryBtn) {
+    mapHistoryBtn.addEventListener('click', () => {
+      navigateToPage('mapHistory');
+    });
+  }
+
+  // Map history back button navigation
+  const mapHistoryBackBtn = document.getElementById('mapHistoryBackBtn');
+  if (mapHistoryBackBtn) {
+    mapHistoryBackBtn.addEventListener('click', () => {
       navigateToPage('home');
     });
   }
