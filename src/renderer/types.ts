@@ -73,6 +73,7 @@ export interface ElectronAPI {
   deleteHourlySession: (sessionId: string) => Promise<void>;
   clearAllHistory: () => Promise<void>;
   deleteBucketsByDateAndHour: (dateStr: string, hourNumber: number) => Promise<void>;
+  updateBucketCustomName: (dateStr: string, hourNumber: number, customName?: string) => Promise<void>;
 }
 
 export interface SavedHourlySession {
@@ -95,6 +96,7 @@ export interface HourlyBucket {
   pricesSnapshot: PriceCache; // Complete price cache at hour end
   includedItems: string[]; // Array of baseIds for tracked compasses/beacons
   usageSnapshot: { [baseId: string]: { used: number; purchased: number } }; // Compass/beacon usage (use object for JSON serialization)
+  customName?: string; // Optional custom name for the hour bucket
 }
 
 export interface ItemDatabase {

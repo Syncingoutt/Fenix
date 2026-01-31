@@ -8,7 +8,7 @@ import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
 import { PriceSyncService } from './core/priceSync';
-import { saveHourlySession, loadHourlySessions, deleteHourlySession, clearAllHistory, deleteBucketsByDateAndHour } from './core/hourlyHistory';
+import { saveHourlySession, loadHourlySessions, deleteHourlySession, clearAllHistory, deleteBucketsByDateAndHour, updateBucketCustomName } from './core/hourlyHistory';
 
 // Single instance lock - prevent multiple instances (CRITICAL for packaged apps)
 const gotTheLock = app.requestSingleInstanceLock();
@@ -1043,6 +1043,10 @@ ipcMain.handle('clear-all-history', async () => {
 
 ipcMain.handle('delete-buckets-by-date-hour', async (_event, dateStr: string, hourNumber: number) => {
   return deleteBucketsByDateAndHour(dateStr, hourNumber);
+});
+
+ipcMain.handle('update-bucket-custom-name', async (_event, dateStr: string, hourNumber: number, customName?: string) => {
+  return updateBucketCustomName(dateStr, hourNumber, customName);
 });
 
 // Log file watcher

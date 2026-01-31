@@ -96,5 +96,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadHourlySessions: () => ipcRenderer.invoke('load-hourly-sessions'),
   deleteHourlySession: (sessionId: string) => ipcRenderer.invoke('delete-hourly-session', sessionId),
   clearAllHistory: () => ipcRenderer.invoke('clear-all-history'),
-  deleteBucketsByDateAndHour: (dateStr: string, hourNumber: number) => ipcRenderer.invoke('delete-buckets-by-date-hour', dateStr, hourNumber)
+  deleteBucketsByDateAndHour: (dateStr: string, hourNumber: number) => ipcRenderer.invoke('delete-buckets-by-date-hour', dateStr, hourNumber),
+  updateBucketCustomName: (dateStr: string, hourNumber: number, customName?: string) => ipcRenderer.invoke('update-bucket-custom-name', dateStr, hourNumber, customName)
 });

@@ -151,7 +151,8 @@ function mergeBucketsByHour(buckets: HourlyBucket[]): HourlyBucket[] {
       inventorySnapshot: last.inventorySnapshot, // Use the latest inventory snapshot
       pricesSnapshot: last.pricesSnapshot, // Use the latest prices
       includedItems: last.includedItems,
-      usageSnapshot: mergedUsageSnapshot
+      usageSnapshot: mergedUsageSnapshot,
+      customName: hourBuckets.find(b => b.customName)?.customName // Preserve custom name if any bucket has one
     };
     
     mergedBuckets.push(mergedBucket);

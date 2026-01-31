@@ -115,7 +115,8 @@ function mergeBucketsByHour(buckets: HourlyBucket[]): HourlyBucket[] {
       inventorySnapshot: last.inventorySnapshot, // Use the latest inventory snapshot
       pricesSnapshot: last.pricesSnapshot, // Use the latest prices
       includedItems: last.includedItems,
-      usageSnapshot: mergedUsageSnapshot
+      usageSnapshot: mergedUsageSnapshot,
+      customName: hourBuckets.find(b => b.customName)?.customName // Preserve custom name if any bucket has one
     };
     
     mergedBuckets.push(mergedBucket);
@@ -202,6 +203,37 @@ export async function deleteBucketsByDateAndHour(dateStr: string, hourNumber: nu
     }
   } catch (error) {
     console.error('Failed to delete buckets:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update custom name for a specific bucket
+ */
+export async function updateBucketCustomName(dateStr: string, hourNumber: number, customName?: string): Promise<void> {
+  try {
+    const sessions = await loadHourlySessions();
+    let hasChanges = false;
+
+    for (const session of sessions) {
+      for (const bucket of session.buckets) {
+        const bucketDate = new Date(bucket.timestamp);
+        const bucketDateStr = formatDate(bucketDate);
+
+        if (bucketDateStr === dateStr && bucket.hourNumber === hourNumber) {
+          if (bucket.customName !== customName) {
+            bucket.customName = customName;
+            hasChanges = true;
+          }
+        }
+      }
+    }
+
+    if (hasChanges) {
+      await fs.promises.writeFile(HOURLY_HISTORY_FILE, JSON.stringify(sessions, null, 2));
+    }
+  } catch (error) {
+    console.error('Failed to update bucket custom name:', error);
     throw error;
   }
 }

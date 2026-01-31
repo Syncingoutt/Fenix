@@ -28,6 +28,9 @@ let historySortOrder: 'asc' | 'desc' = 'desc';
 // Track if event listeners have been initialized
 let eventListenersInitialized = false;
 
+// Track if dropdown listeners have been initialized
+let dropdownListenersInitialized = false;
+
 /**
  * Initialize and render the history page
  */
@@ -173,6 +176,20 @@ function initializeEventListeners(): void {
   }
   if (deleteSelectedHoursBtn) {
     deleteSelectedHoursBtn.addEventListener('click', () => {
+      showDeleteHoursModal();
+    });
+  }
+
+  // Delete hours modal actions
+  const deleteHoursCancelBtn = document.getElementById('deleteHoursCancelBtn');
+  const deleteHoursConfirmBtn = document.getElementById('deleteHoursConfirmBtn');
+  if (deleteHoursCancelBtn) {
+    deleteHoursCancelBtn.addEventListener('click', () => {
+      hideDeleteHoursModal();
+    });
+  }
+  if (deleteHoursConfirmBtn) {
+    deleteHoursConfirmBtn.addEventListener('click', () => {
       handleDeleteSelectedHours();
     });
   }
@@ -323,34 +340,174 @@ function renderGraph(canvas: HTMLCanvasElement, data: { time: number; value: num
 }
 
 /**
+ * Setup custom dropdown event handlers
+ */
+function setupCustomDropdown(): void {
+  const dropdownWrapper = document.getElementById('hourDropdownWrapper') as HTMLElement;
+  const dropdownTrigger = document.getElementById('hourDropdownTrigger') as HTMLElement;
+  const dropdownMenu = document.getElementById('hourDropdownMenu') as HTMLElement;
+
+  if (!dropdownWrapper || !dropdownTrigger || !dropdownMenu) return;
+
+  // Toggle dropdown on trigger click
+  dropdownTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdownWrapper.classList.toggle('open');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!dropdownWrapper.contains(e.target as Node)) {
+      dropdownWrapper.classList.remove('open');
+    }
+  });
+
+  // Handle keyboard navigation
+  dropdownTrigger.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      dropdownWrapper.classList.toggle('open');
+    } else if (e.key === 'Escape') {
+      dropdownWrapper.classList.remove('open');
+    }
+  });
+
+  // Attach click handler to menu using event delegation (only once)
+  dropdownMenu.addEventListener('click', handleDropdownOptionClick);
+}
+
+/**
+ * Handle dropdown option click
+ */
+function handleDropdownOptionClick(e: Event): void {
+  const target = e.target as HTMLElement;
+  const option = target.closest('.custom-dropdown-option') as HTMLElement;
+
+  if (!option) return;
+
+  e.stopPropagation();
+
+  const dropdownWrapper = document.getElementById('hourDropdownWrapper') as HTMLElement;
+  const dropdownValue = document.getElementById('hourDropdownValue') as HTMLElement;
+  const dropdownMenu = document.getElementById('hourDropdownMenu') as HTMLElement;
+
+  const value = option.getAttribute('data-value');
+  const hourNumber = value ? parseInt(value, 10) : null;
+
+  // Update selected value
+  setSelectedHour(hourNumber);
+  if (dropdownValue) {
+    dropdownValue.textContent = option.textContent;
+  }
+
+  // Update selected state
+  const options = dropdownMenu?.querySelectorAll('.custom-dropdown-option') as NodeListOf<HTMLElement>;
+  if (options) {
+    options.forEach(opt => opt.classList.remove('selected'));
+  }
+  option.classList.add('selected');
+
+  // Close dropdown
+  if (dropdownWrapper) {
+    dropdownWrapper.classList.remove('open');
+  }
+
+  // Re-render page
+  renderHistoryPage();
+}
+
+/**
  * Render the hour selector dropdown
  */
 function renderHourSelector(): void {
-  const hourSelect = document.getElementById('historyHourSelect') as HTMLSelectElement;
-  if (!hourSelect) return;
+  const dropdownWrapper = document.getElementById('hourDropdownWrapper') as HTMLElement;
+  const dropdownTrigger = document.getElementById('hourDropdownTrigger') as HTMLElement;
+  const dropdownValue = document.getElementById('hourDropdownValue') as HTMLElement;
+  const dropdownMenu = document.getElementById('hourDropdownMenu') as HTMLElement;
+  const hourSelector = document.querySelector('.history-hour-selector') as HTMLElement;
+  if (!dropdownWrapper || !dropdownTrigger || !dropdownValue || !dropdownMenu || !hourSelector) return;
 
   const data = getCurrentHistoryData();
   const selectedHour = getSelectedHour();
 
   if (!data || data.buckets.length === 0) {
-    hourSelect.innerHTML = '<option value="">All Hours</option>';
+    dropdownValue.textContent = 'All Hours';
+    dropdownMenu.innerHTML = '<div class="custom-dropdown-option selected" data-value="">All Hours</div>';
     hideEditMode();
     return;
   }
 
   // Create options for each hour bucket
-  const options = ['<option value="">All Hours</option>'];
+  const options = ['<div class="custom-dropdown-option" data-value="">All Hours</div>'];
+
+  let selectedDisplay = 'All Hours';
 
   data.buckets.forEach(bucket => {
     const hourLabel = formatHour(bucket.hourNumber);
-    const option = `<option value="${bucket.hourNumber}" ${bucket.hourNumber === selectedHour ? 'selected' : ''}>${hourLabel}</option>`;
+    const customName = bucket.customName || '';
+    const displayName = customName ? `${hourLabel}: ${customName}` : hourLabel;
+    const isSelected = bucket.hourNumber === selectedHour ? 'selected' : '';
+    const option = `<div class="custom-dropdown-option ${isSelected}" data-value="${bucket.hourNumber}">${displayName}</div>`;
     options.push(option);
+
+    if (bucket.hourNumber === selectedHour) {
+      selectedDisplay = displayName;
+    }
   });
 
-  hourSelect.innerHTML = options.join('');
+  dropdownMenu.innerHTML = options.join('');
+  dropdownValue.textContent = selectedDisplay;
 
   // Hide edit mode when re-rendering (user needs to click Edit to enter edit mode)
   hideEditMode();
+
+  // Ensure hour selector div is visible
+  hourSelector.style.display = 'flex';
+
+  // Setup custom dropdown event listeners (only once)
+  if (!dropdownListenersInitialized) {
+    setupCustomDropdown();
+    dropdownListenersInitialized = true;
+  }
+}
+
+/**
+ * Update hour selector dropdown options without closing edit mode
+ */
+function updateHourSelectorOptions(): void {
+  const dropdownMenu = document.getElementById('hourDropdownMenu') as HTMLElement;
+  const dropdownValue = document.getElementById('hourDropdownValue') as HTMLElement;
+  if (!dropdownMenu || !dropdownValue) return;
+
+  const data = getCurrentHistoryData();
+  const selectedHour = getSelectedHour();
+
+  if (!data || data.buckets.length === 0) {
+    dropdownValue.textContent = 'All Hours';
+    dropdownMenu.innerHTML = '<div class="custom-dropdown-option selected" data-value="">All Hours</div>';
+    return;
+  }
+
+  // Create options for each hour bucket
+  const options = ['<div class="custom-dropdown-option" data-value="">All Hours</div>'];
+
+  let selectedDisplay = 'All Hours';
+
+  data.buckets.forEach(bucket => {
+    const hourLabel = formatHour(bucket.hourNumber);
+    const customName = bucket.customName || '';
+    const displayName = customName ? `${hourLabel}: ${customName}` : hourLabel;
+    const isSelected = bucket.hourNumber === selectedHour ? 'selected' : '';
+    const option = `<div class="custom-dropdown-option ${isSelected}" data-value="${bucket.hourNumber}">${displayName}</div>`;
+    options.push(option);
+
+    if (bucket.hourNumber === selectedHour) {
+      selectedDisplay = displayName;
+    }
+  });
+
+  dropdownMenu.innerHTML = options.join('');
+  dropdownValue.textContent = selectedDisplay;
 }
 
 /**
@@ -647,31 +804,112 @@ async function handleClearHistory(): Promise<void> {
 }
 
 /**
+ * Show delete hours modal
+ */
+function showDeleteHoursModal(): void {
+  const checkboxes = document.querySelectorAll('.edit-hour-checkbox:checked') as NodeListOf<HTMLInputElement>;
+  const selectedCount = Array.from(checkboxes).length;
+
+  if (selectedCount === 0) {
+    return;
+  }
+
+  const deleteHoursCount = document.getElementById('deleteHoursCount');
+  if (deleteHoursCount) {
+    deleteHoursCount.textContent = selectedCount.toString();
+  }
+
+  const modal = document.getElementById('deleteHoursModal') as HTMLElement;
+  if (modal) {
+    modal.classList.add('active');
+  }
+}
+
+/**
+ * Hide delete hours modal
+ */
+function hideDeleteHoursModal(): void {
+  const modal = document.getElementById('deleteHoursModal') as HTMLElement;
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
+/**
  * Show edit mode
  */
 function showEditMode(): void {
   const editSelector = document.getElementById('historyEditSelector') as HTMLElement;
-  const hourSelect = document.getElementById('historyHourSelect') as HTMLSelectElement;
-  const editHourSelect = document.getElementById('editHourSelect') as HTMLSelectElement;
+  const hourSelector = document.querySelector('.history-hour-selector') as HTMLElement;
+  const editHourCheckboxList = document.getElementById('editHourCheckboxList') as HTMLElement;
 
-  if (!editSelector || !hourSelect || !editHourSelect) return;
+  if (!editSelector || !hourSelector || !editHourCheckboxList) return;
 
   // Get current data
   const data = getCurrentHistoryData();
   if (!data || data.buckets.length === 0) return;
 
-  // Hide the main hour selector and show edit mode
-  hourSelect.style.display = 'none';
+  // Hide the main hour selector div and show edit mode
+  hourSelector.style.display = 'none';
   editSelector.style.display = 'block';
 
-  // Populate the multi-select dropdown
-  const options: string[] = [];
+  // Populate the checkbox list
+  const checkboxItems: string[] = [];
   data.buckets.forEach(bucket => {
     const hourLabel = formatHour(bucket.hourNumber);
-    const option = `<option value="${bucket.hourNumber}">${hourLabel}</option>`;
-    options.push(option);
+    const customName = bucket.customName || '';
+    const displayName = customName ? `${hourLabel}: ${customName}` : hourLabel;
+    const checkboxItem = `
+      <label class="edit-hour-checkbox-item">
+        <input type="checkbox" class="edit-hour-checkbox" value="${bucket.hourNumber}">
+        <span class="edit-hour-checkbox-label" data-hour="${bucket.hourNumber}" data-baselabel="${hourLabel}" data-customname="${customName}">${displayName}</span>
+        <button class="edit-hour-name-btn" data-hour="${bucket.hourNumber}" title="Edit Name">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M18.5 2.50023C18.8978 2.1024 19.5374 2.1024 19.9352 2.50023L21.4998 4.06479C21.8976 4.46261 21.8976 5.10217 21.4998 5.5L12 15L8 16L9 12L18.5 2.50023Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </label>
+    `;
+    checkboxItems.push(checkboxItem);
   });
-  editHourSelect.innerHTML = options.join('');
+  editHourCheckboxList.innerHTML = checkboxItems.join('');
+
+  // Attach event listeners to edit name buttons
+  const editNameButtons = editHourCheckboxList.querySelectorAll('.edit-hour-name-btn') as NodeListOf<HTMLButtonElement>;
+  editNameButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const hourNumber = parseInt(btn.getAttribute('data-hour') || '0', 10);
+      const label = editHourCheckboxList.querySelector(`.edit-hour-checkbox-label[data-hour="${hourNumber}"]`) as HTMLElement;
+      if (label) {
+        makeLabelEditable(label);
+      }
+    });
+  });
+
+  // Attach event listeners to checkboxes to show/hide delete button
+  const hourCheckboxes = editHourCheckboxList.querySelectorAll('.edit-hour-checkbox') as NodeListOf<HTMLInputElement>;
+  hourCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateDeleteButtonVisibility);
+  });
+
+  // Initial visibility check
+  updateDeleteButtonVisibility();
+}
+
+/**
+ * Update delete button visibility based on checkbox selections
+ */
+function updateDeleteButtonVisibility(): void {
+  const checkboxes = document.querySelectorAll('.edit-hour-checkbox:checked') as NodeListOf<HTMLInputElement>;
+  const deleteBtn = document.getElementById('deleteSelectedHoursBtn') as HTMLElement;
+
+  if (deleteBtn) {
+    const hasSelection = Array.from(checkboxes).length > 0;
+    deleteBtn.style.display = hasSelection ? 'flex' : 'none';
+  }
 }
 
 /**
@@ -679,21 +917,116 @@ function showEditMode(): void {
  */
 function hideEditMode(): void {
   const editSelector = document.getElementById('historyEditSelector') as HTMLElement;
-  const hourSelect = document.getElementById('historyHourSelect') as HTMLSelectElement;
+  const hourSelector = document.querySelector('.history-hour-selector') as HTMLElement;
 
-  if (!editSelector || !hourSelect) return;
+  if (!editSelector || !hourSelector) return;
 
-  // Show the main hour selector and hide edit mode
-  hourSelect.style.display = 'block';
+  // Show the main hour selector div and hide edit mode
+  hourSelector.style.display = 'flex';
   editSelector.style.display = 'none';
 
-  // Clear selections
-  const editHourSelect = document.getElementById('editHourSelect') as HTMLSelectElement;
-  if (editHourSelect) {
-    Array.from(editHourSelect.selectedOptions).forEach(option => {
-      option.selected = false;
-    });
+  // Clear checkbox selections
+  const checkboxes = document.querySelectorAll('.edit-hour-checkbox') as NodeListOf<HTMLInputElement>;
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = false;
+  });
+
+  // Hide delete button
+  const deleteBtn = document.getElementById('deleteSelectedHoursBtn') as HTMLElement;
+  if (deleteBtn) {
+    deleteBtn.style.display = 'none';
   }
+}
+
+/**
+ * Make label editable
+ */
+async function makeLabelEditable(label: HTMLElement): Promise<void> {
+  const hourNumber = parseInt(label.getAttribute('data-hour') || '0', 10);
+  const baseLabel = label.getAttribute('data-baselabel') || '';
+  const currentCustomName = label.getAttribute('data-customname') || '';
+  const data = getCurrentHistoryData();
+  const selectedDate = getSelectedDate();
+
+  if (!data || !selectedDate) return;
+
+  const bucket = data.buckets.find(b => b.hourNumber === hourNumber);
+  if (!bucket) return;
+
+  // Create input element
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentCustomName;
+  input.className = 'edit-hour-name-input';
+  input.style.width = '100%';
+  input.style.padding = '4px 8px';
+  input.style.fontSize = 'inherit';
+  input.style.fontFamily = 'inherit';
+  input.style.background = 'rgba(0, 0, 0, 0.3)';
+  input.style.border = '1px solid #DE5C0B';
+  input.style.borderRadius = '4px';
+  input.style.color = 'inherit';
+  input.style.outline = 'none';
+
+  // Replace label with input
+  label.replaceWith(input);
+  input.focus();
+
+  // Save function
+  const save = async () => {
+    const newName = input.value.trim();
+    const newDisplayName = newName ? `${baseLabel}: ${newName}` : baseLabel;
+
+    // Update bucket in memory
+    bucket.customName = newName || undefined;
+
+    // Save to persistent storage
+    try {
+      await electronAPI.updateBucketCustomName(selectedDate, hourNumber, newName || undefined);
+    } catch (error) {
+      console.error('Failed to save custom name:', error);
+      // Still update UI even if save fails
+    }
+
+    // Create new label element
+    const newLabel = document.createElement('span');
+    newLabel.className = 'edit-hour-checkbox-label';
+    newLabel.setAttribute('data-hour', hourNumber.toString());
+    newLabel.setAttribute('data-baselabel', baseLabel);
+    newLabel.setAttribute('data-customname', newName || '');
+    newLabel.textContent = newDisplayName;
+
+    // Replace input with new label
+    input.replaceWith(newLabel);
+
+    // Update hour selector dropdown options (without closing edit mode)
+    updateHourSelectorOptions();
+
+    console.log(`Updated hour ${hourNumber} name to: ${bucket.customName}`);
+  };
+
+  // Save on Enter key
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      save();
+    } else if (e.key === 'Escape') {
+      // Cancel on Escape - revert to original
+      const newLabel = document.createElement('span');
+      newLabel.className = 'edit-hour-checkbox-label';
+      newLabel.setAttribute('data-hour', hourNumber.toString());
+      newLabel.setAttribute('data-baselabel', baseLabel);
+      newLabel.setAttribute('data-customname', currentCustomName);
+      newLabel.textContent = currentCustomName ? `${baseLabel}: ${currentCustomName}` : baseLabel;
+      input.replaceWith(newLabel);
+    }
+  });
+
+  // Save when clicking away (blur)
+  input.addEventListener('blur', () => {
+    // Small delay to allow other events to fire
+    setTimeout(save, 10);
+  });
 }
 
 /**
@@ -701,32 +1034,27 @@ function hideEditMode(): void {
  */
 async function handleDeleteSelectedHours(): Promise<void> {
   const selectedDate = getSelectedDate();
-  const editHourSelect = document.getElementById('editHourSelect') as HTMLSelectElement;
+  const checkboxes = document.querySelectorAll('.edit-hour-checkbox:checked') as NodeListOf<HTMLInputElement>;
 
-  if (!selectedDate || !editHourSelect) return;
+  if (!selectedDate) return;
 
   // Get selected hours
-  const selectedOptions = Array.from(editHourSelect.selectedOptions);
+  const selectedCheckboxes = Array.from(checkboxes);
 
-  if (selectedOptions.length === 0) {
-    alert('Please select at least one hour to delete.');
+  if (selectedCheckboxes.length === 0) {
+    hideDeleteHoursModal();
     return;
   }
 
-  // Confirm deletion
-  const hoursToDelete = selectedOptions.map(opt => opt.textContent || '').join(', ');
-  const confirmed = confirm(`Are you sure you want to delete the following hours?\n\n${hoursToDelete}\n\nThis action cannot be undone.`);
-
-  if (!confirmed) return;
-
   try {
     // Delete each selected hour
-    for (const option of selectedOptions) {
-      const hourNumber = parseInt(option.value, 10);
+    for (const checkbox of selectedCheckboxes) {
+      const hourNumber = parseInt(checkbox.value, 10);
       await electronAPI.deleteBucketsByDateAndHour(selectedDate, hourNumber);
     }
 
-    // Exit edit mode and reload
+    // Hide modal, exit edit mode and reload
+    hideDeleteHoursModal();
     hideEditMode();
     setSelectedHour(null);
     await loadHistoryData();
@@ -734,5 +1062,6 @@ async function handleDeleteSelectedHours(): Promise<void> {
   } catch (error) {
     console.error('Failed to delete selected hours:', error);
     alert('Failed to delete hours. Please try again.');
+    hideDeleteHoursModal();
   }
 }
