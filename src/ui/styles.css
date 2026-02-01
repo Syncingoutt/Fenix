@@ -794,6 +794,9 @@ img:not(.header-logo-pic) {
   color: var(--text);
   min-width: calc(100px * var(--scale));
 }
+.history-usage .usage-container {
+  max-width: calc(1300px * var(--scale));
+}
 
 /* ============================================
    INVENTORY CONTAINER

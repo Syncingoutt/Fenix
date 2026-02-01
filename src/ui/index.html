@@ -343,7 +343,7 @@
                     <div class="history-stat-value" id="historyTotalDuration">00:00:00</div>
                   </div>
                   <div class="history-stat-item">
-                    <div class="history-stat-label">FE per Hour:</div>
+                    <div class="history-stat-label">FE per Session:</div>
                     <div class="history-stat-value" id="historyFePerHour">0</div>
                   </div>
                   <div class="history-stat-item">
@@ -351,7 +351,7 @@
                     <div class="history-stat-value" id="historyTotalFe">0</div>
                   </div>
                   <div class="history-stat-item" id="historyBucketsItem" style="display: none;">
-                    <div class="history-stat-label">Hours:</div>
+                    <div class="history-stat-label">Sessions:</div>
                     <div class="history-stat-value" id="historyBucketsCount">0</div>
                   </div>
                 </div>
@@ -381,20 +381,20 @@
               <div class="history-main">
               <!-- Hour Dropdown -->
               <div class="history-hour-selector">
-                <label for="historyHourSelect" class="history-hour-label">Hour:</label>
+                <label for="historyHourSelect" class="history-hour-label">Session:</label>
                 <div class="custom-dropdown-wrapper" id="hourDropdownWrapper">
                   <div class="custom-dropdown-trigger" id="hourDropdownTrigger" tabindex="0">
-                    <span class="custom-dropdown-value" id="hourDropdownValue">All Hours</span>
+                    <span class="custom-dropdown-value" id="hourDropdownValue">All Sessions</span>
                     <svg class="custom-dropdown-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M1 1L6 6L11 1" stroke="#DE5C0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </div>
                   <div class="custom-dropdown-menu" id="hourDropdownMenu">
-                    <div class="custom-dropdown-option" data-value="">All Hours</div>
-                    <!-- Hour options will be populated by JavaScript -->
+                    <div class="custom-dropdown-option" data-value="">All Sessions</div>
+                    <!-- Session options will be populated by JavaScript -->
                   </div>
                 </div>
-                <button id="editHoursToggleBtn" class="edit-hours-toggle-btn" title="Edit Hours">
+                <button id="editHoursToggleBtn" class="edit-hours-toggle-btn" title="Edit Sessions">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M18.5 2.50023C18.8978 2.1024 19.5374 2.1024 19.9352 2.50023L21.4998 4.06479C21.8976 4.46261 21.8976 5.10217 21.4998 5.5L12 15L8 16L9 12L18.5 2.50023Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -412,7 +412,7 @@
               <!-- Edit Mode Dropdown -->
               <div class="history-edit-selector" id="historyEditSelector" style="display: none;">
                 <div class="edit-mode-header">
-                  <label class="edit-mode-label">Select hours to delete or edit:</label>
+                  <label class="edit-mode-label">Select sessions to delete or edit:</label>
                   <div class="edit-mode-actions">
                     <button id="deleteSelectedHoursBtn" class="delete-selected-hours-btn" style="display: none;" title="Delete Selected">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -424,7 +424,7 @@
                   </div>
                 </div>
                 <div class="edit-mode-checkbox-list" id="editHourCheckboxList">
-                  <!-- Hour checkboxes will be populated by JavaScript -->
+                  <!-- Session checkboxes will be populated by JavaScript -->
                 </div>
               </div>
 
@@ -436,6 +436,12 @@
                 </svg>
                 <input type="text" id="historySearchInput" placeholder="Search items..." />
               </div>
+
+                <!-- Usage Section (Compasses & Beacons Used) -->
+                <div class="history-usage" id="historyUsageSection">
+                  <!-- Usage content will be populated by JavaScript -->
+                  <div id="historyUsageContent"></div>
+                </div>
 
                 <!-- Inventory Section -->
                 <div class="history-inventory">
@@ -540,9 +546,9 @@
           <div class="breakdown-total-label">Total Earned</div>
           <div class="breakdown-total" id="breakdownTotal">0.00 FE</div>
         </div>
-        
+
         <div class="breakdown-hours" id="breakdownHours">
-          <!-- Hour cards will be inserted here by JavaScript -->
+          <!-- Session cards will be inserted here by JavaScript -->
         </div>
 
         <div class="breakdown-close">
@@ -703,9 +709,8 @@
             Are you sure you want to delete all historical data? This will permanently remove:
             <ul>
               <li>All date entries</li>
-              <li>All hourly buckets and earnings data</li>
+              <li>All sessions and earnings</li>
               <li>Inventory snapshots</li>
-              <li>Price history</li>
             </ul>
           </div>
           <div class="clear-history-modal-note">
@@ -731,16 +736,16 @@
               <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#E74C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <div class="delete-hours-modal-title">Delete Selected Hours?</div>
+          <div class="delete-hours-modal-title">Delete Selected Sessions?</div>
           <div class="delete-hours-modal-subtitle">This action cannot be undone</div>
         </div>
 
         <div class="delete-hours-modal-body">
           <div class="delete-hours-modal-message">
-            Are you sure you want to delete <span id="deleteHoursCount">0</span> selected hour(s)?
+            Are you sure you want to delete <span id="deleteHoursCount">0</span> selected session(s)?
           </div>
           <div class="delete-hours-modal-note">
-            This will permanently remove the selected hourly data and inventory snapshots.
+            This will permanently remove the selected session data and inventory snapshots.
           </div>
         </div>
 

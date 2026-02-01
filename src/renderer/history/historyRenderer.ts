@@ -16,6 +16,7 @@ import {
 import { ElectronAPI } from '../types.js';
 import { FLAME_ELEMENTIUM_ID } from '../constants.js';
 import { applyTax } from '../utils/tax.js';
+import { getItemDatabase } from '../state/inventoryState.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -37,7 +38,7 @@ let dropdownListenersInitialized = false;
 // Track if this is initial page load (for animation)
 let isInitialLoad = true;
 
-// Track if we've played the animation when switching from "All Hours" to a specific hour
+// Track if we've played the animation when switching from "All Sessions" to a specific session
 let hasPlayedFirstHourAnimation = false;
 
   // Track last selected date and hour to detect what changed
@@ -64,7 +65,7 @@ export async function renderHistoryPage(): Promise<void> {
   const dateChanged = lastSelectedDate !== currentSelectedDate;
   const hourChanged = lastSelectedBucketStartTime !== currentSelectedBucketStartTime;
 
-  // Detect transition from "All Hours" (null) to a specific hour (BEFORE updating tracking)
+  // Detect transition from "All Sessions" (null) to a specific session (BEFORE updating tracking)
   const isTransitioningFromAllHoursToHour = !hasPlayedFirstHourAnimation && hourChanged && lastSelectedBucketStartTime === null && currentSelectedBucketStartTime !== null;
 
   // Reset first hour animation flag when changing dates
@@ -82,10 +83,10 @@ export async function renderHistoryPage(): Promise<void> {
     setSelectedDate(dates[0].date);
   }
 
-  // Animate on: initial load OR first transition from "All Hours" to specific hour OR hour change (but NOT on date change)
+  // Animate on: initial load OR first transition from "All Sessions" to specific session OR hour change (but NOT on date change)
   const shouldAnimate = isInitialLoad || isTransitioningFromAllHoursToHour || (!dateChanged && hourChanged);
 
-  // Mark that we've played the first hour animation
+  // Mark that we've played the first session animation
   if (isTransitioningFromAllHoursToHour) {
     hasPlayedFirstHourAnimation = true;
   }
@@ -94,6 +95,7 @@ export async function renderHistoryPage(): Promise<void> {
   renderOverview(shouldAnimate);
   renderHourSelector();
   renderInventory();
+  renderUsage();
   renderPriceComparison();
   updateSortIndicators();
 
@@ -303,7 +305,7 @@ function renderOverview(animate: boolean = true): void {
     bucketsCountEl.textContent = stats.bucketsCount.toString();
   }
   if (bucketsItem) {
-    // Show buckets count only when no specific hour is selected
+    // Show buckets count only when no specific session is selected
     const selectedHour = getSelectedHour();
     bucketsItem.style.display = selectedHour === null ? 'flex' : 'none';
   }
@@ -349,7 +351,7 @@ function renderOverviewGraph(): void {
   if (!canvas) return;
 
   // TODO: Implement graph rendering using Chart.js or similar
-  // This will show the wealth progression for the selected date/hour
+  // This will show the wealth progression for the selected date/session
   const data = getCurrentHistoryData();
   if (!data || data.buckets.length === 0) return;
 
@@ -514,16 +516,16 @@ function renderHourSelector(): void {
   const selectedBucketStartTime = getSelectedBucketStartTime();
 
   if (!data || data.buckets.length === 0) {
-    dropdownValue.textContent = 'All Hours';
-    dropdownMenu.innerHTML = '<div class="custom-dropdown-option selected" data-value="">All Hours</div>';
+    dropdownValue.textContent = 'All Sessions';
+    dropdownMenu.innerHTML = '<div class="custom-dropdown-option selected" data-value="">All Sessions</div>';
     hideEditMode();
     return;
   }
 
   // Create options for each hour bucket
-  const options = ['<div class="custom-dropdown-option" data-value="">All Hours</div>'];
+  const options = ['<div class="custom-dropdown-option" data-value="">All Sessions</div>'];
 
-  let selectedDisplay = 'All Hours';
+  let selectedDisplay = 'All Sessions';
 
   data.buckets.forEach(bucket => {
     const hourLabel = formatHour(bucket);
@@ -566,15 +568,15 @@ function updateHourSelectorOptions(): void {
   const selectedBucketStartTime = getSelectedBucketStartTime();
 
   if (!data || data.buckets.length === 0) {
-    dropdownValue.textContent = 'All Hours';
-    dropdownMenu.innerHTML = '<div class="custom-dropdown-option selected" data-value="">All Hours</div>';
+    dropdownValue.textContent = 'All Sessions';
+    dropdownMenu.innerHTML = '<div class="custom-dropdown-option selected" data-value="">All Sessions</div>';
     return;
   }
 
   // Create options for each hour bucket
-  const options = ['<div class="custom-dropdown-option" data-value="">All Hours</div>'];
+  const options = ['<div class="custom-dropdown-option" data-value="">All Sessions</div>'];
 
-  let selectedDisplay = 'All Hours';
+  let selectedDisplay = 'All Sessions';
 
   data.buckets.forEach(bucket => {
     const hourLabel = formatHour(bucket);
@@ -618,7 +620,7 @@ function renderInventory(): void {
     return;
   }
 
-  // If single hour selected, use saved inventory snapshot from bucket
+  // If single session selected, use saved inventory snapshot from bucket
   // But if compareWithToday is enabled, parse and re-render with updated prices
   if (selectedBucketStartTime !== null && bucketsToShow.length > 0) {
     if (compareWithToday) {
@@ -637,7 +639,7 @@ function renderInventory(): void {
     return;
   }
 
-  // All hours - aggregate items
+  // All sessions - aggregate items
   const aggregatedItems = aggregateBuckets(bucketsToShow);
 
   if (Object.keys(aggregatedItems).length === 0) {
@@ -652,6 +654,196 @@ function renderInventory(): void {
 
   // Update sort indicators
   updateSortIndicators();
+}
+
+/**
+ * Render the usage section showing compasses & beacons used
+ */
+function renderUsage(): void {
+  const usageContent = document.getElementById('historyUsageContent');
+  if (!usageContent) return;
+
+  const data = getCurrentHistoryData();
+  const selectedBucketStartTime = getSelectedBucketStartTime();
+
+  if (!data || data.buckets.length === 0) {
+    usageContent.innerHTML = '';
+    return;
+  }
+
+  // Get bucket(s) to display
+  const bucketsToShow = selectedBucketStartTime !== null
+    ? data.buckets.filter(b => b.bucketStartTime === selectedBucketStartTime)
+    : data.buckets;
+
+  if (bucketsToShow.length === 0) {
+    usageContent.innerHTML = '';
+    return;
+  }
+
+  // If single session selected, use usageSnapshot data directly
+  if (selectedBucketStartTime !== null && bucketsToShow.length > 0) {
+    const bucket = bucketsToShow[0];
+    const usageSnapshot = bucket.usageSnapshot || {};
+    const priceCache = bucket.pricesSnapshot || {};
+
+    // Render usage from snapshot data for this specific session
+    const usageItems: Array<{ baseId: string; name: string; quantity: number; price: number; total: number }> = [];
+
+    for (const [baseId, usageData] of Object.entries(usageSnapshot)) {
+      const used = usageData.used || 0;
+      if (used <= 0) continue; // Skip items not used
+
+      const price = priceCache[baseId]?.price || 0;
+      const total = used * price;
+
+      // Get item name from item database
+      const itemDatabase = getItemDatabase();
+      const name = itemDatabase[baseId]?.name || `Unknown (${baseId})`;
+
+      usageItems.push({
+        baseId,
+        name,
+        quantity: used,
+        price,
+        total
+      });
+    }
+
+    if (usageItems.length === 0) {
+      usageContent.innerHTML = '';
+      return;
+    }
+
+    // Sort by total cost (highest first)
+    usageItems.sort((a, b) => b.total - a.total);
+
+    let totalUsageCost = 0;
+
+    usageContent.innerHTML = `
+      <div id="usageSection">
+        <div class="usage-container">
+          <div class="usage-header">Compasses & Beacons Used</div>
+        <div class="usage-content">
+            ${usageItems.map((item) => {
+              totalUsageCost += item.total;
+
+              return `
+                <div class="item-row">
+                  <div class="item-name">
+                    <img src="../../assets/${item.baseId}.webp"
+                         alt="${item.name}"
+                         class="item-icon"
+                         onerror="this.style.display='none'">
+                    <div class="item-name-content">
+                      <div class="item-name-text">${item.name}</div>
+                    </div>
+                  </div>
+                  <div class="item-quantity">-${formatInteger(item.quantity)}</div>
+                  <div class="item-price">
+                    <div class="price-single">${item.price.toFixed(2)}</div>
+                    <div class="price-total">-${item.total.toFixed(2)} FE</div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+            ${totalUsageCost !== 0 ? `
+              <div class="usage-footer">
+                <div class="usage-footer-label">Total Used:</div>
+                <div class="usage-footer-total">-${totalUsageCost.toFixed(2)} FE</div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // All sessions - aggregate usage data from all buckets
+  const aggregatedUsage: { [baseId: string]: { name: string; quantity: number; price: number; total: number; iconPath?: string } } = {};
+
+  for (const bucket of bucketsToShow) {
+    // Parse the usage snapshot data
+    const usageSnapshot = bucket.usageSnapshot || {};
+    const priceCache = bucket.pricesSnapshot || {};
+
+    for (const [baseId, usageData] of Object.entries(usageSnapshot)) {
+      const used = usageData.used || 0;
+      if (used <= 0) continue; // Skip items not used
+
+      const price = priceCache[baseId]?.price || 0;
+      const total = used * price;
+
+      if (!aggregatedUsage[baseId]) {
+        // Get item name from item database
+        const itemDatabase = getItemDatabase();
+        const name = itemDatabase[baseId]?.name || `Unknown (${baseId})`;
+
+        aggregatedUsage[baseId] = {
+          name,
+          quantity: 0,
+          price,
+          total: 0,
+          iconPath: `../../assets/${baseId}.webp`
+        };
+      }
+
+      aggregatedUsage[baseId].quantity += used;
+      aggregatedUsage[baseId].total += total;
+    }
+  }
+
+  // Render aggregated usage
+  if (Object.keys(aggregatedUsage).length === 0) {
+    usageContent.innerHTML = '';
+    return;
+  }
+
+  const sortedUsage = Object.entries(aggregatedUsage)
+    .map(([baseId, item]) => ({ baseId, item }))
+    .sort((a, b) => b.item.total - a.item.total);
+
+  let totalUsageCost = 0;
+
+  usageContent.innerHTML = `
+    <div id="usageSection">
+      <div class="usage-container">
+        <div class="usage-header">Compasses & Beacons Used</div>
+        <div class="usage-content">
+          ${sortedUsage.map(({ baseId, item }) => {
+            const totalPrice = item.quantity * item.price;
+            totalUsageCost += totalPrice;
+
+            return `
+              <div class="item-row">
+                <div class="item-name">
+                  <img src="${item.iconPath}" 
+                       alt="${item.name}" 
+                       class="item-icon"
+                       onerror="this.style.display='none'">
+                  <div class="item-name-content">
+                    <div class="item-name-text">${item.name}</div>
+                  </div>
+                </div>
+                <div class="item-quantity">-${formatInteger(item.quantity)}</div>
+                <div class="item-price">
+                  <div class="price-single">${item.price.toFixed(2)}</div>
+                  <div class="price-total">-${totalPrice.toFixed(2)} FE</div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+          ${totalUsageCost !== 0 ? `
+            <div class="usage-footer">
+              <div class="usage-footer-label">Total Used:</div>
+              <div class="usage-footer-total">-${totalUsageCost.toFixed(2)} FE</div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 /**
@@ -1151,7 +1343,7 @@ async function makeLabelEditable(label: HTMLElement): Promise<void> {
 }
 
 /**
- * Handle delete selected hours
+ * Handle delete selected sessions
  */
 async function handleDeleteSelectedHours(): Promise<void> {
   const selectedDate = getSelectedDate();
@@ -1159,7 +1351,7 @@ async function handleDeleteSelectedHours(): Promise<void> {
 
   if (!selectedDate) return;
 
-  // Get selected hours
+  // Get selected sessions
   const selectedCheckboxes = Array.from(checkboxes);
 
   if (selectedCheckboxes.length === 0) {
@@ -1168,7 +1360,7 @@ async function handleDeleteSelectedHours(): Promise<void> {
   }
 
   try {
-    // Delete each selected hour
+    // Delete each selected session
     for (const checkbox of selectedCheckboxes) {
       const bucketStartTime = parseInt(checkbox.value, 10);
       await electronAPI.deleteBucketsByDateAndHour(selectedDate, bucketStartTime);
@@ -1181,8 +1373,8 @@ async function handleDeleteSelectedHours(): Promise<void> {
     await loadHistoryData();
     renderHistoryPage();
   } catch (error) {
-    console.error('Failed to delete selected hours:', error);
-    alert('Failed to delete hours. Please try again.');
+    console.error('Failed to delete selected sessions:', error);
+    alert('Failed to delete sessions. Please try again.');
     hideDeleteHoursModal();
   }
 }
