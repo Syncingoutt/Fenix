@@ -294,37 +294,65 @@ export function showCompassBeaconSelection(): void {
     };
   }
 
+  // Helper function to restore last selection
+  const restoreLastSelection = (): void => {
+    const lastSelectionJson = localStorage.getItem('lastCompassBeaconSelection');
+    if (lastSelectionJson) {
+      try {
+        const lastSelection = JSON.parse(lastSelectionJson) as string[];
+
+        checkedItemsSet.clear();
+        lastSelection.forEach(baseId => {
+          checkedItemsSet.add(baseId);
+        });
+
+        const currentQuery = searchInput?.value.trim() || '';
+        if (currentQuery === '') {
+          renderItems(allItemGroups, true);
+        } else {
+          const filteredGroups = allItemGroups.map(group => filterGroupItems(group, currentQuery));
+          renderItems(filteredGroups, true);
+        }
+
+        // Also update the checkbox state to match
+        if (restoreCheckbox) {
+          restoreCheckbox.checked = true;
+        }
+      } catch (e) {
+        console.error('Failed to restore last selection:', e);
+        if (restoreCheckbox) {
+          restoreCheckbox.checked = false;
+        }
+      }
+    }
+  };
+
   // Add Restore Last Selection handler
   const restoreCheckbox = document.getElementById('compassBeaconRestore') as HTMLInputElement;
   if (restoreCheckbox) {
     restoreCheckbox.addEventListener('change', () => {
       if (restoreCheckbox.checked) {
-        const lastSelectionJson = localStorage.getItem('lastCompassBeaconSelection');
-        if (lastSelectionJson) {
-          try {
-            const lastSelection = JSON.parse(lastSelectionJson) as string[];
+        restoreLastSelection();
+      } else {
+        // If unchecked, clear back to default (just 5028)
+        checkedItemsSet.clear();
+        checkedItemsSet.add('5028');
 
-            checkedItemsSet.clear();
-            lastSelection.forEach(baseId => {
-              checkedItemsSet.add(baseId);
-            });
-
-            const currentQuery = searchInput?.value.trim() || '';
-            if (currentQuery === '') {
-              renderItems(allItemGroups, true);
-            } else {
-              const filteredGroups = allItemGroups.map(group => filterGroupItems(group, currentQuery));
-              renderItems(filteredGroups, true);
-            }
-          } catch (e) {
-            console.error('Failed to restore last selection:', e);
-            restoreCheckbox.checked = false;
-          }
+        const currentQuery = searchInput?.value.trim() || '';
+        if (currentQuery === '') {
+          renderItems(allItemGroups, true);
         } else {
-          restoreCheckbox.checked = false;
+          const filteredGroups = allItemGroups.map(group => filterGroupItems(group, currentQuery));
+          renderItems(filteredGroups, true);
         }
       }
     });
+
+    // If there's a last selection, auto-restore it on modal open
+    const lastSelectionJson = localStorage.getItem('lastCompassBeaconSelection');
+    if (lastSelectionJson) {
+      restoreLastSelection();
+    }
   }
 
   modal.classList.add('active');

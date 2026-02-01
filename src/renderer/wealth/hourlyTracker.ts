@@ -213,6 +213,15 @@ export async function captureHourlyBucket(): Promise<void> {
   const hourlyPurchases = getHourlyPurchases();
   const hourlyStartTime = getHourlyStartTime();
 
+  // Generate a unique session ID when starting a new session
+  // This will be used to ensure buckets from different sessions don't merge
+  if (hourlyBuckets.length === 0) {
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    (window as any).currentSessionId = sessionId;
+  }
+
+  const sessionId = (window as any).currentSessionId || `session_${Date.now()}`;
+
   // Calculate hour number based on actual clock time, not elapsed time
   const startDate = new Date(hourlyStartTime);
   const endDate = new Date();
@@ -233,23 +242,28 @@ export async function captureHourlyBucket(): Promise<void> {
     usageSnapshot[baseId] = { used, purchased: hourlyPurchases.get(baseId) || 0 };
   }
 
+  const bucketEndTime = Date.now();
   const bucket: HourlyBucket = {
     hourNumber,
     startValue: currentHourStartValue,
     endValue: currentValue,
     earnings: currentValue - currentHourStartValue,
     history: [...hourlyHistory],
-    timestamp: hourlyStartTime, // Use session start time, not current time
+    timestamp: hourlyStartTime, // Keep for backwards compatibility
     duration: hourlyElapsedSeconds,
     inventorySnapshot,
     pricesSnapshot: priceCache,
     includedItems: includedItemsArray,
-    usageSnapshot
+    usageSnapshot,
+    customName: undefined,
+    bucketStartTime: hourlyStartTime, // When this bucket actually started
+    bucketEndTime: bucketEndTime, // When this bucket actually ended
+    sessionId // All buckets from this session share same ID
   };
 
   hourlyBuckets.push(bucket);
   setHourlyBuckets(hourlyBuckets);
-  
+
   // Reset for next hour
   setCurrentHourStartValue(currentValue);
   setHourlyHistory([{ time: Date.now(), value: currentValue }]);
@@ -264,7 +278,7 @@ export async function captureHourlyBucket(): Promise<void> {
       previousQuantities.set(baseId, currentItem.totalQuantity);
     }
   }
-  
+
   // Show notification (positioned relative to stats container)
   const statsContainer = document.querySelector('.stats-container');
   if (statsContainer) {
@@ -326,6 +340,9 @@ export async function stopHourlyTracking(): Promise<void> {
   const hourlyElapsedSeconds = getHourlyElapsedSeconds();
   const hourlyStartTime = getHourlyStartTime();
 
+  // Get session ID for this tracking session
+  const sessionId = (window as any).currentSessionId || `session_${Date.now()}`;
+
   // Capture inventory HTML (snapshot before ending session)
   const inventoryContainer = document.querySelector('#inventory');
   const inventorySnapshot = inventoryContainer?.outerHTML || '';
@@ -348,28 +365,36 @@ export async function stopHourlyTracking(): Promise<void> {
     usageSnapshot[baseId] = { used, purchased: hourlyPurchases.get(baseId) || 0 };
   }
 
+  const bucketEndTime = Date.now();
   const bucket: HourlyBucket = {
     hourNumber,
     startValue: currentHourStartValue,
     endValue: finalGain,
     earnings: finalGain - currentHourStartValue,
     history: [...hourlyHistory],
-    timestamp: hourlyStartTime, // Use session start time, not current time
+    timestamp: hourlyStartTime, // Keep for backwards compatibility
     duration: hourlyElapsedSeconds,
     inventorySnapshot,
     pricesSnapshot: priceCache,
     includedItems: includedItemsArray,
-    usageSnapshot
+    usageSnapshot,
+    customName: undefined,
+    bucketStartTime: hourlyStartTime, // When this bucket actually started
+    bucketEndTime: bucketEndTime, // When this bucket actually ended
+    sessionId // All buckets from this session share same ID
   };
   hourlyBuckets.push(bucket);
   setHourlyBuckets(hourlyBuckets);
-  
+
   // Save complete session to disk
   await electronAPI.saveHourlySession(hourlyBuckets);
-  
+
+  // Reset session ID so next session gets a new one
+  delete (window as any).currentSessionId;
+
   // Show breakdown modal
   showBreakdownModal();
-  
+
   // UI reset
   startHourlyBtn.style.display = 'inline-block';
   stopHourlyBtn.style.display = 'none';
@@ -377,15 +402,15 @@ export async function stopHourlyTracking(): Promise<void> {
   resumeHourlyBtn.style.display = 'none';
   hourlyTimerEl.textContent = '00:00:00';
   setHourlyElapsedSeconds(0);
-  
+
   // Reset state flags
   setIsHourlyActive(false);
   setHourlyPaused(false);
-  
+
   // Update UI to show all items (not just gained items) after stopping hourly mode
   renderInventory();
   renderBreakdown();
-  
+
   // Update overlay widget with realtime data since hourly mode ended
   updateOverlayWidgetData();
 }

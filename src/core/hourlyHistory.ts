@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
 import { HourlyBucket } from '../renderer/types.js';
+import { mergeBucketsByHour } from '../utils/bucketUtils.js';
 
 export interface SavedHourlySession {
   sessionId: string;
@@ -49,83 +50,6 @@ export async function saveHourlySession(buckets: HourlyBucket[]): Promise<void> 
   } catch (error) {
     console.error('Failed to save hourly session:', error);
   }
-}
-
-/**
- * Merge buckets with the same hour number
- */
-function mergeBucketsByHour(buckets: HourlyBucket[]): HourlyBucket[] {
-  const hourMap = new Map<number, HourlyBucket[]>();
-  
-  // Group buckets by hour number
-  for (const bucket of buckets) {
-    if (!hourMap.has(bucket.hourNumber)) {
-      hourMap.set(bucket.hourNumber, []);
-    }
-    hourMap.get(bucket.hourNumber)!.push(bucket);
-  }
-  
-  // Merge each group
-  const mergedBuckets: HourlyBucket[] = [];
-  for (const [hourNumber, hourBuckets] of hourMap) {
-    // Sort by timestamp to ensure correct order
-    hourBuckets.sort((a, b) => a.timestamp - b.timestamp);
-    
-    if (hourBuckets.length === 1) {
-      mergedBuckets.push(hourBuckets[0]);
-      continue;
-    }
-    
-    // Merge multiple buckets for the same hour
-    const first = hourBuckets[0];
-    const last = hourBuckets[hourBuckets.length - 1];
-    
-    // Sum earnings and durations
-    const totalEarnings = hourBuckets.reduce((sum, b) => sum + b.earnings, 0);
-    const totalDuration = hourBuckets.reduce((sum, b) => sum + b.duration, 0);
-    
-    // Combine and sort history points
-    const combinedHistory: { time: number; value: number }[] = [];
-    for (const bucket of hourBuckets) {
-      combinedHistory.push(...bucket.history);
-    }
-    combinedHistory.sort((a, b) => a.time - b.time);
-    
-    // Merge usage snapshots
-    const mergedUsageSnapshot: { [baseId: string]: { used: number; purchased: number } } = {};
-    for (const bucket of hourBuckets) {
-      for (const [baseId, usage] of Object.entries(bucket.usageSnapshot)) {
-        if (!mergedUsageSnapshot[baseId]) {
-          mergedUsageSnapshot[baseId] = { used: 0, purchased: 0 };
-        }
-        mergedUsageSnapshot[baseId].used += usage.used;
-        mergedUsageSnapshot[baseId].purchased += usage.purchased;
-      }
-    }
-    
-    // Use the earliest start value and the latest end value
-    const mergedBucket: HourlyBucket = {
-      hourNumber,
-      startValue: first.startValue,
-      endValue: last.endValue,
-      earnings: totalEarnings,
-      history: combinedHistory,
-      timestamp: first.timestamp, // Use the earliest timestamp
-      duration: totalDuration,
-      inventorySnapshot: last.inventorySnapshot, // Use the latest inventory snapshot
-      pricesSnapshot: last.pricesSnapshot, // Use the latest prices
-      includedItems: last.includedItems,
-      usageSnapshot: mergedUsageSnapshot,
-      customName: hourBuckets.find(b => b.customName)?.customName // Preserve custom name if any bucket has one
-    };
-    
-    mergedBuckets.push(mergedBucket);
-  }
-  
-  // Sort merged buckets by hour number
-  mergedBuckets.sort((a, b) => a.hourNumber - b.hourNumber);
-  
-  return mergedBuckets;
 }
 
 /**

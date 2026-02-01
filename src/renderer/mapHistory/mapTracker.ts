@@ -296,13 +296,15 @@ async function captureInventorySnapshot(when: 'start' | 'end'): Promise<void> {
 /**
  * Parse timestamp string to Date object
  * Format: 2026.01.28-02.43.35:826
+ * Note: Timestamps from game logs are in UTC, so we create a UTC Date object
  */
 function parseTimestamp(timestampStr: string): Date {
   // Format: YYYY.MM.DD-HH.MM.SS:ms
   const match = timestampStr.match(/(\d{4})\.(\d{2})\.(\d{2})-(\d{2})\.(\d{2})\.(\d{2})[:.](\d{3})/);
   if (match) {
     const [, year, month, day, hours, minutes, seconds, millis] = match;
-    return new Date(
+    // Create a Date object using UTC values to preserve the timezone
+    return new Date(Date.UTC(
       parseInt(year),
       parseInt(month) - 1,
       parseInt(day),
@@ -310,7 +312,7 @@ function parseTimestamp(timestampStr: string): Date {
       parseInt(minutes),
       parseInt(seconds),
       parseInt(millis)
-    );
+    ));
   }
   return new Date();
 }

@@ -523,7 +523,7 @@ function renderHourSelector(): void {
   let selectedDisplay = 'All Hours';
 
   data.buckets.forEach(bucket => {
-    const hourLabel = formatHour(bucket.hourNumber);
+    const hourLabel = formatHour(bucket);
     const customName = bucket.customName || '';
     const displayName = customName ? `${hourLabel}: ${customName}` : hourLabel;
     const isSelected = bucket.hourNumber === selectedHour ? 'selected' : '';
@@ -574,7 +574,7 @@ function updateHourSelectorOptions(): void {
   let selectedDisplay = 'All Hours';
 
   data.buckets.forEach(bucket => {
-    const hourLabel = formatHour(bucket.hourNumber);
+    const hourLabel = formatHour(bucket);
     const customName = bucket.customName || '';
     const displayName = customName ? `${hourLabel}: ${customName}` : hourLabel;
     const isSelected = bucket.hourNumber === selectedHour ? 'selected' : '';
@@ -805,10 +805,20 @@ function formatDuration(seconds: number): string {
 
 /**
  * Format hour number to readable format (shows time range)
+ * If bucket has bucketStartTime and bucketEndTime, uses actual times
+ * Otherwise falls back to hour-based display
  */
-function formatHour(hour: number): string {
-  const startHour = hour;
-  const endHour = (hour + 1) % 24;
+function formatHour(bucket: { hourNumber: number; bucketStartTime?: number; bucketEndTime?: number; duration: number }): string {
+  // If we have actual start and end times, use them
+  if (bucket.bucketStartTime !== undefined && bucket.bucketEndTime !== undefined) {
+    const startTime = new Date(bucket.bucketStartTime);
+    const endTime = new Date(bucket.bucketEndTime);
+    return formatTimeRange(startTime, endTime);
+  }
+
+  // Fall back to hour-based display for backward compatibility
+  const startHour = bucket.hourNumber;
+  const endHour = (bucket.hourNumber + 1) % 24;
 
   const formatHour = (h: number) => {
     if (h === 0) return '12:00 AM';
@@ -818,6 +828,23 @@ function formatHour(hour: number): string {
   };
 
   return `${formatHour(startHour)} → ${formatHour(endHour)}`;
+}
+
+/**
+ * Format time range from start and end Date objects
+ */
+function formatTimeRange(startTime: Date, endTime: Date): string {
+  const formatTime = (date: Date) => {
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    const minutesStr = minutes.toString().padStart(2, '0');
+    return `${hours}:${minutesStr} ${ampm}`;
+  };
+
+  return `${formatTime(startTime)} → ${formatTime(endTime)}`;
 }
 
 /**
@@ -946,7 +973,7 @@ function showEditMode(): void {
   // Populate the checkbox list
   const checkboxItems: string[] = [];
   data.buckets.forEach(bucket => {
-    const hourLabel = formatHour(bucket.hourNumber);
+    const hourLabel = formatHour(bucket);
     const customName = bucket.customName || '';
     const displayName = customName ? `${hourLabel}: ${customName}` : hourLabel;
     const checkboxItem = `

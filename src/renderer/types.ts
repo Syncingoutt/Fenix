@@ -99,6 +99,9 @@ export interface HourlyBucket {
   includedItems: string[]; // Array of baseIds for tracked compasses/beacons
   usageSnapshot: { [baseId: string]: { used: number; purchased: number } }; // Compass/beacon usage (use object for JSON serialization)
   customName?: string; // Optional custom name for the hour bucket
+  bucketStartTime?: number; // Unix timestamp when this bucket actually started
+  bucketEndTime?: number; // Unix timestamp when this bucket actually ended
+  sessionId?: string; // ID of the session this bucket belongs to (for session-aware merging)
 }
 
 export interface ItemDatabase {

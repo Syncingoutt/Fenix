@@ -1,6 +1,7 @@
 // History page state management
 
 import { HourlyBucket, SavedHourlySession, ElectronAPI } from '../types.js';
+import { mergeBucketsByHour, mergeConsecutiveHours } from '../../utils/bucketUtils.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -58,110 +59,41 @@ export function setSavedSessions(sessions: SavedHourlySession[]): void {
 // Helper functions
 export async function loadHistoryData(): Promise<void> {
   savedSessions = await electronAPI.loadHourlySessions();
-  
-  // Group buckets by date from all sessions
+
+  // Group buckets by date based on bucket end time, not just bucket hour number
+  // This handles cross-day sessions (e.g., 11:30 PM to 1:00 AM shows up on Jan 31)
   const dateMap = new Map<string, { date: string; displayDate: string; buckets: HourlyBucket[] }>();
-  
+
   for (const session of savedSessions) {
     for (const bucket of session.buckets) {
-      const date = new Date(bucket.timestamp);
+      // Use bucketEndTime if available, otherwise fall back to timestamp + duration
+      const bucketEndTime = bucket.bucketEndTime || (bucket.timestamp + bucket.duration * 1000);
+      const date = new Date(bucketEndTime);
       const dateStr = formatDate(date);
       const displayDateStr = formatDateDisplay(date);
-      
+
       if (!dateMap.has(dateStr)) {
         dateMap.set(dateStr, { date: dateStr, displayDate: displayDateStr, buckets: [] });
       }
-      
+
       dateMap.get(dateStr)!.buckets.push(bucket);
     }
   }
-  
-  // Merge buckets with the same hour number within each date
+
+  // First merge buckets with same hour within same session
   for (const dateData of dateMap.values()) {
     dateData.buckets = mergeBucketsByHour(dateData.buckets);
   }
-  
+
+  // Then merge consecutive hours within same session
+  for (const dateData of dateMap.values()) {
+    dateData.buckets = mergeConsecutiveHours(dateData.buckets);
+  }
+
   // Sort dates descending
   historyDates = Array.from(dateMap.values())
     .map(d => ({ date: d.date, displayDate: d.displayDate, buckets: d.buckets }))
     .sort((a, b) => b.date.localeCompare(a.date));
-}
-
-/**
- * Merge buckets with the same hour number
- */
-function mergeBucketsByHour(buckets: HourlyBucket[]): HourlyBucket[] {
-  const hourMap = new Map<number, HourlyBucket[]>();
-  
-  // Group buckets by hour number
-  for (const bucket of buckets) {
-    if (!hourMap.has(bucket.hourNumber)) {
-      hourMap.set(bucket.hourNumber, []);
-    }
-    hourMap.get(bucket.hourNumber)!.push(bucket);
-  }
-  
-  // Merge each group
-  const mergedBuckets: HourlyBucket[] = [];
-  for (const [hourNumber, hourBuckets] of hourMap) {
-    // Sort by timestamp to ensure correct order
-    hourBuckets.sort((a, b) => a.timestamp - b.timestamp);
-    
-    if (hourBuckets.length === 1) {
-      mergedBuckets.push(hourBuckets[0]);
-      continue;
-    }
-    
-    // Merge multiple buckets for the same hour
-    const first = hourBuckets[0];
-    const last = hourBuckets[hourBuckets.length - 1];
-    
-    // Sum earnings and durations
-    const totalEarnings = hourBuckets.reduce((sum, b) => sum + b.earnings, 0);
-    const totalDuration = hourBuckets.reduce((sum, b) => sum + b.duration, 0);
-    
-    // Combine and sort history points
-    const combinedHistory: { time: number; value: number }[] = [];
-    for (const bucket of hourBuckets) {
-      combinedHistory.push(...bucket.history);
-    }
-    combinedHistory.sort((a, b) => a.time - b.time);
-    
-    // Merge usage snapshots
-    const mergedUsageSnapshot: { [baseId: string]: { used: number; purchased: number } } = {};
-    for (const bucket of hourBuckets) {
-      for (const [baseId, usage] of Object.entries(bucket.usageSnapshot)) {
-        if (!mergedUsageSnapshot[baseId]) {
-          mergedUsageSnapshot[baseId] = { used: 0, purchased: 0 };
-        }
-        mergedUsageSnapshot[baseId].used += usage.used;
-        mergedUsageSnapshot[baseId].purchased += usage.purchased;
-      }
-    }
-    
-    // Use the earliest start value and the latest end value
-    const mergedBucket: HourlyBucket = {
-      hourNumber,
-      startValue: first.startValue,
-      endValue: last.endValue,
-      earnings: totalEarnings,
-      history: combinedHistory,
-      timestamp: first.timestamp, // Use the earliest timestamp
-      duration: totalDuration,
-      inventorySnapshot: last.inventorySnapshot, // Use the latest inventory snapshot
-      pricesSnapshot: last.pricesSnapshot, // Use the latest prices
-      includedItems: last.includedItems,
-      usageSnapshot: mergedUsageSnapshot,
-      customName: hourBuckets.find(b => b.customName)?.customName // Preserve custom name if any bucket has one
-    };
-    
-    mergedBuckets.push(mergedBucket);
-  }
-  
-  // Sort merged buckets by hour number
-  mergedBuckets.sort((a, b) => a.hourNumber - b.hourNumber);
-  
-  return mergedBuckets;
 }
 
 export function getOverviewStats(): {
