@@ -458,33 +458,23 @@
 
             <!-- Map History Content (shown when Map History tab is active) -->
             <div class="history-map-history" id="historyMapHistoryContent" style="display: none;">
-              <div class="map-stats">
-                <h2>Map Statistics</h2>
-                <div class="stats-grid">
-                  <div class="stat-card">
-                    <div class="stat-label">Total Maps</div>
-                    <div class="stat-value" id="statTotalMaps">0</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-label">Average Duration</div>
-                    <div class="stat-value" id="statAverageDuration">0m 0s</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-label">
-                      Total Gained
-                      <span class="price-help-icon">
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                          <circle cx="8" cy="8" r="6.5"></circle>
-                          <text x="8" y="11.5" text-anchor="middle" font-size="9" font-weight="600" fill="currentColor" stroke="none">i</text>
-                        </svg>
-                        <span class="price-help-tooltip">
-                          <strong>Total Gained Calculation</strong><br>
-                          Spending is automatically included<br>
-                          (e.g. Compasses, beacons, etc.)
-                        </span>
-                      </span>
+              <!-- Map Overview Section -->
+              <div class="map-overview-wrapper">
+                <div class="map-overview">
+                  <h1 class="map-overview-title">Map Overview</h1>
+                  <div class="map-overview-stats">
+                    <div class="map-stat-item">
+                      <div class="map-stat-label">Total maps:</div>
+                      <div class="map-stat-value" id="statTotalMaps">0</div>
                     </div>
-                    <div class="stat-value" id="statTotalProfit">0.00</div>
+                    <div class="map-stat-item">
+                      <div class="map-stat-label">Average duration per map:</div>
+                      <div class="map-stat-value" id="statAverageDuration">0m 0s</div>
+                    </div>
+                    <div class="map-stat-item">
+                      <div class="map-stat-label">Profit:</div>
+                      <div class="map-stat-value" id="statTotalProfit">0.00</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -510,7 +500,16 @@
 
               <!-- Map History List -->
               <div class="map-history-list">
-                <h2>Map History</h2>
+                <div class="map-history-header">
+                  <h2>Map History</h2>
+                  <button id="clearMapHistoryBtn" class="clear-history-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Clear
+                  </button>
+                </div>
                 <div id="emptyHistoryMessage" class="empty-history">
                   <p>No map history yet. Start tracking by entering maps!</p>
                 </div>

@@ -155,7 +155,7 @@ function updateStatistics(stats: any): void {
 
   if (totalProfitEl) {
     totalProfitEl.textContent = (stats.netProfit >= 0 ? '+' : '') + formatCurrency(stats.netProfit);
-    totalProfitEl.className = 'stat-value ' + (stats.netProfit >= 0 ? 'positive' : 'negative');
+    totalProfitEl.className = 'map-stat-value ' + (stats.netProfit >= 0 ? 'positive' : 'negative');
   }
 }
 
@@ -252,8 +252,14 @@ function updateMapHistoryTable(mapHistory: any[]): void {
  * Initialize event listeners
  */
 function initializeEventListeners(): void {
-  // Back button handler is already handled in uiEvents.ts
-  // We'll add more event listeners here when implementing the full feature
+  const clearMapHistoryBtn = document.getElementById('clearMapHistoryBtn');
+
+  if (clearMapHistoryBtn) {
+    clearMapHistoryBtn.addEventListener('click', () => {
+      clearMapHistory();
+      renderMapHistoryContent();
+    });
+  }
 }
 
 /**

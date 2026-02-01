@@ -3738,6 +3738,83 @@ body.overlay-widget {
   font-family: "Manrope", sans-serif;
 }
 
+/* Map Overview Section (matching history overview design) */
+.map-overview-wrapper {
+  position: relative;
+  background: var(--bg-shade);
+  padding: calc(1.5rem * var(--scale)) calc(2rem * var(--scale));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  height: calc(200px * var(--scale));
+  min-height: calc(180px * var(--scale));
+}
+
+.map-overview {
+  position: relative;
+  z-index: 1;
+  height: 70%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  animation: diagonalFadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.map-overview-title {
+  font-size: calc(var(--text-title-large) * var(--text-scale));
+  color: var(--text);
+  margin: 0 0 calc(1rem * var(--scale)) 0;
+  font-family: "Manrope", sans-serif;
+  animation: fadeInUp 0.5s ease-out 0.15s backwards;
+}
+
+.map-overview-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: calc(1rem * var(--scale));
+}
+
+.map-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--scale));
+  animation: fadeInUp 0.5s ease-out backwards;
+}
+
+.map-stat-item:nth-child(1) {
+  animation-delay: 0.25s;
+}
+
+.map-stat-item:nth-child(2) {
+  animation-delay: 0.35s;
+}
+
+.map-stat-item:nth-child(3) {
+  animation-delay: 0.45s;
+}
+
+.map-stat-label {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--text);
+  opacity: 0.7;
+  font-weight: 500;
+  font-family: "Manrope", sans-serif;
+}
+
+.map-stat-value {
+  font-size: calc(var(--text-title) * var(--text-scale));
+  font-weight: 700;
+  color: var(--primary);
+  font-family: "Manrope", sans-serif;
+}
+
+.map-stat-value.positive {
+  color: #4ade80;
+}
+
+.map-stat-value.negative {
+  color: #f87171;
+}
+
 /* Main Content Area */
 .history-content {
   display: flex;
@@ -4887,10 +4964,17 @@ body.overlay-widget {
   margin-top: calc(1rem * var(--scale));
 }
 
+.map-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: calc(1rem * var(--scale));
+}
+
 .map-history-list h2 {
   font-size: calc(var(--text-title) * var(--text-scale));
   color: var(--text);
-  margin: 0 0 calc(1rem * var(--scale)) 0;
+  margin: 0;
   font-family: "Manrope", sans-serif;
 }
 
