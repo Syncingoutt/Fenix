@@ -27,7 +27,6 @@ let isRefreshing = false;
  * Initialize and render the map history page
  */
 export async function renderMapHistoryPage(): Promise<void> {
-  console.log('[MapHistory] Rendering map history page');
 
   // Always clear any existing intervals first to prevent duplicates
   if (refreshIntervalId !== null) {
@@ -350,13 +349,11 @@ export function cleanupMapHistoryPage(): void {
   if (refreshIntervalId !== null) {
     clearInterval(refreshIntervalId);
     refreshIntervalId = null;
-    console.log('[MapHistory] Cleaned up refresh interval');
   }
 
   if (durationIntervalId !== null) {
     clearInterval(durationIntervalId);
     durationIntervalId = null;
-    console.log('[MapHistory] Cleaned up duration interval');
   }
 
   // Reset refresh flag to prevent stuck states
