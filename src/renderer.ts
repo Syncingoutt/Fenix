@@ -4,7 +4,7 @@ import { ElectronAPI, InventoryItem } from './renderer/types.js';
 import { FLAME_ELEMENTIUM_ID } from './renderer/constants.js';
 
 // State
-import { setCurrentItems, setItemDatabase, getCurrentItems } from './renderer/state/inventoryState.js';
+import { setCurrentItems, setItemDatabase, getCurrentItems, setPriceCache } from './renderer/state/inventoryState.js';
 import { getWealthMode, getIsHourlyActive, getHourlyPaused, getRealtimeElapsedSeconds, getHourlyElapsedSeconds, setRealtimeElapsedSeconds, setHourlyElapsedSeconds, getIsRealtimeInitialized, setIsRealtimeInitialized, getRealtimeStartValue, getHourlyHistory, setHourlyHistory } from './renderer/state/wealthState.js';
 import { setIncludeTax } from './renderer/state/settingsState.js';
 
@@ -100,12 +100,14 @@ function updateStats(items: InventoryItem[]): void {
  * Load inventory from main process
  */
 async function loadInventory(): Promise<void> {
-  const [inventory, db] = await Promise.all([
+  const [inventory, db, priceCache] = await Promise.all([
     electronAPI.getInventory(),
-    electronAPI.getItemDatabase()
+    electronAPI.getItemDatabase(),
+    electronAPI.getPriceCache()
   ]);
   
   setItemDatabase(db);
+  setPriceCache(priceCache);
   
   // Set Flame Elementium price to 1 FE (it's the currency itself)
   const processedInventory = inventory.map(item => {

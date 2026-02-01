@@ -1,10 +1,11 @@
 // Inventory state management
 
-import { InventoryItem, ItemDatabase, SortBy, SortOrder } from '../types.js';
+import { InventoryItem, ItemDatabase, SortBy, SortOrder, PriceCache } from '../types.js';
 
 // Inventory data
 let currentItems: InventoryItem[] = [];
 let itemDatabase: ItemDatabase = {};
+let priceCache: PriceCache = {};
 
 // Sorting state
 let currentSortBy: SortBy = 'priceTotal';
@@ -47,6 +48,14 @@ export function getMinPriceFilter(): number | null {
 
 export function getMaxPriceFilter(): number | null {
   return maxPriceFilter;
+}
+
+export function getPriceCache(): PriceCache {
+  return priceCache;
+}
+
+export function setPriceCache(cache: PriceCache): void {
+  priceCache = cache;
 }
 
 // Setters

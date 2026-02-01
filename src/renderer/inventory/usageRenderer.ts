@@ -7,7 +7,7 @@ import {
   getHourlyStartSnapshot,
   getIncludedItems
 } from '../state/wealthState.js';
-import { getCurrentItems, getItemDatabase } from '../state/inventoryState.js';
+import { getCurrentItems, getItemDatabase, getPriceCache } from '../state/inventoryState.js';
 
 /**
  * Render the usage section showing compass/beacon consumption
@@ -27,44 +27,37 @@ export function renderUsageSection(): void {
   // Only show in hourly mode when active and items are being tracked
   if (wealthMode === 'hourly' && isHourlyActive && includedItems.size > 0) {
     usageSection.style.display = 'block';
-    
+
     const currentItems = getCurrentItems();
     const hourlyStartSnapshot = getHourlyStartSnapshot();
     const itemDatabase = getItemDatabase();
-    
+    const priceCache = getPriceCache();
+
     const usageItems: Array<{ baseId: string; itemName: string; netUsage: number; price: number }> = [];
-    
+
     for (const baseId of includedItems) {
-      // Always get the latest item data and price from currentItems (prices can be updated during session)
       const item = currentItems.find(i => i.baseId === baseId);
       const currentQty = item ? item.totalQuantity : 0;
       const startQty = hourlyStartSnapshot.get(baseId) || 0;
-      
+
       // Calculate net usage for display: (startQty - currentQty)
       // Positive means used, negative means bought
       const netUsage = startQty - currentQty;
-      
-      if (!item) {
-        // If item not in inventory, try to get from database
-        const itemData = itemDatabase[baseId];
-        if (itemData) {
-          usageItems.push({
-            baseId,
-            itemName: itemData.name,
-            netUsage,
-            price: 0 // No price if not in inventory
-          });
-        }
-        continue;
-      }
-      
+
+      // Get price from price_cache.json instead of inventory
+      // This ensures we have prices even if the user doesn't have the item or runs out
+      const priceCacheEntry = priceCache[baseId];
+      const price = priceCacheEntry?.price ?? 0;
+
+      // Get item name from inventory if available, otherwise from database
+      const itemName = item?.itemName ?? itemDatabase[baseId]?.name ?? `Unknown Item (${baseId})`;
+
       // Always include tracked items, even if netUsage is 0
-      // Use current price (may have been updated during session)
       usageItems.push({
         baseId,
-        itemName: item.itemName,
+        itemName,
         netUsage,
-        price: item.price || 0 // Always use current price, not cached
+        price
       });
     }
     

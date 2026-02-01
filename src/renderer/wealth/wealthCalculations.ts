@@ -2,7 +2,7 @@
 
 import { InventoryItem } from '../types.js';
 import { FLAME_ELEMENTIUM_ID } from '../constants.js';
-import { getCurrentItems, getMinPriceFilter, getMaxPriceFilter } from '../state/inventoryState.js';
+import { getCurrentItems, getMinPriceFilter, getMaxPriceFilter, getPriceCache } from '../state/inventoryState.js';
 import { getHourlyStartSnapshot, getIncludedItems } from '../state/wealthState.js';
 import { applyTax } from '../utils/tax.js';
 import { passesPriceFilters } from '../utils/filters.js';
@@ -86,22 +86,24 @@ export function getHourlyWealthGain(): number {
   // netUsage > 0: used items → subtract cost (negative impact)
   // netUsage < 0: bought items → add value (positive impact)
   // Selected compasses/beacons: do NOT apply tax (use raw price)
-  
+
+  const priceCache = getPriceCache();
+
   for (const baseId of includedItems) {
-    // Always get the latest price from currentItems (prices can be updated during session)
-    const item = currentItems.find(i => i.baseId === baseId);
-    if (!item || item.price === null) continue;
-    
-    const currentQty = item.totalQuantity;
+    const currentQtyItem = currentItems.find(i => i.baseId === baseId);
+    const currentQty = currentQtyItem ? currentQtyItem.totalQuantity : 0;
     const startQty = hourlyStartSnapshot.get(baseId) || 0;
     const netUsage = startQty - currentQty; // Calculate net usage
-    
+
     if (netUsage === 0) continue;
-    
-    // Use current price for calculations (may have been updated during session)
-    // Selected compasses/beacons: use raw price without tax
-    const value = Math.abs(netUsage) * item.price;
-    
+
+    // Get price from price_cache.json instead of inventory
+    // This ensures we have prices even if the user doesn't have the item or runs out
+    const priceCacheEntry = priceCache[baseId];
+    if (!priceCacheEntry || priceCacheEntry.price === undefined || priceCacheEntry.price === null) continue;
+
+    const value = Math.abs(netUsage) * priceCacheEntry.price;
+
     if (netUsage > 0) {
       // Used items: subtract cost (negative impact on FE)
       gainedValue -= value;
