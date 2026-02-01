@@ -28,6 +28,7 @@ export interface ElectronAPI {
   getItemDatabase: () => Promise<Record<string, { name: string; tradable?: boolean; group?: string }>>;
   getPriceCache: () => Promise<PriceCache>;
   getMapEvents: () => Promise<MapEvent[]>;
+  resetMapEvents: () => void;
   onInventoryUpdate: (callback: () => void) => void;
   startHourlyTimer: () => void;
   pauseHourlyTimer: () => void;

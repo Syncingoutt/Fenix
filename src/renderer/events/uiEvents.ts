@@ -4,6 +4,7 @@ import { ElectronAPI } from '../types.js';
 import { customTitleBar, titleBarMinimize, titleBarMaximize, titleBarClose } from '../dom/domElements.js';
 import { renderHistoryPage } from '../history/historyRenderer.js';
 import { renderMapHistoryPage, cleanupMapHistoryPage } from '../mapHistory/mapHistoryRenderer.js';
+import { getWealthMode } from '../state/wealthState.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -85,11 +86,12 @@ export function initUIEvents(
   const header = document.querySelector('.header'); // Target the .header div, not <header>
 
   function navigateToPage(pageId: string): void {
-    // Cleanup map history page if navigating away from it
-    if (pageId !== 'mapHistory') {
+    // Cleanup map history UI if navigating away from it (stops UI intervals only)
+    // Map tracking continues running globally at the renderer level
+    if (pageId !== 'history') {
       cleanupMapHistoryPage();
     }
-    
+
     // Update nav active state
     navItems.forEach(item => item.classList.remove('active'));
     const activeNav = document.getElementById(`nav-${pageId}`);
@@ -100,17 +102,58 @@ export function initUIEvents(
     const activePage = document.getElementById(`page-${pageId}`);
     if (activePage) activePage.classList.add('active');
 
-    // Hide header for history and mapHistory pages using CSS class
-    if ((pageId === 'history' || pageId === 'mapHistory') && header) {
+    // Hide header for history page using CSS class
+    if (pageId === 'history' && header) {
       header.classList.add('hidden');
-      // Render history page when navigating to it
-      if (pageId === 'history') {
-        renderHistoryPage();
-      } else if (pageId === 'mapHistory') {
-        renderMapHistoryPage();
-      }
+      renderHistoryPage();
+      // Configure tabs based on current mode
+      configureHistoryPageTabs();
     } else if (header) {
       header.classList.remove('hidden');
+    }
+  }
+
+  // Configure History page tabs based on current wealth mode
+  function configureHistoryPageTabs(): void {
+    const tabsContainer = document.getElementById('historyPageTabs');
+    if (!tabsContainer) return;
+
+    const wealthMode = getWealthMode();
+
+    if (wealthMode === 'hourly') {
+      // Show both tabs for hourly mode
+      tabsContainer.style.display = 'flex';
+      // Show History tab by default
+      showHistoryTab('history');
+    } else {
+      // Show only Map History tab for total mode, but hide it visually
+      // and automatically select it
+      tabsContainer.style.display = 'none';
+      // Show Map History content directly
+      showHistoryTab('mapHistory');
+    }
+  }
+
+  // Show the appropriate History tab content
+  function showHistoryTab(tab: 'history' | 'mapHistory'): void {
+    const overviewWrapper = document.querySelector('.history-overview-wrapper') as HTMLElement;
+    const historyContent = document.querySelector('.history-content') as HTMLElement;
+    const mapHistoryContent = document.getElementById('historyMapHistoryContent') as HTMLElement;
+    const tabs = document.querySelectorAll('.history-page-tab');
+
+    tabs.forEach(t => t.classList.remove('active'));
+
+    if (tab === 'history') {
+      if (overviewWrapper) overviewWrapper.style.display = 'block';
+      if (historyContent) historyContent.style.display = 'flex';
+      if (mapHistoryContent) mapHistoryContent.style.display = 'none';
+      tabs[0].classList.add('active');
+    } else {
+      if (overviewWrapper) overviewWrapper.style.display = 'none';
+      if (historyContent) historyContent.style.display = 'none';
+      if (mapHistoryContent) mapHistoryContent.style.display = 'block';
+      tabs[1]?.classList.add('active');
+      renderMapHistoryPage();
     }
   }
   
@@ -129,7 +172,7 @@ export function initUIEvents(
       navigateToPage('history');
     });
   }
-  
+
   // History back button navigation
   const historyBackBtn = document.getElementById('historyBackBtn');
   if (historyBackBtn) {
@@ -138,19 +181,18 @@ export function initUIEvents(
     });
   }
 
-  // Map history button navigation
-  const mapHistoryBtn = document.getElementById('mapHistoryBtn');
-  if (mapHistoryBtn) {
-    mapHistoryBtn.addEventListener('click', () => {
-      navigateToPage('mapHistory');
+  // History page tab navigation
+  const historyTabs = document.querySelectorAll('.history-page-tab');
+  historyTabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const tabName = target.getAttribute('data-tab');
+      if (tabName === 'history' || tabName === 'mapHistory') {
+        showHistoryTab(tabName);
+      }
     });
-  }
+  });
 
-  // Map history back button navigation
-  const mapHistoryBackBtn = document.getElementById('mapHistoryBackBtn');
-  if (mapHistoryBackBtn) {
-    mapHistoryBackBtn.addEventListener('click', () => {
-      navigateToPage('home');
-    });
-  }
+  // Export function to reconfigure tabs when mode changes
+  (window as any).reconfigureHistoryTabs = configureHistoryPageTabs;
 }

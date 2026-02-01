@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
 import { loadItemDatabase, loadPriceCache, savePriceCache, PriceCacheEntry } from './core/database';
-import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings, getLogPath, parseMapEvents, MapEvent } from './core/logParser';
+import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings, getLogPath, parseMapEvents, resetMapEventPosition, MapEvent } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
@@ -701,6 +701,10 @@ ipcMain.handle('get-price-cache', () => {
 
 ipcMain.handle('get-map-events', () => {
   return parseMapEvents();
+});
+
+ipcMain.on('reset-map-events', () => {
+  resetMapEventPosition();
 });
 
 ipcMain.on('minimize-window', () => {

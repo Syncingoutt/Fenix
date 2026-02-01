@@ -1,16 +1,27 @@
 // Map History page rendering
 
 import { ElectronAPI } from '../types.js';
-import { getMapHistory, getMapStats, getCurrentMap } from '../state/mapHistoryState.js';
+import { getMapHistory, getMapStats, getCurrentMap, clearMapHistory } from '../state/mapHistoryState.js';
 import { getZoneDisplayName } from './zoneMappings.js';
-import { initializeMapTracking, processMapEvents } from './mapTracker.js';
+import { clearMapTracking } from './mapTracker.js';
 
 declare const electronAPI: ElectronAPI;
 
-let isMapTrackingInitialized = false;
-
 // Store the refresh interval ID so we can clear it
 let refreshIntervalId: ReturnType<typeof setInterval> | null = null;
+
+// Store the duration update interval ID
+let durationIntervalId: ReturnType<typeof setInterval> | null = null;
+
+// Flag to prevent overlapping refresh calls
+let isRefreshing = false;
+
+  // Cache previous state to avoid unnecessary DOM updates
+  let cachedMapHistoryLength = -1;
+  let cachedTotalMaps = -1;
+  let cachedAverageDuration = -1;
+  let cachedTotalProfit: number | null = null;
+  let cachedCurrentMapStartTime: string | null = null;
 
 /**
  * Initialize and render the map history page
@@ -18,141 +29,222 @@ let refreshIntervalId: ReturnType<typeof setInterval> | null = null;
 export async function renderMapHistoryPage(): Promise<void> {
   console.log('[MapHistory] Rendering map history page');
 
-  // Initialize map tracking only once
-  if (!isMapTrackingInitialized) {
-    await initializeMapTracking();
-    isMapTrackingInitialized = true;
-  }
-
-  renderMapHistoryContent();
-  initializeEventListeners();
-  
-  // Clear any existing interval to avoid multiple refresh timers
+  // Always clear any existing intervals first to prevent duplicates
   if (refreshIntervalId !== null) {
     clearInterval(refreshIntervalId);
+    refreshIntervalId = null;
   }
-  
-  // Set up auto-refresh to fetch new map events and update the page
+  if (durationIntervalId !== null) {
+    clearInterval(durationIntervalId);
+    durationIntervalId = null;
+  }
+
+  // Note: Map tracking reset happens at app startup in renderer.ts
+  // We only handle UI rendering and refresh here
+
+  // Initial render of all content
+  renderMapHistoryContent();
+  initializeEventListeners();
+
+  // Only set up UI refresh intervals if we're on the map history page
+  // Note: Map tracking continues running globally at the renderer level
+
+  // Set up auto-refresh to update the UI with changes from global map tracking
   refreshIntervalId = setInterval(async () => {
     await refreshMapHistory();
-  }, 500); // Refresh every 500ms to match main process polling
+  }, 500); // Refresh every 500ms to match global polling
+
+  // Set up duration update interval (only updates current map duration, doesn't rebuild DOM)
+  durationIntervalId = setInterval(() => {
+    updateCurrentMapDurationOnly();
+  }, 1000); // Update duration every 1 second
 }
 
 /**
- * Render the main map history content
+ * Render the main map history content (initial full render)
  */
 function renderMapHistoryContent(): void {
-  const content = document.getElementById('mapHistoryContent');
-  if (!content) return;
-
   const mapHistory = getMapHistory();
   const stats = getMapStats();
   const currentMap = getCurrentMap();
 
-  // Build HTML for map history
-  let historyHtml = '';
+  // Update cache with initial values
+  cachedMapHistoryLength = mapHistory.length;
+  cachedTotalMaps = stats.totalMaps;
+  cachedAverageDuration = Math.round(stats.averageDuration);
+  cachedTotalProfit = stats.totalProfit;
+  cachedCurrentMapStartTime = currentMap ? currentMap.startTime : null;
 
-  // Show statistics section
-  historyHtml += `
-    <div class="map-stats">
-      <h2>Map Statistics</h2>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Total Maps</div>
-          <div class="stat-value">${stats.totalMaps}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Average Duration</div>
-          <div class="stat-value">${formatMapDuration(Math.round(stats.averageDuration))}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Total Profit</div>
-          <div class="stat-value ${stats.totalProfit >= 0 ? 'positive' : 'negative'}">
-            ${stats.totalProfit >= 0 ? '+' : ''}${formatCurrency(stats.totalProfit)}
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  // Update statistics values
+  updateStatistics(stats);
 
-  // Show current map if active
-  if (currentMap) {
-    const zoneName = currentMap.zonePath 
-      ? getZoneDisplayName(currentMap.zonePath, currentMap.levelId)
-      : 'Unknown Zone';
-    const isHideout = (currentMap as any).isHideout || false;
+  // Update current map section
+  updateCurrentMap(currentMap);
 
-    historyHtml += `
-      <div class="current-map">
-        <h2>Current Map</h2>
-        <div class="current-map-info">
-          <div class="info-row">
-            <span class="info-label">Zone:</span>
-            <span class="info-value">${zoneName}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Started:</span>
-            <span class="info-value">${formatTimestamp(currentMap.startTime)}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Duration:</span>
-            <span class="info-value" id="currentMapDuration">Calculating...</span>
-          </div>
-        </div>
-      </div>
-    `;
+  // Update map history table
+  updateMapHistoryTable(mapHistory);
+}
+
+/**
+ * Refresh the map history display (only updates changed values)
+ */
+async function refreshMapHistory(): Promise<void> {
+  // Prevent overlapping refresh calls to avoid memory leaks and race conditions
+  if (isRefreshing) {
+    return;
   }
 
-  // Show map history table
-  historyHtml += `
-    <div class="map-history-list">
-      <h2>Map History</h2>
-      ${mapHistory.length === 0 ? `
-        <div class="empty-history">
-          <p>No map history yet. Start tracking by entering maps!</p>
-        </div>
-      ` : `
-        <table class="map-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Map</th>
-              <th>Duration</th>
-              <th>Profit</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${mapHistory.slice().reverse().map(map => {
-              const zoneName = map.zonePath 
-                ? getZoneDisplayName(map.zonePath, map.levelId)
-                : 'Unknown Zone';
-              
-              const duration = map.duration !== undefined ? formatMapDuration(map.duration) : 'N/A';
-              const profit = map.profit !== undefined ? 
-                `<span class="${map.profit >= 0 ? 'positive' : 'negative'}">
-                  ${map.profit >= 0 ? '+' : ''}${formatCurrency(map.profit)}
-                </span>` : 'N/A';
+  try {
+    isRefreshing = true;
 
-              return `
-                <tr>
-                  <td>${formatTimestamp(map.startTime)}</td>
-                  <td>${zoneName}</td>
-                  <td>${duration}</td>
-                  <td>${profit}</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      `}
-    </div>
-  `;
+    // Get current state (map tracking is handled at the renderer level)
+    const mapHistory = getMapHistory();
+    const stats = getMapStats();
+    const currentMap = getCurrentMap();
 
-  content.innerHTML = historyHtml;
+    // Only update statistics if values changed
+    if (stats.totalMaps !== cachedTotalMaps ||
+        Math.round(stats.averageDuration) !== cachedAverageDuration ||
+        stats.totalProfit !== cachedTotalProfit) {
+      updateStatistics(stats);
+      cachedTotalMaps = stats.totalMaps;
+      cachedAverageDuration = Math.round(stats.averageDuration);
+      cachedTotalProfit = stats.totalProfit;
+    }
 
-  // Update current map duration if there is one
-  if (currentMap) {
-    updateCurrentMapDuration(currentMap.startTime);
+    // Only update current map if it changed
+    const newMapStartTime = currentMap ? currentMap.startTime : null;
+    if (newMapStartTime !== cachedCurrentMapStartTime) {
+      console.log(`[MapHistoryRenderer] Current map changed from ${cachedCurrentMapStartTime} to ${newMapStartTime}`);
+      console.log(`[MapHistoryRenderer] New current map:`, currentMap ? {
+        zonePath: currentMap.zonePath,
+        levelId: currentMap.levelId,
+        isHideout: (currentMap as any).isHideout
+      } : null);
+      updateCurrentMap(currentMap);
+      cachedCurrentMapStartTime = newMapStartTime;
+    }
+
+    // Only update table if history length changed (new map completed)
+    if (mapHistory.length !== cachedMapHistoryLength) {
+      console.log(`[MapHistoryRenderer] History length changed from ${cachedMapHistoryLength} to ${mapHistory.length}`);
+      updateMapHistoryTable(mapHistory);
+      cachedMapHistoryLength = mapHistory.length;
+    }
+
+  } finally {
+    isRefreshing = false;
+  }
+}
+
+/**
+ * Update statistics display values
+ */
+function updateStatistics(stats: any): void {
+  const totalMapsEl = document.getElementById('statTotalMaps');
+  const averageDurationEl = document.getElementById('statAverageDuration');
+  const totalProfitEl = document.getElementById('statTotalProfit');
+
+  if (totalMapsEl) {
+    totalMapsEl.textContent = stats.totalMaps.toString();
+  }
+
+  if (averageDurationEl) {
+    averageDurationEl.textContent = formatMapDuration(Math.round(stats.averageDuration));
+  }
+
+  if (totalProfitEl) {
+    totalProfitEl.textContent = (stats.netProfit >= 0 ? '+' : '') + formatCurrency(stats.netProfit);
+    totalProfitEl.className = 'stat-value ' + (stats.netProfit >= 0 ? 'positive' : 'negative');
+  }
+}
+
+/**
+ * Update current map section
+ */
+function updateCurrentMap(currentMap: any): void {
+  const currentMapSection = document.getElementById('currentMapSection');
+
+  if (!currentMap) {
+    if (currentMapSection) {
+      currentMapSection.style.display = 'none';
+    }
+    return;
+  }
+
+  if (currentMapSection) {
+    currentMapSection.style.display = 'block';
+  }
+
+  const zoneEl = document.getElementById('currentMapZone');
+  const startedEl = document.getElementById('currentMapStarted');
+  const durationEl = document.getElementById('currentMapDuration');
+
+  if (zoneEl) {
+    const zoneName = currentMap.zonePath
+      ? getZoneDisplayName(currentMap.zonePath, currentMap.levelId)
+      : ((currentMap as any).isHideout ? 'Hideout' : 'Unknown Zone');
+    zoneEl.textContent = zoneName;
+  }
+
+  if (startedEl) {
+    startedEl.textContent = formatTimestamp(currentMap.startTime);
+  }
+
+  if (durationEl) {
+    // Initial duration value - will be updated by the duration interval
+    const start = parseTimestamp(currentMap.startTime);
+    const now = Date.now();
+    const elapsed = Math.floor((now - start.getTime()) / 1000);
+    durationEl.textContent = formatMapDuration(elapsed);
+  }
+}
+
+/**
+ * Update map history table (only called when history length changes)
+ */
+function updateMapHistoryTable(mapHistory: any[]): void {
+  const emptyMessageEl = document.getElementById('emptyHistoryMessage');
+  const tableEl = document.getElementById('mapHistoryTable');
+  const tableBodyEl = document.getElementById('mapHistoryTableBody');
+
+  if (mapHistory.length === 0) {
+    if (emptyMessageEl) emptyMessageEl.style.display = 'block';
+    if (tableEl) tableEl.style.display = 'none';
+    return;
+  }
+
+  if (emptyMessageEl) emptyMessageEl.style.display = 'none';
+  if (tableEl) tableEl.style.display = 'table';
+
+  if (tableBodyEl) {
+    tableBodyEl.innerHTML = mapHistory.slice().reverse().map(map => {
+      const zoneName = map.zonePath
+        ? getZoneDisplayName(map.zonePath, map.levelId)
+        : 'Unknown Zone';
+
+      const duration = map.duration !== undefined ? formatMapDuration(map.duration) : 'N/A';
+
+      // Calculate net profit (profit - spent) for the "Gained" column
+      let gainedValue: number | null = null;
+      if (map.profit !== undefined) {
+        gainedValue = map.profit - (map.spent || 0);
+      }
+
+      const gained = gainedValue !== null ?
+        `<span class="${gainedValue >= 0 ? 'positive' : 'negative'}">
+          ${gainedValue >= 0 ? '+' : ''}${formatCurrency(gainedValue)}
+        </span>` : 'N/A';
+
+      return `
+        <tr>
+          <td>${formatTimestamp(map.startTime)}</td>
+          <td>${zoneName}</td>
+          <td>${duration}</td>
+          <td>${gained}</td>
+        </tr>
+      `;
+    }).join('');
   }
 }
 
@@ -165,24 +257,18 @@ function initializeEventListeners(): void {
 }
 
 /**
- * Refresh the map history display
+ * Update only the current map duration (called every second)
+ * This is the only thing that needs frequent updates without rebuilding DOM
  */
-async function refreshMapHistory(): Promise<void> {
-  // Process any new map events from the log
-  await processMapEvents();
-  
-  // Re-render entire content to show new maps, updates to current map, etc.
-  renderMapHistoryContent();
-}
+function updateCurrentMapDurationOnly(): void {
+  if (!cachedCurrentMapStartTime) {
+    return;
+  }
 
-/**
- * Update the duration display for the current map
- */
-function updateCurrentMapDuration(startTime: string): void {
   const durationElement = document.getElementById('currentMapDuration');
   if (durationElement) {
     const now = Date.now();
-    const start = parseTimestamp(startTime);
+    const start = parseTimestamp(cachedCurrentMapStartTime);
     const elapsed = Math.floor((now - start.getTime()) / 1000);
     durationElement.textContent = formatMapDuration(elapsed);
   }
@@ -248,7 +334,7 @@ function formatCurrency(value: number): string {
 }
 
 /**
- * Cleanup - stop refresh interval when navigating away
+ * Cleanup - stop intervals and reset state when navigating away
  */
 export function cleanupMapHistoryPage(): void {
   if (refreshIntervalId !== null) {
@@ -256,4 +342,27 @@ export function cleanupMapHistoryPage(): void {
     refreshIntervalId = null;
     console.log('[MapHistory] Cleaned up refresh interval');
   }
+
+  if (durationIntervalId !== null) {
+    clearInterval(durationIntervalId);
+    durationIntervalId = null;
+    console.log('[MapHistory] Cleaned up duration interval');
+  }
+
+  // Reset refresh flag to prevent stuck states
+  isRefreshing = false;
+
+  // Reset cache variables
+  cachedMapHistoryLength = -1;
+  cachedTotalMaps = -1;
+  cachedAverageDuration = -1;
+  cachedTotalProfit = null;
+  cachedCurrentMapStartTime = null;
+
+  // Don't clear map tracking here - it continues running at the renderer level
+  // Only clear the UI-specific intervals
+
+  // Note: We DON'T clear mapHistory state here because user's map history
+  // should persist across navigation within the same app session.
+  // It will be automatically cleared when the app is closed and restarted.
 }

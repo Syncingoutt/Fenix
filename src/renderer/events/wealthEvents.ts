@@ -96,18 +96,23 @@ export function initWealthEvents(
     renderInventory(); // Show all items
     renderBreakdown(renderInventory); // Update breakdown for realtime mode
     updateGraph();
+
+    // Reconfigure History page tabs if on History page
+    if ((window as any).reconfigureHistoryTabs) {
+      (window as any).reconfigureHistoryTabs();
+    }
   });
-  
+
   hourlyBtn.addEventListener('click', () => {
     setWealthMode('hourly');
     realtimeBtn.classList.remove('active');
     hourlyBtn.classList.add('active');
     hourlyControls.classList.add('active');
-    
+
     // Hide realtime timer and reset button when in hourly mode, show controls
     timerEl.style.display = 'none';
     resetRealtimeBtn.style.display = 'none';
-    
+
     // Update display to show hourly values (if session is active)
     if (getIsHourlyActive()) {
       updateHourlyWealth();
@@ -122,11 +127,16 @@ export function initWealthEvents(
       renderBreakdown(renderInventory); // Clear breakdown (no active hourly session)
     }
     updateGraph();
-    
+
+    // Reconfigure History page tabs if on History page
+    if ((window as any).reconfigureHistoryTabs) {
+      (window as any).reconfigureHistoryTabs();
+    }
+
     // Update overlay widget with current mode
     updateOverlayWidgetData();
   });
-  
+
   startHourlyBtn.addEventListener('click', startHourlyTracking);
   stopHourlyBtn.addEventListener('click', stopHourlyTracking);
   pauseHourlyBtn.addEventListener('click', pauseHourlyTracking);

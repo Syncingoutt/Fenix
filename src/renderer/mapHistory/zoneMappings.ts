@@ -13,6 +13,7 @@ export interface MapEntry {
   levelId?: number;
   zoneEnglishName?: string;
   profit?: number;
+  spent?: number; // Items used/consumed during the map
   isHideout?: boolean; // Tag hideout maps so they're excluded from history
 }
 

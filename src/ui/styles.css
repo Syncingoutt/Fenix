@@ -517,11 +517,6 @@ img:not(.header-logo-pic) {
   align-items: center;
 }
 #historyBtn {
-  display: none;
-}
-
-/* Show history button when hourly mode is selected */
-.mode-controls:has(input[value="second"]:checked) #historyBtn {
   display: flex;
 }
 
@@ -3597,6 +3592,64 @@ body.overlay-widget {
   height: calc(16px * var(--scale));
 }
 
+/* History Page Header with Tabs */
+.history-page-header {
+  display: flex;
+  align-items: center;
+  gap: calc(1rem * var(--scale));
+  margin-bottom: calc(1.5rem * var(--scale));
+  padding: 0 calc(2rem * var(--scale));
+}
+
+.history-page-tabs {
+  display: flex;
+  gap: calc(8px * var(--scale));
+  background: rgba(0, 0, 0, 0.3);
+  padding: calc(4px * var(--scale));
+  border-radius: calc(6px * var(--scale));
+}
+
+.history-page-tab {
+  padding: calc(8px * var(--scale)) calc(16px * var(--scale));
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-family: "Manrope", sans-serif;
+  cursor: pointer;
+  border-radius: calc(4px * var(--scale));
+  transition: all 0.2s ease;
+}
+
+.history-page-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.history-page-tab.active {
+  background: var(--primary);
+  color: white;
+}
+
+.history-page-tab.active:hover {
+  background: var(--primary);
+  color: white;
+}
+
+/* Map History content inside History page */
+.history-map-history {
+  display: flex;
+  flex-direction: column;
+  gap: calc(1rem * var(--scale));
+  padding: 0 calc(2rem * var(--scale));
+}
+
+.history-map-history .map-stats,
+.history-map-history .current-map,
+.history-map-history .map-history-list {
+  max-width: 100%;
+}
+
 /* Overview Section with Graph Background */
 .history-overview-wrapper {
   position: relative;
@@ -4767,7 +4820,6 @@ body.overlay-widget {
 .stat-label {
   font-size: calc(var(--text-small) * var(--text-scale));
   color: var(--text);
-  opacity: 0.7;
 }
 
 .stat-value {
@@ -4887,6 +4939,11 @@ body.overlay-widget {
 .map-table .negative {
   color: #f87171;
   font-weight: 500;
+}
+
+.map-table .zero {
+  color: #888;
+  font-weight: 400;
 }
 
 /* Map Name Cell */

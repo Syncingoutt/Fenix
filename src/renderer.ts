@@ -46,7 +46,8 @@ import { initPrices } from './renderer/prices/pricesRenderer.js';
 
 // Map History
 import { renderMapHistoryPage } from './renderer/mapHistory/mapHistoryRenderer.js';
-import { initializeMapTracking, processMapEvents, setOnMapEndCallback } from './renderer/mapHistory/mapTracker.js';
+import { processMapEvents, setOnMapEndCallback, initializeMapTracking, clearMapTracking } from './renderer/mapHistory/mapTracker.js';
+import { clearMapHistory } from './renderer/state/mapHistoryState.js';
 
 declare const electronAPI: ElectronAPI;
 declare const Chart: any;
@@ -129,7 +130,7 @@ async function loadInventory(): Promise<void> {
   
   // Update previous quantities for tracking
   updatePreviousQuantities();
-  
+
   renderInventory();
   updateStats(getCurrentItems());
   renderBreakdown(renderInventory);
@@ -210,8 +211,7 @@ async function initialize(): Promise<void> {
   // Initialize prices page
   initPrices();
 
-  // Initialize map tracking and register callback for average time update
-  initializeMapTracking();
+  // Register callback for average time update when maps end
   setOnMapEndCallback(updateAverageTimePerMap);
 
 // Listen to timer ticks from main process
@@ -252,10 +252,28 @@ electronAPI.onTimerTick((data) => {
 
   // Listen for inventory updates
 electronAPI.onInventoryUpdate(() => {
+      console.log('[Renderer] onInventoryUpdate called');
       loadInventory();
-      // Process map events when inventory updates
-      processMapEvents();
   });
+
+  // Reset map tracking for new session - clear old history and reset log position
+  // This must happen BEFORE initializing map tracking to ensure we only track new maps
+  console.log('[Renderer] Resetting map tracking for new session');
+  await electronAPI.resetMapEvents();
+  clearMapHistory();
+  clearMapTracking();
+
+  // Initialize map tracking on app startup - runs regardless of current page
+  await initializeMapTracking();
+
+  // Start continuous map event processing loop
+  setInterval(async () => {
+    try {
+      await processMapEvents();
+    } catch (error) {
+      console.error('[Renderer] Error in continuous map event processing:', error);
+    }
+  }, 500); // Check for new map events every 500ms
   
   // Load tax preference on startup and initialize
   const [settings, configured] = await Promise.all([

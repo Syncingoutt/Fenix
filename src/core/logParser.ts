@@ -28,6 +28,9 @@ const DEFAULT_LOG_PATH = '';
 // Store userData path (set by main process)
 let userDataPath: string | null = null;
 
+// Store last read position for map events to enable incremental reading
+let lastMapEventPosition = 0;
+
 /**
  * Initialize the log parser with userData path (called from main process)
  */
@@ -636,7 +639,7 @@ function parseBeaconUsage(line: string): { baseId: string | undefined, timestamp
  */
 export function parseMapEvents(): MapEvent[] {
   const logPath = getLogPath();
-  
+
   if (!logPath || !fs.existsSync(logPath)) {
     return [];
   }
@@ -644,12 +647,25 @@ export function parseMapEvents(): MapEvent[] {
   const stats = fs.statSync(logPath);
   const fileSize = stats.size;
 
-  const startPosition = 0;
+  // If file is smaller than last position (file was rotated/reset), start from beginning
+  if (fileSize < lastMapEventPosition) {
+    lastMapEventPosition = 0;
+  }
+
+  // If no new content, return empty array
+  if (fileSize <= lastMapEventPosition) {
+    return [];
+  }
 
   const fd = fs.openSync(logPath, 'r');
-  const buffer = Buffer.alloc(fileSize - startPosition);
-  fs.readSync(fd, buffer, 0, fileSize - startPosition, startPosition);
+  // Only read new content since last position
+  const bufferSize = fileSize - lastMapEventPosition;
+  const buffer = Buffer.alloc(bufferSize);
+  fs.readSync(fd, buffer, 0, bufferSize, lastMapEventPosition);
   fs.closeSync(fd);
+
+  // Update last read position
+  lastMapEventPosition = fileSize;
 
   const logContent = buffer.toString('utf-8');
   const lines = logContent.split('\n');
@@ -666,7 +682,7 @@ export function parseMapEvents(): MapEvent[] {
     const timestamp = timestampMatch ? timestampMatch[1] : 'unknown';
 
     // Detect map start events: OpenMainWorld END
-    if (line.includes('OpenMainWorld END!') && line.includes('InMainLevelPath')) {
+    if (line.includes('OpenMainWorld END!')) {
       const zonePath = parseZonePath(line);
       const levelId = parseLevelId(line);
       
@@ -681,7 +697,7 @@ export function parseMapEvents(): MapEvent[] {
         });
       }
       
-      // Always log the map start (even for hideouts)
+      // Always log the map start (even for hideouts and maps without zonePath)
       mapEvents.push({
         timestamp,
         eventType: 'map_start',
@@ -703,4 +719,19 @@ export function parseMapEvents(): MapEvent[] {
   }
 
   return mapEvents;
+}
+
+/**
+ * Reset map event reading position (call when clearing history or file changes)
+ */
+export function resetMapEventPosition(): void {
+  // Set to current file size so we only track NEW events from this point forward
+  // This prevents old events from being re-read
+  const logPath = getLogPath();
+  if (logPath && fs.existsSync(logPath)) {
+    const stats = fs.statSync(logPath);
+    lastMapEventPosition = stats.size;
+  } else {
+    lastMapEventPosition = 0;
+  }
 }
