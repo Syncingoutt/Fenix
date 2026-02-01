@@ -4,15 +4,18 @@ import {
   getHistoryDates,
   getSelectedDate,
   getSelectedHour,
+  getSelectedBucketStartTime,
   getCurrentHistoryData,
   setSelectedDate,
   setSelectedHour,
+  setSelectedBucketStartTime,
   loadHistoryData,
   getOverviewStats,
   HistoryDate
 } from '../state/historyState.js';
 import { ElectronAPI } from '../types.js';
 import { FLAME_ELEMENTIUM_ID } from '../constants.js';
+import { applyTax } from '../utils/tax.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -37,9 +40,9 @@ let isInitialLoad = true;
 // Track if we've played the animation when switching from "All Hours" to a specific hour
 let hasPlayedFirstHourAnimation = false;
 
-// Track last selected date and hour to detect what changed
+  // Track last selected date and hour to detect what changed
 let lastSelectedDate: string | null = null;
-let lastSelectedHour: number | null = null;
+let lastSelectedBucketStartTime: number | null = null;
 
 /**
  * Initialize and render the history page
@@ -50,19 +53,19 @@ export async function renderHistoryPage(): Promise<void> {
   // Reset tracking variables on initial load to detect first change properly
   if (isInitialLoad) {
     lastSelectedDate = null;
-    lastSelectedHour = null;
+    lastSelectedBucketStartTime = null;
   }
 
   // Get current selections
   const currentSelectedDate = getSelectedDate();
-  const currentSelectedHour = getSelectedHour();
+  const currentSelectedBucketStartTime = getSelectedBucketStartTime();
 
   // Detect what changed
   const dateChanged = lastSelectedDate !== currentSelectedDate;
-  const hourChanged = lastSelectedHour !== currentSelectedHour;
+  const hourChanged = lastSelectedBucketStartTime !== currentSelectedBucketStartTime;
 
   // Detect transition from "All Hours" (null) to a specific hour (BEFORE updating tracking)
-  const isTransitioningFromAllHoursToHour = !hasPlayedFirstHourAnimation && hourChanged && lastSelectedHour === null && currentSelectedHour !== null;
+  const isTransitioningFromAllHoursToHour = !hasPlayedFirstHourAnimation && hourChanged && lastSelectedBucketStartTime === null && currentSelectedBucketStartTime !== null;
 
   // Reset first hour animation flag when changing dates
   if (dateChanged) {
@@ -71,7 +74,7 @@ export async function renderHistoryPage(): Promise<void> {
 
   // Update tracking
   lastSelectedDate = currentSelectedDate;
-  lastSelectedHour = currentSelectedHour;
+  lastSelectedBucketStartTime = currentSelectedBucketStartTime;
 
   // Auto-select the latest date if no date is currently selected
   const dates = getHistoryDates();
@@ -350,9 +353,9 @@ function renderOverviewGraph(): void {
   const data = getCurrentHistoryData();
   if (!data || data.buckets.length === 0) return;
 
-  const selectedHour = getSelectedHour();
-  const buckets = selectedHour !== null
-    ? data.buckets.filter(b => b.hourNumber === selectedHour)
+  const selectedBucketStartTime = getSelectedBucketStartTime();
+  const buckets = selectedBucketStartTime !== null
+    ? data.buckets.filter(b => b.bucketStartTime === selectedBucketStartTime)
     : data.buckets;
 
   // Combine all history points from buckets
@@ -472,10 +475,10 @@ function handleDropdownOptionClick(e: Event): void {
   const dropdownMenu = document.getElementById('hourDropdownMenu') as HTMLElement;
 
   const value = option.getAttribute('data-value');
-  const hourNumber = value ? parseInt(value, 10) : null;
+  const bucketStartTime = value ? parseInt(value, 10) : null;
 
   // Update selected value
-  setSelectedHour(hourNumber);
+  setSelectedBucketStartTime(bucketStartTime);
   if (dropdownValue) {
     dropdownValue.textContent = option.textContent;
   }
@@ -508,7 +511,7 @@ function renderHourSelector(): void {
   if (!dropdownWrapper || !dropdownTrigger || !dropdownValue || !dropdownMenu || !hourSelector) return;
 
   const data = getCurrentHistoryData();
-  const selectedHour = getSelectedHour();
+  const selectedBucketStartTime = getSelectedBucketStartTime();
 
   if (!data || data.buckets.length === 0) {
     dropdownValue.textContent = 'All Hours';
@@ -526,11 +529,11 @@ function renderHourSelector(): void {
     const hourLabel = formatHour(bucket);
     const customName = bucket.customName || '';
     const displayName = customName ? `${hourLabel}: ${customName}` : hourLabel;
-    const isSelected = bucket.hourNumber === selectedHour ? 'selected' : '';
-    const option = `<div class="custom-dropdown-option ${isSelected}" data-value="${bucket.hourNumber}">${displayName}</div>`;
+    const isSelected = bucket.bucketStartTime === selectedBucketStartTime ? 'selected' : '';
+    const option = `<div class="custom-dropdown-option ${isSelected}" data-value="${bucket.bucketStartTime}">${displayName}</div>`;
     options.push(option);
 
-    if (bucket.hourNumber === selectedHour) {
+    if (bucket.bucketStartTime === selectedBucketStartTime) {
       selectedDisplay = displayName;
     }
   });
@@ -560,7 +563,7 @@ function updateHourSelectorOptions(): void {
   if (!dropdownMenu || !dropdownValue) return;
 
   const data = getCurrentHistoryData();
-  const selectedHour = getSelectedHour();
+  const selectedBucketStartTime = getSelectedBucketStartTime();
 
   if (!data || data.buckets.length === 0) {
     dropdownValue.textContent = 'All Hours';
@@ -577,11 +580,11 @@ function updateHourSelectorOptions(): void {
     const hourLabel = formatHour(bucket);
     const customName = bucket.customName || '';
     const displayName = customName ? `${hourLabel}: ${customName}` : hourLabel;
-    const isSelected = bucket.hourNumber === selectedHour ? 'selected' : '';
-    const option = `<div class="custom-dropdown-option ${isSelected}" data-value="${bucket.hourNumber}">${displayName}</div>`;
+    const isSelected = bucket.bucketStartTime === selectedBucketStartTime ? 'selected' : '';
+    const option = `<div class="custom-dropdown-option ${isSelected}" data-value="${bucket.bucketStartTime}">${displayName}</div>`;
     options.push(option);
 
-    if (bucket.hourNumber === selectedHour) {
+    if (bucket.bucketStartTime === selectedBucketStartTime) {
       selectedDisplay = displayName;
     }
   });
@@ -598,7 +601,7 @@ function renderInventory(): void {
   if (!inventoryContent) return;
 
   const data = getCurrentHistoryData();
-  const selectedHour = getSelectedHour();
+  const selectedBucketStartTime = getSelectedBucketStartTime();
 
   if (!data || data.buckets.length === 0) {
     inventoryContent.innerHTML = '<div class="history-empty-state">Select a date to view inventory</div>';
@@ -606,8 +609,8 @@ function renderInventory(): void {
   }
 
   // Get bucket(s) to display
-  const bucketsToShow = selectedHour !== null
-    ? data.buckets.filter(b => b.hourNumber === selectedHour)
+  const bucketsToShow = selectedBucketStartTime !== null
+    ? data.buckets.filter(b => b.bucketStartTime === selectedBucketStartTime)
     : data.buckets;
 
   if (bucketsToShow.length === 0) {
@@ -617,7 +620,7 @@ function renderInventory(): void {
 
   // If single hour selected, use saved inventory snapshot from bucket
   // But if compareWithToday is enabled, parse and re-render with updated prices
-  if (selectedHour !== null && bucketsToShow.length > 0) {
+  if (selectedBucketStartTime !== null && bucketsToShow.length > 0) {
     if (compareWithToday) {
       // Parse the inventory snapshot to extract items and re-render with latest prices
       const aggregatedItems = aggregateBuckets(bucketsToShow);
@@ -734,17 +737,20 @@ async function renderAggregatedInventory(items: { [baseId: string]: { name: stri
       total = item.quantity;
     } else if (compareWithToday && priceCache[baseId]) {
       price = priceCache[baseId].price;
-      total = price * item.quantity;
+      const rawTotal = price * item.quantity;
+      total = applyTax(rawTotal, baseId);
     } else if (isToday && priceCache[baseId]) {
       price = priceCache[baseId].price;
-      total = price * item.quantity;
+      const rawTotal = price * item.quantity;
+      total = applyTax(rawTotal, baseId);
     } else if (priceCache[baseId]?.history) {
       const history = priceCache[baseId].history;
       const dayHistory = history.filter(h => h.date.startsWith(selectedDate));
 
       if (dayHistory.length > 0) {
         price = dayHistory[dayHistory.length - 1].price;
-        total = price * item.quantity;
+        const rawTotal = price * item.quantity;
+        total = applyTax(rawTotal, baseId);
       } else {
         price = item.quantity > 0 ? item.total / item.quantity : 0;
         total = item.total;
@@ -978,9 +984,9 @@ function showEditMode(): void {
     const displayName = customName ? `${hourLabel}: ${customName}` : hourLabel;
     const checkboxItem = `
       <label class="edit-hour-checkbox-item">
-        <input type="checkbox" class="edit-hour-checkbox" value="${bucket.hourNumber}">
-        <span class="edit-hour-checkbox-label" data-hour="${bucket.hourNumber}" data-baselabel="${hourLabel}" data-customname="${customName}">${displayName}</span>
-        <button class="edit-hour-name-btn" data-hour="${bucket.hourNumber}" title="Edit Name">
+        <input type="checkbox" class="edit-hour-checkbox" value="${bucket.bucketStartTime}">
+        <span class="edit-hour-checkbox-label" data-bucketstarttime="${bucket.bucketStartTime}" data-baselabel="${hourLabel}" data-customname="${customName}">${displayName}</span>
+        <button class="edit-hour-name-btn" data-bucketstarttime="${bucket.bucketStartTime}" title="Edit Name">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M18.5 2.50023C18.8978 2.1024 19.5374 2.1024 19.9352 2.50023L21.4998 4.06479C21.8976 4.46261 21.8976 5.10217 21.4998 5.5L12 15L8 16L9 12L18.5 2.50023Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -998,8 +1004,8 @@ function showEditMode(): void {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const hourNumber = parseInt(btn.getAttribute('data-hour') || '0', 10);
-      const label = editHourCheckboxList.querySelector(`.edit-hour-checkbox-label[data-hour="${hourNumber}"]`) as HTMLElement;
+      const bucketStartTime = parseInt(btn.getAttribute('data-bucketstarttime') || '0', 10);
+      const label = editHourCheckboxList.querySelector(`.edit-hour-checkbox-label[data-bucketstarttime="${bucketStartTime}"]`) as HTMLElement;
       if (label) {
         makeLabelEditable(label);
       }
@@ -1059,7 +1065,7 @@ function hideEditMode(): void {
  * Make label editable
  */
 async function makeLabelEditable(label: HTMLElement): Promise<void> {
-  const hourNumber = parseInt(label.getAttribute('data-hour') || '0', 10);
+  const bucketStartTime = parseInt(label.getAttribute('data-bucketstarttime') || '0', 10);
   const baseLabel = label.getAttribute('data-baselabel') || '';
   const currentCustomName = label.getAttribute('data-customname') || '';
   const data = getCurrentHistoryData();
@@ -1067,7 +1073,7 @@ async function makeLabelEditable(label: HTMLElement): Promise<void> {
 
   if (!data || !selectedDate) return;
 
-  const bucket = data.buckets.find(b => b.hourNumber === hourNumber);
+  const bucket = data.buckets.find(b => b.bucketStartTime === bucketStartTime);
   if (!bucket) return;
 
   // Create input element
@@ -1099,7 +1105,7 @@ async function makeLabelEditable(label: HTMLElement): Promise<void> {
 
     // Save to persistent storage
     try {
-      await electronAPI.updateBucketCustomName(selectedDate, hourNumber, newName || undefined);
+      await electronAPI.updateBucketCustomName(selectedDate, bucketStartTime, newName || undefined);
     } catch (error) {
       console.error('Failed to save custom name:', error);
       // Still update UI even if save fails
@@ -1108,7 +1114,7 @@ async function makeLabelEditable(label: HTMLElement): Promise<void> {
     // Create new label element
     const newLabel = document.createElement('span');
     newLabel.className = 'edit-hour-checkbox-label';
-    newLabel.setAttribute('data-hour', hourNumber.toString());
+    newLabel.setAttribute('data-bucketstarttime', bucketStartTime.toString());
     newLabel.setAttribute('data-baselabel', baseLabel);
     newLabel.setAttribute('data-customname', newName || '');
     newLabel.textContent = newDisplayName;
@@ -1129,7 +1135,7 @@ async function makeLabelEditable(label: HTMLElement): Promise<void> {
       // Cancel on Escape - revert to original
       const newLabel = document.createElement('span');
       newLabel.className = 'edit-hour-checkbox-label';
-      newLabel.setAttribute('data-hour', hourNumber.toString());
+      newLabel.setAttribute('data-bucketstarttime', bucketStartTime.toString());
       newLabel.setAttribute('data-baselabel', baseLabel);
       newLabel.setAttribute('data-customname', currentCustomName);
       newLabel.textContent = currentCustomName ? `${baseLabel}: ${currentCustomName}` : baseLabel;
@@ -1164,14 +1170,14 @@ async function handleDeleteSelectedHours(): Promise<void> {
   try {
     // Delete each selected hour
     for (const checkbox of selectedCheckboxes) {
-      const hourNumber = parseInt(checkbox.value, 10);
-      await electronAPI.deleteBucketsByDateAndHour(selectedDate, hourNumber);
+      const bucketStartTime = parseInt(checkbox.value, 10);
+      await electronAPI.deleteBucketsByDateAndHour(selectedDate, bucketStartTime);
     }
 
     // Hide modal, exit edit mode and reload
     hideDeleteHoursModal();
     hideEditMode();
-    setSelectedHour(null);
+    setSelectedBucketStartTime(null);
     await loadHistoryData();
     renderHistoryPage();
   } catch (error) {

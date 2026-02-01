@@ -98,20 +98,20 @@ export async function clearAllHistory(): Promise<void> {
 }
 
 /**
- * Delete specific buckets from history by date and hour
+ * Delete specific buckets from history by date and bucket start time
  */
-export async function deleteBucketsByDateAndHour(dateStr: string, hourNumber: number): Promise<void> {
+export async function deleteBucketsByDateAndHour(dateStr: string, bucketStartTime: number): Promise<void> {
   try {
     const sessions = await loadHourlySessions();
     let hasChanges = false;
 
     for (const session of sessions) {
       const originalLength = session.buckets.length;
-      // Filter out buckets matching the date and hour
+      // Filter out buckets matching the date and bucket start time
       session.buckets = session.buckets.filter(bucket => {
         const bucketDate = new Date(bucket.timestamp);
         const bucketDateStr = formatDate(bucketDate);
-        return bucketDateStr !== dateStr || bucket.hourNumber !== hourNumber;
+        return bucketDateStr !== dateStr || bucket.bucketStartTime !== bucketStartTime;
       });
 
       if (session.buckets.length !== originalLength) {
@@ -134,7 +134,7 @@ export async function deleteBucketsByDateAndHour(dateStr: string, hourNumber: nu
 /**
  * Update custom name for a specific bucket
  */
-export async function updateBucketCustomName(dateStr: string, hourNumber: number, customName?: string): Promise<void> {
+export async function updateBucketCustomName(dateStr: string, bucketStartTime: number, customName?: string): Promise<void> {
   try {
     const sessions = await loadHourlySessions();
     let hasChanges = false;
@@ -144,7 +144,7 @@ export async function updateBucketCustomName(dateStr: string, hourNumber: number
         const bucketDate = new Date(bucket.timestamp);
         const bucketDateStr = formatDate(bucketDate);
 
-        if (bucketDateStr === dateStr && bucket.hourNumber === hourNumber) {
+        if (bucketDateStr === dateStr && bucket.bucketStartTime === bucketStartTime) {
           if (bucket.customName !== customName) {
             bucket.customName = customName;
             hasChanges = true;

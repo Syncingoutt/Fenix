@@ -14,7 +14,7 @@ export interface HistoryDate {
 // History data storage
 let historyDates: HistoryDate[] = [];
 let selectedDate: string | null = null;
-let selectedHour: number | null = null;
+let selectedBucketStartTime: number | null = null; // Changed from selectedHour to selectedBucketStartTime for unique identification
 let savedSessions: SavedHourlySession[] = [];
 
 // Getters
@@ -27,7 +27,16 @@ export function getSelectedDate(): string | null {
 }
 
 export function getSelectedHour(): number | null {
-  return selectedHour;
+  // For backward compatibility, return hourNumber from the selected bucket
+  if (selectedBucketStartTime === null) return null;
+  const data = getCurrentHistoryData();
+  if (!data) return null;
+  const bucket = data.buckets.find(b => b.bucketStartTime === selectedBucketStartTime);
+  return bucket ? bucket.hourNumber : null;
+}
+
+export function getSelectedBucketStartTime(): number | null {
+  return selectedBucketStartTime;
 }
 
 export function getCurrentHistoryData(): HistoryDate | null {
@@ -49,7 +58,22 @@ export function setSelectedDate(date: string | null): void {
 }
 
 export function setSelectedHour(hour: number | null): void {
-  selectedHour = hour;
+  // For backward compatibility, find bucket by hourNumber and select it
+  if (hour === null) {
+    selectedBucketStartTime = null;
+    return;
+  }
+  const data = getCurrentHistoryData();
+  if (!data) {
+    selectedBucketStartTime = null;
+    return;
+  }
+  const bucket = data.buckets.find(b => b.hourNumber === hour);
+  selectedBucketStartTime = bucket?.bucketStartTime ?? null;
+}
+
+export function setSelectedBucketStartTime(bucketStartTime: number | null): void {
+  selectedBucketStartTime = bucketStartTime;
 }
 
 export function setSavedSessions(sessions: SavedHourlySession[]): void {
@@ -103,8 +127,8 @@ export function getOverviewStats(): {
   bucketsCount: number;
 } {
   const data = getCurrentHistoryData();
-  const selectedHour = getSelectedHour();
-  
+  const selectedBucketStartTime = getSelectedBucketStartTime();
+
   if (!data || data.buckets.length === 0) {
     return {
       totalDuration: 0,
@@ -113,18 +137,18 @@ export function getOverviewStats(): {
       bucketsCount: 0
     };
   }
-  
+
   // Get buckets to calculate stats for
-  const bucketsToCalc = selectedHour !== null
-    ? data.buckets.filter(b => b.hourNumber === selectedHour)
+  const bucketsToCalc = selectedBucketStartTime !== null
+    ? data.buckets.filter(b => b.bucketStartTime === selectedBucketStartTime)
     : data.buckets;
-  
+
   // Calculate stats
   const totalDuration = bucketsToCalc.reduce((sum, b) => sum + b.duration, 0);
   const totalFe = bucketsToCalc.reduce((sum, b) => sum + b.earnings, 0);
   const bucketsCount = bucketsToCalc.length;
   const fePerHour = totalDuration > 0 ? (totalFe / (totalDuration / 3600)) : 0;
-  
+
   return {
     totalDuration,
     fePerHour,
