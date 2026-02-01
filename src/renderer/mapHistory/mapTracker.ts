@@ -1,8 +1,9 @@
 // Map tracker service for tracking map runs from log file
 
 import { MapEvent, ElectronAPI } from '../types.js';
-import { startMap, endMap, getCurrentMap, setMapStartInventory, setMapEndInventory } from '../state/mapHistoryState.js';
+import { startMap, endMap, getCurrentMap, setMapStartTotalWealth, setMapEndTotalWealth } from '../state/mapHistoryState.js';
 import { getZoneDisplayName } from './zoneMappings.js';
+import { getCurrentTotalValue } from '../wealth/wealthCalculations.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -20,9 +21,17 @@ let cachedMapEvents: MapEvent[] = [];
 // Limit cached map events to prevent memory leaks
 const MAX_CACHED_EVENTS = 500;
 
-// Store inventory from hideout end to use as start for next real map
-// This captures beacons used right before entering the map
-let hideoutEndInventory: Map<string, number> | null = null;
+// Track wealth while in hideout - updates continuously
+let hideoutWealth: number = 0;
+let hideoutUpdateInterval: ReturnType<typeof setInterval> | null = null;
+
+// Track hideout wealth history to capture pre-drop value
+interface WealthSnapshot {
+  wealth: number;
+  timestamp: number;
+}
+let hideoutWealthHistory: WealthSnapshot[] = [];
+const MAX_HISTORY_SIZE = 10; // Store last 10 seconds of data
 
 /**
  * Register a callback to be called when a map ends
@@ -36,9 +45,12 @@ export function setOnMapEndCallback(callback: () => void): void {
  * @param forceRebuild - If true, rebuild state from all events (used on first load)
  */
 export async function initializeMapTracking(forceRebuild = false): Promise<void> {
+  // Start tracking hideout wealth continuously
+  startHideoutWealthTracking();
+
+  // If not initialized yet, do first-time setup
   // If not initialized yet, do first-time setup
   if (!isMapTrackingInitialized) {
-    console.log('[MapTracker] First-time initialization');
 
     // Read initial position from local storage
     const savedPosition = localStorage.getItem('mapTrackingLastPosition');
@@ -74,7 +86,6 @@ async function refreshMapEvents(): Promise<void> {
 
     // Only log if we actually got new events (not on every refresh)
     if (newEvents.length > 0) {
-      console.log(`[MapTracker] Loaded ${newEvents.length} new events from main process`);
       // Accumulate new events instead of replacing
       cachedMapEvents = [...cachedMapEvents, ...newEvents];
     }
@@ -116,19 +127,9 @@ export async function processMapEvents(initialSetup: boolean = false, skipRefres
     for (let i = startIndex; i < cachedMapEvents.length; i++) {
       const event = cachedMapEvents[i];
 
-      console.log(`[MapTracker] Processing event ${i}:`, {
-        type: event.eventType,
-        zonePath: event.zonePath,
-        isHideout: event.isHideout,
-        timestamp: event.timestamp
-      });
-
       await processMapEvent(event, initialSetup);
       lastProcessedEventIndex = i;
     }
-
-    // Only log when we actually processed events, and only once per batch
-    console.log(`[MapTracker] Processed ${eventsToProcess} new event(s) (index ${startIndex}-${lastProcessedEventIndex})`);
   } catch (error) {
     console.error('[MapTracker] Error processing map events:', error);
   }
@@ -161,12 +162,6 @@ async function handleMapStart(event: MapEvent, initialSetup: boolean): Promise<v
   const isHideout = event.isHideout || false;
   const isCurrentHideout = currentMap && (currentMap as any).isHideout;
 
-  // If leaving hideout to enter real map, capture inventory FIRST
-  // This must happen before we end the hideout and start the new map
-  if (isCurrentHideout && !isHideout) {
-    await handleHideoutEnd(event, initialSetup);
-  }
-
   // If there's a current map without an end time, end it now
   // During initial setup: only end hideouts if entering real map (hideout → non-hideout)
   // During runtime: only end hideouts if entering different type
@@ -178,6 +173,12 @@ async function handleMapStart(event: MapEvent, initialSetup: boolean): Promise<v
       (!initialSetup && isCurrentHideout !== isHideout);
 
     if (shouldEndCurrentMap) {
+      // If leaving hideout to enter real map, capture hideout wealth FIRST
+      // This captures wealth BEFORE any map entry costs are deducted
+      if (isCurrentHideout && !isHideout) {
+        await captureHideoutExitWealth();
+      }
+
       // End the current map (only hideouts during initial setup, or different types during runtime)
       const currentZoneName = currentMap.zonePath
         ? getZoneDisplayName(currentMap.zonePath, currentMap.levelId)
@@ -186,14 +187,20 @@ async function handleMapStart(event: MapEvent, initialSetup: boolean): Promise<v
         ? getZoneDisplayName(event.zonePath, event.levelId)
         : (isHideout ? 'Hideout' : 'Unknown Map');
 
-      console.log(`[MapTracker] Ending "${currentZoneName}" (${isCurrentHideout ? 'hideout' : 'map'}), entering "${newZoneName}" (${isHideout ? 'hideout' : 'map'})`);
       endMap(event.timestamp);
     }
   }
 
   // Start a new map (hideouts are tracked but not saved to history)
   if (!initialSetup) {
-    console.log(`[MapTracker] Starting map: zonePath=${event.zonePath}, isHideout=${isHideout}, timestamp=${event.timestamp}`);
+
+    // For non-hideout maps, capture hideout wealth BEFORE starting the map
+    // This ensures we get wealth before map entry costs are deducted
+    if (!isHideout) {
+      // Capture current hideout wealth (which has been continuously updated while in hideout)
+      await captureHideoutExitWealth();
+    }
+
     startMap(event.timestamp, event.zonePath, event.levelId);
 
     // Mark hideout maps so we can exclude them from history
@@ -202,17 +209,14 @@ async function handleMapStart(event: MapEvent, initialSetup: boolean): Promise<v
       if (currentMap) {
         (currentMap as any).isHideout = true;
       }
+
+      // Clear history when entering hideout to prevent using stale data
+      hideoutWealthHistory = [];
     }
 
-    // Use hideout end inventory as starting point (after beacons were used)
-    if (!isHideout && hideoutEndInventory) {
-      console.log('[MapTracker] Using hideout end inventory as map start (includes beacons)');
-      const priceCache = await electronAPI.getPriceCache();
-      setMapStartInventory(hideoutEndInventory, priceCache);
-      hideoutEndInventory = null; // Clear after using
-    } else {
-      // Capture inventory snapshot at map start
-      await captureInventorySnapshot('start');
+    // For non-hideout maps, use the captured hideout exit wealth as start wealth
+    if (!isHideout) {
+      await captureMapStartWealth(hideoutWealth);
     }
   }
 }
@@ -225,8 +229,8 @@ async function handleMapEnd(event: MapEvent, initialSetup: boolean): Promise<voi
 
   if (currentMap && !currentMap.endTime) {
     if (!initialSetup) {
-      // Capture inventory snapshot at map end before ending the map
-      await captureInventorySnapshot('end');
+      // Capture total wealth at map end before ending the map
+      await captureMapEndWealth();
 
       endMap(event.timestamp);
 
@@ -242,54 +246,49 @@ async function handleMapEnd(event: MapEvent, initialSetup: boolean): Promise<voi
 }
 
 /**
- * Handle map start event for hideouts ending
- * When we leave hideout, save inventory state to use as starting point for next map
+ * Capture total wealth at map start (uses captured hideout exit wealth)
+ * @param wealth - The hideout exit wealth to use as start wealth
  */
-async function handleHideoutEnd(event: MapEvent, initialSetup: boolean): Promise<void> {
-  // Save inventory from hideout end - this will be starting point for real map
-  await captureInventorySnapshot('start');
-  hideoutEndInventory = await getInventorySnapshotMap();
-  console.log('[MapTracker] Saved hideout inventory for next map start');
-}
-
-async function getInventorySnapshotMap(): Promise<Map<string, number>> {
-  const currentItems = await electronAPI.getInventory();
-  const snapshot = new Map<string, number>();
-  for (const item of currentItems) {
-    snapshot.set(item.baseId, item.totalQuantity);
+async function captureMapStartWealth(wealth: number): Promise<void> {
+  try {
+    setMapStartTotalWealth(wealth);
+  } catch (error) {
+    console.error('[MapTracker] Error capturing map start wealth:', error);
   }
-  return snapshot;
 }
 
 /**
- * Capture inventory snapshot for map tracking
- * @param when - 'start' or 'end' to indicate when snapshot is being taken
+ * Capture hideout wealth when leaving hideout to enter a map
+ * This captures wealth BEFORE any map entry costs are deducted
  */
-async function captureInventorySnapshot(when: 'start' | 'end'): Promise<void> {
+async function captureHideoutExitWealth(): Promise<void> {
   try {
-    const currentItems = await electronAPI.getInventory();
+    // Analyze the history to find the last stable wealth value before the drop
+    // This happens during the loading screen when costs are deducted
+    if (hideoutWealthHistory.length >= 2) {
+      // Find the peak value in the recent history (before costs were deducted)
+      const maxWealth = Math.max(...hideoutWealthHistory.map(h => h.wealth));
 
-    // Convert inventory to a Map of baseId -> totalQuantity
-    const inventorySnapshot = new Map<string, number>();
-    for (const item of currentItems) {
-      inventorySnapshot.set(item.baseId, item.totalQuantity);
+      // Only use it if it's significantly different from current (means we caught a drop)
+      if (maxWealth > hideoutWealth) {
+        hideoutWealth = maxWealth;
+      }
     }
 
-    // Get price cache (only needed at map start)
-    let priceCache = null;
-    if (when === 'start') {
-      priceCache = await electronAPI.getPriceCache();
-      const priceCacheSize = priceCache ? Object.keys(priceCache).length : 0;
-    }
-
-    // Store the snapshot
-    if (when === 'start') {
-      setMapStartInventory(inventorySnapshot, priceCache);
-    } else {
-      setMapEndInventory(inventorySnapshot);
-    }
   } catch (error) {
-    console.error(`[MapTracker] Error capturing ${when} inventory snapshot:`, error);
+    console.error('[MapTracker] Error capturing hideout exit wealth:', error);
+  }
+}
+
+/**
+ * Capture total wealth at map end (when leaving map)
+ */
+async function captureMapEndWealth(): Promise<void> {
+  try {
+    const totalWealth = getCurrentTotalValue();
+    setMapEndTotalWealth(totalWealth);
+  } catch (error) {
+    console.error('[MapTracker] Error capturing map end wealth:', error);
   }
 }
 
@@ -331,14 +330,69 @@ export function getMapTrackingStatus(): {
 }
 
 /**
+ * Start tracking hideout wealth continuously
+ */
+function startHideoutWealthTracking(): void {
+  if (hideoutUpdateInterval) {
+    return; // Already tracking
+  }
+
+  // Update hideout wealth every second
+  hideoutUpdateInterval = setInterval(async () => {
+    const currentMap = getCurrentMap();
+    const isHideout = currentMap && (currentMap as any).isHideout;
+
+    // Only update hideout wealth while in hideout or not in any map
+    // CRITICAL: Do NOT update while in a real map (non-hideout)
+    if (isHideout || !currentMap) {
+      try {
+        const currentWealth = getCurrentTotalValue();
+        hideoutWealth = currentWealth;
+
+        // Store in history to detect pre-map-entry values
+        hideoutWealthHistory.push({
+          wealth: currentWealth,
+          timestamp: Date.now()
+        });
+
+        // Trim history to prevent memory bloat
+        if (hideoutWealthHistory.length > MAX_HISTORY_SIZE) {
+          hideoutWealthHistory = hideoutWealthHistory.slice(-MAX_HISTORY_SIZE);
+        }
+
+      } catch (error) {
+        console.error('[MapTracker] Error updating hideout wealth:', error);
+      }
+    } else {
+    }
+  }, 1000); // Update every second
+}
+
+/**
+ * Stop tracking hideout wealth
+ */
+function stopHideoutWealthTracking(): void {
+  if (hideoutUpdateInterval) {
+    clearInterval(hideoutUpdateInterval);
+    hideoutUpdateInterval = null;
+  }
+}
+
+/**
  * Clear all map tracking state (called on page navigation)
  */
 export function clearMapTracking(): void {
+  // Stop hideout wealth tracking
+  stopHideoutWealthTracking();
+
+  // Clear hideout wealth history
+  hideoutWealthHistory = [];
+  hideoutWealth = 0;
+
   // Don't reset lastProcessedEventIndex and isMapTrackingInitialized
   // These need to persist across page navigation to avoid reprocessing events
   // Only clear the event cache to free memory
   cachedMapEvents = [];
-  hideoutEndInventory = null;
   localStorage.removeItem('mapTrackingLastPosition');
   // Map history state is cleared separately in mapHistoryState
 }

@@ -225,10 +225,11 @@ function updateMapHistoryTable(mapHistory: any[]): void {
 
       const duration = map.duration !== undefined ? formatMapDuration(map.duration) : 'N/A';
 
-      // Calculate net profit (profit - spent) for the "Gained" column
+      // Profit is now already the net profit (totalEarned - totalSpent)
+      // No need to subtract spent again
       let gainedValue: number | null = null;
       if (map.profit !== undefined) {
-        gainedValue = map.profit - (map.spent || 0);
+        gainedValue = map.profit;
       }
 
       const gained = gainedValue !== null ?

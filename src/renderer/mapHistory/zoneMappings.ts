@@ -12,8 +12,7 @@ export interface MapEntry {
   zonePath?: string;
   levelId?: number;
   zoneEnglishName?: string;
-  profit?: number;
-  spent?: number; // Items used/consumed during the map
+  profit?: number; // Net profit (endWealth - startWealth)
   isHideout?: boolean; // Tag hideout maps so they're excluded from history
 }
 

@@ -1,16 +1,12 @@
 // Map history state management
 
 import { MapEntry } from '../mapHistory/zoneMappings.js';
-import { getItemDatabase } from './inventoryState.js';
-import { FLAME_ELEMENTIUM_ID } from '../constants.js';
-import { applyTax } from '../utils/tax.js';
 
 // Map history storage
 let mapHistory: MapEntry[] = [];
 let currentMap: MapEntry | null = null;
-let mapStartInventory: Map<string, number> = new Map(); // baseId -> quantity at map start
-let mapEndInventory: Map<string, number> = new Map(); // baseId -> quantity at map end
-let mapPriceCache: any = null; // Price cache at the time of the map
+let totalWealthAtStart: number = 0; // Total wealth when entering the map
+let totalWealthAtEnd: number = 0; // Total wealth when leaving the map
 
 // Limit the number of maps to store in history to prevent memory leaks
 const MAX_MAP_HISTORY_SIZE = 1000;
@@ -72,7 +68,6 @@ export function addMapEntry(entry: MapEntry): void {
   if (mapHistory.length > MAX_MAP_HISTORY_SIZE) {
     // Remove the oldest maps (from the beginning of the array)
     mapHistory = mapHistory.slice(-MAX_MAP_HISTORY_SIZE);
-    console.log(`[MapHistory] Trimmed history to ${MAX_MAP_HISTORY_SIZE} entries`);
   }
 }
 
@@ -93,10 +88,9 @@ export function startMap(startTime: string, zonePath?: string, levelId?: number)
     levelId
   };
 
-  // Reset inventory tracking for this map
-  mapStartInventory.clear();
-  mapEndInventory.clear();
-  mapPriceCache = null;
+  // Reset wealth tracking for this map
+  totalWealthAtStart = 0;
+  totalWealthAtEnd = 0;
 }
 
 /**
@@ -108,13 +102,10 @@ export function endMap(endTime: string): void {
   currentMap.endTime = endTime;
   currentMap.duration = calculateDuration(currentMap.startTime, endTime);
 
-  // Calculate profit and spent based on inventory changes
-  const { profit, spent } = calculateMapProfitAndSpent();
+  // Calculate profit: endWealth - startWealth
+  const profit = calculateMapProfit();
   if (profit !== null) {
     currentMap.profit = profit;
-  }
-  if (spent !== null) {
-    currentMap.spent = spent;
   }
 
   // Only add to history if it's not a hideout map
@@ -125,96 +116,43 @@ export function endMap(endTime: string): void {
 
   // Clear current map
   currentMap = null;
-  mapStartInventory.clear();
-  mapEndInventory.clear();
-  mapPriceCache = null;
+  totalWealthAtStart = 0;
+  totalWealthAtEnd = 0;
 }
 
 /**
- * Set inventory snapshot at map start
+ * Set total wealth at map start (before entering map)
  */
-export function setMapStartInventory(inventory: Map<string, number>, priceCache?: any): void {
-  mapStartInventory = new Map(inventory);
-  if (priceCache) {
-    mapPriceCache = priceCache;
-  }
+export function setMapStartTotalWealth(wealth: number): void {
+  totalWealthAtStart = wealth;
 }
 
 /**
- * Set inventory snapshot at map end
+ * Set total wealth at map end (when leaving map)
  */
-export function setMapEndInventory(inventory: Map<string, number>): void {
-  mapEndInventory = new Map(inventory);
+export function setMapEndTotalWealth(wealth: number): void {
+  totalWealthAtEnd = wealth;
 }
 
 /**
- * Calculate profit and spent for the current map based on inventory changes
- * Profit is calculated by finding items that increased in quantity (gained)
- * Spent is calculated by finding items that decreased in quantity (used)
- * Returns both profit and spent values
+ * Calculate profit for the current map based on wealth changes
+ * Simplified logic: profit = endWealth - startWealth
+ * Returns profit (can be negative)
  */
-function calculateMapProfitAndSpent(): { profit: number | null; spent: number | null } {
-  if (!mapPriceCache || mapPriceCache === null) {
-    console.warn('[MapHistoryState] No price cache available, cannot calculate profit/spent');
-    return { profit: null, spent: null };
+function calculateMapProfit(): number | null {
+  // Validate we have the necessary wealth data
+  if (totalWealthAtStart === 0 || totalWealthAtEnd === 0) {
+    console.warn('[MapHistoryState] Insufficient wealth data, cannot calculate profit', {
+      totalWealthAtStart,
+      totalWealthAtEnd
+    });
+    return null;
   }
 
-  if (mapStartInventory.size === 0 && mapEndInventory.size === 0) {
-    console.warn('[MapHistoryState] No inventory data available, cannot calculate profit/spent');
-    return { profit: null, spent: null }; // Not enough data
-  }
+  // Net profit is end wealth minus start wealth
+  const profit = totalWealthAtEnd - totalWealthAtStart;
 
-  let profit = 0;
-  let spent = 0;
-  let itemsWithGains = 0;
-  let itemsWithExpenses = 0;
-  let itemsWithoutPrice = 0;
-
-  // Check all items that were present at start OR are present at end
-  const allBaseIds = new Set([...mapStartInventory.keys(), ...mapEndInventory.keys()]);
-
-  for (const baseId of allBaseIds) {
-    const startQty = mapStartInventory.get(baseId) || 0;
-    const endQty = mapEndInventory.get(baseId) || 0;
-    const quantityChange = endQty - startQty;
-
-    let itemPrice: number | null = null;
-
-    // Flame Elementium (FE) is currency, always has price 1
-    if (baseId === FLAME_ELEMENTIUM_ID) {
-      itemPrice = 1;
-    } else {
-      const priceEntry = mapPriceCache[baseId];
-      if (priceEntry && priceEntry.price) {
-        itemPrice = priceEntry.price;
-      } else {
-        itemsWithoutPrice++;
-        continue; // Skip items without price
-      }
-    }
-
-    if (itemPrice !== null) {
-      if (quantityChange > 0) {
-        // Item was gained (positive change)
-        const itemProfit = quantityChange * itemPrice;
-        // Apply tax to item profit (FE will be exempted by applyTax)
-        const taxedProfit = applyTax(itemProfit, baseId);
-        profit += taxedProfit;
-        itemsWithGains++;
-      } else if (quantityChange < 0) {
-        // Item was used/spent (negative change)
-        const expense = Math.abs(quantityChange) * itemPrice;
-        // Apply tax to expense (FE will be exempted by applyTax)
-        const taxedExpense = applyTax(expense, baseId);
-        spent += taxedExpense;
-        itemsWithExpenses++;
-      }
-    }
-  }
-
-  console.log(`[MapHistoryState] Profit: ${profit.toFixed(2)}, Spent: ${spent.toFixed(2)}, Items gained: ${itemsWithGains}, Items spent: ${itemsWithExpenses}, Skipped: ${itemsWithoutPrice}`);
-
-  return { profit, spent };
+  return profit;
 }
 
 /**
@@ -223,9 +161,8 @@ function calculateMapProfitAndSpent(): { profit: number | null; spent: number | 
 export function clearMapHistory(): void {
   mapHistory = [];
   currentMap = null;
-  mapStartInventory.clear();
-  mapEndInventory.clear();
-  mapPriceCache = null;
+  totalWealthAtStart = 0;
+  totalWealthAtEnd = 0;
 }
 
 /**
@@ -252,9 +189,13 @@ export function getMapStats(): {
 
   const totalDuration = mapHistory.reduce((sum, map) => sum + (map.duration || 0), 0);
   const averageDuration = totalDuration / totalMaps;
-  const totalProfit = mapHistory.reduce((sum, map) => sum + (map.profit || 0), 0);
-  const totalSpent = mapHistory.reduce((sum, map) => sum + (map.spent || 0), 0);
-  const netProfit = totalProfit - totalSpent;
+
+  // Profit is now net profit (endWealth - startWealth)
+  const netProfit = mapHistory.reduce((sum, map) => sum + (map.profit || 0), 0);
+
+  // For backwards compatibility with existing code
+  const totalProfit = netProfit;
+  const totalSpent = 0; // No longer tracked
 
   return {
     totalMaps,

@@ -254,13 +254,11 @@ electronAPI.onTimerTick((data) => {
 
   // Listen for inventory updates
 electronAPI.onInventoryUpdate(() => {
-      console.log('[Renderer] onInventoryUpdate called');
       loadInventory();
   });
 
   // Reset map tracking for new session - clear old history and reset log position
   // This must happen BEFORE initializing map tracking to ensure we only track new maps
-  console.log('[Renderer] Resetting map tracking for new session');
   await electronAPI.resetMapEvents();
   clearMapHistory();
   clearMapTracking();
