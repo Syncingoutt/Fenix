@@ -642,6 +642,13 @@ img:not(.header-logo-pic) {
   background: var(--bg-shade);
 }
 
+.overlay-stat-value {
+  color: var(--text);
+  font-weight: 500;
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-family: "Manrope", sans-serif;
+}
+
 /* ============================================
    STATS CONTAINERS
    ============================================ */
@@ -677,10 +684,10 @@ img:not(.header-logo-pic) {
   position: absolute;
   bottom: calc(8px * var(--scale));
   right: calc(8px * var(--scale));
-  width: calc(28px * var(--scale));
-  height: calc(28px * var(--scale));
-  min-width: 24px;
-  min-height: 24px;
+  width: calc(280px * var(--scale));
+  height: calc(280px * var(--scale));
+  min-width: 240px;
+  min-height: 240px;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: calc(6px * var(--scale));
