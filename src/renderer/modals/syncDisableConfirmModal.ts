@@ -1,9 +1,5 @@
 // Cloud sync disable confirmation modal
 
-import { ElectronAPI } from '../types.js';
-
-declare const electronAPI: ElectronAPI;
-
 const syncDisableConfirmModal = document.getElementById('syncDisableConfirmModal')!;
 const syncDisableCancelBtn = document.getElementById('syncDisableCancelBtn') as HTMLButtonElement | null;
 const syncDisableConfirmBtn = document.getElementById('syncDisableConfirmBtn') as HTMLButtonElement | null;

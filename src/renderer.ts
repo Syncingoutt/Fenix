@@ -21,7 +21,7 @@ import { renderInventory, updateSortIndicators } from './renderer/inventory/inve
 import { renderBreakdown } from './renderer/inventory/breakdownRenderer.js';
 
 // Graph
-import { initGraph, pushRealtimePoint, pushPoint, updateGraph } from './renderer/graph/graphManager.js';
+import { initGraph, pushRealtimePoint, updateGraph } from './renderer/graph/graphManager.js';
 
 // Modals
 import { showBreakdownModal, initBreakdownModal, closeBreakdownModal } from './renderer/modals/breakdownModal.js';
@@ -45,12 +45,10 @@ import { initUIEvents } from './renderer/events/uiEvents.js';
 import { initPrices } from './renderer/prices/pricesRenderer.js';
 
 // Map History
-import { renderMapHistoryPage } from './renderer/mapHistory/mapHistoryRenderer.js';
 import { processMapEvents, setOnMapEndCallback, initializeMapTracking, clearMapTracking } from './renderer/mapHistory/mapTracker.js';
 import { clearMapHistory, getMapStats } from './renderer/state/mapHistoryState.js';
 
 declare const electronAPI: ElectronAPI;
-declare const Chart: any;
 
 /**
  * Update overlay widget with current data

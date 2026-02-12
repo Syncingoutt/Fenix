@@ -1,11 +1,7 @@
 // Map History page rendering
 
-import { ElectronAPI } from '../types.js';
 import { getMapHistory, getMapStats, getCurrentMap, clearMapHistory } from '../state/mapHistoryState.js';
 import { getZoneDisplayName } from './zoneMappings.js';
-import { clearMapTracking } from './mapTracker.js';
-
-declare const electronAPI: ElectronAPI;
 
 // Store the refresh interval ID so we can clear it
 let refreshIntervalId: ReturnType<typeof setInterval> | null = null;
