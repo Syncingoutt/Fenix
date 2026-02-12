@@ -2912,7 +2912,7 @@ body.overlay-widget {
   gap: 4px;
   cursor: move;
   -webkit-app-region: drag;
-  min-width: 130px;
+  min-width: 145px;
 }
 
 .stat-row {
@@ -2937,6 +2937,10 @@ body.overlay-widget {
 .stat-value.duration {
   color: #de5c0b;
   font-size: var(--text-small);
+}
+
+.stat-row.tmp-row {
+  margin-bottom: 4px;
 }
 
 .stat-value.hourly {

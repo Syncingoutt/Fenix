@@ -12,6 +12,10 @@
         <span class="stat-label">Time</span>
         <span class="stat-value duration" id="duration">00:00:00</span>
       </div>
+      <div class="stat-row tmp-row">
+        <span class="stat-label">TMP</span>
+        <span class="stat-value duration" id="tmp">00:00</span>
+      </div>
       <div class="stat-row">
         <span class="stat-label">FE/hr</span>
         <span class="overlay-stat-value hourly" id="hourly">0.00</span>
@@ -47,6 +51,7 @@
       const { ipcRenderer } = require('electron');
 
       const durationEl = document.getElementById('duration');
+      const tmpEl = document.getElementById('tmp');
       const hourlyEl = document.getElementById('hourly');
       const totalEl = document.getElementById('total');
       const closeBtn = document.getElementById('closeBtn');
@@ -60,6 +65,12 @@
         const mins = Math.floor((seconds % 3600) / 60);
         const secs = seconds % 60;
         return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+
+      function formatTimeShort(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
       }
 
       function formatValue(value) {
@@ -84,6 +95,9 @@
       ipcRenderer.on('widget-update', (event, data) => {
         if (data.duration !== undefined) {
           durationEl.textContent = formatTime(data.duration);
+        }
+        if (data.avgTimePerMap !== undefined) {
+          tmpEl.textContent = formatTimeShort(data.avgTimePerMap);
         }
         if (data.hourly !== undefined) {
           hourlyEl.textContent = formatValue(data.hourly);

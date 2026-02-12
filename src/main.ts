@@ -52,6 +52,7 @@ let overlayDisplayData = {
   duration: 0,
   hourly: 0,
   total: 0,
+  avgTimePerMap: 0,
   isHourlyMode: false,
   isPaused: false
 };
@@ -352,7 +353,7 @@ function createOverlayWidget() {
 
   overlayWidget = new BrowserWindow({
     width: 150,
-    height: 130,
+    height: 165,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -759,7 +760,7 @@ ipcMain.on('close-overlay-widget', () => {
 });
 
 // Receives already-calculated display values from renderer
-ipcMain.on('update-overlay-widget', (_event, data: { duration: number; hourly: number; total: number; isHourlyMode: boolean; isPaused: boolean }) => {
+ipcMain.on('update-overlay-widget', (_event, data: { duration: number; hourly: number; total: number; avgTimePerMap: number; isHourlyMode: boolean; isPaused: boolean }) => {
   overlayDisplayData = data;
   updateOverlayWidget();
 });

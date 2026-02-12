@@ -82,7 +82,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openExternal: (url: string) => ipcRenderer.send('open-external', url),
   // Overlay widget methods
   toggleOverlayWidget: () => ipcRenderer.send('toggle-overlay-widget'),
-  updateOverlayWidget: (data: { duration: number; hourly: number; total: number; isHourlyMode: boolean; isPaused: boolean }) => 
+  updateOverlayWidget: (data: { duration: number; hourly: number; total: number; avgTimePerMap: number; isHourlyMode: boolean; isPaused: boolean }) => 
     ipcRenderer.send('update-overlay-widget', data),
   onWidgetPauseHourly: (callback: () => void) => {
     ipcRenderer.on('widget-pause-hourly', callback);

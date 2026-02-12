@@ -47,7 +47,7 @@ import { initPrices } from './renderer/prices/pricesRenderer.js';
 // Map History
 import { renderMapHistoryPage } from './renderer/mapHistory/mapHistoryRenderer.js';
 import { processMapEvents, setOnMapEndCallback, initializeMapTracking, clearMapTracking } from './renderer/mapHistory/mapTracker.js';
-import { clearMapHistory } from './renderer/state/mapHistoryState.js';
+import { clearMapHistory, getMapStats } from './renderer/state/mapHistoryState.js';
 
 declare const electronAPI: ElectronAPI;
 declare const Chart: any;
@@ -82,7 +82,11 @@ function updateOverlayWidgetData(): void {
     total = currentValue;
   }
 
-  electronAPI.updateOverlayWidget({ duration, hourly, total, isHourlyMode, isPaused: hourlyPaused });
+  // Get average time per map
+  const mapStats = getMapStats();
+  const avgTimePerMap = Math.round(mapStats.averageDuration);
+
+  electronAPI.updateOverlayWidget({ duration, hourly, total, avgTimePerMap, isHourlyMode, isPaused: hourlyPaused });
 }
 
 /**
