@@ -14,7 +14,7 @@ import { formatTime } from './renderer/utils/formatting.js';
 // Wealth
 import { getCurrentTotalValue, getHourlyWealthGain } from './renderer/wealth/wealthCalculations.js';
 import { initRealtimeTracker, initRealtimeTracking, updateRealtimeWealth, resetRealtimeTracking, updateAverageTimePerMap, initRealtimeTimer as initRealtimeTimerFn } from './renderer/wealth/realtimeTracker.js';
-import { initHourlyTracker, startHourlyTracking, stopHourlyTracking, pauseHourlyTracking, resumeHourlyTracking, actuallyStartHourlyTracking, trackCompassBeaconUsage, updatePreviousQuantities, updateHourlyWealth, captureHourlyBucket } from './renderer/wealth/hourlyTracker.js';
+import { initHourlyTracker, startHourlyTracking, stopHourlyTracking, pauseHourlyTracking, resumeHourlyTracking, trackCompassBeaconUsage, updatePreviousQuantities, updateHourlyWealth, captureHourlyBucket } from './renderer/wealth/hourlyTracker.js';
 
 // Inventory
 import { renderInventory, updateSortIndicators } from './renderer/inventory/inventoryRenderer.js';
@@ -25,7 +25,6 @@ import { initGraph, pushRealtimePoint, updateGraph } from './renderer/graph/grap
 
 // Modals
 import { showBreakdownModal, initBreakdownModal, closeBreakdownModal } from './renderer/modals/breakdownModal.js';
-import { showCompassBeaconPrompt, hideCompassBeaconPrompt, showCompassBeaconSelection, hideCompassBeaconSelection, handleCompassBeaconSelectionConfirm } from './renderer/modals/compassBeaconModal.js';
 import { initUpdatePanel } from './renderer/updates/updatePanel.js';
 import { initSettingsModal, closeSettingsModal } from './renderer/modals/settingsModal.js';
 import { initSyncConsentModal } from './renderer/modals/syncConsentModal.js';
@@ -180,7 +179,6 @@ async function initialize(): Promise<void> {
     pauseHourlyBtn,
     resumeHourlyBtn,
     updateOverlayWidgetData,
-    showCompassBeaconPrompt,
     showBreakdownModal,
     renderInventory,
     () => renderBreakdown(renderInventory)
@@ -201,12 +199,6 @@ async function initialize(): Promise<void> {
     () => renderBreakdown(renderInventory),
     updateGraph,
     updateOverlayWidgetData,
-    showCompassBeaconPrompt,
-    hideCompassBeaconPrompt,
-    showCompassBeaconSelection,
-    hideCompassBeaconSelection,
-    handleCompassBeaconSelectionConfirm,
-    actuallyStartHourlyTracking,
     closeBreakdownModal
   );
   

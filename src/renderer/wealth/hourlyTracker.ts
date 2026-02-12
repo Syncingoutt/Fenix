@@ -28,9 +28,10 @@ import {
   getWealthMode,
   setWealthMode
 } from '../state/wealthState.js';
-import { getCurrentItems } from '../state/inventoryState.js';
+import { getCurrentItems, getItemDatabase } from '../state/inventoryState.js';
 import { formatTime } from '../utils/formatting.js';
 import { ElectronAPI, HourlyBucket, PriceCache } from '../types.js';
+import { categorizers } from '../modals/compassBeaconModal.js';
 
 declare const electronAPI: ElectronAPI;
 
@@ -43,7 +44,6 @@ let stopHourlyBtn: HTMLButtonElement;
 let pauseHourlyBtn: HTMLButtonElement;
 let resumeHourlyBtn: HTMLButtonElement;
 let updateOverlayWidgetData: () => void;
-let showCompassBeaconPrompt: () => void;
 let showBreakdownModal: () => void;
 let renderInventory: () => void;
 let renderBreakdown: () => void;
@@ -57,7 +57,6 @@ export function initHourlyTracker(
   pauseBtn: HTMLButtonElement,
   resumeBtn: HTMLButtonElement,
   overlayWidgetUpdater: () => void,
-  compassBeaconPromptFn: () => void,
   breakdownModalFn: () => void,
   inventoryRenderer: () => void,
   breakdownRenderer: () => void
@@ -70,18 +69,44 @@ export function initHourlyTracker(
   pauseHourlyBtn = pauseBtn;
   resumeHourlyBtn = resumeBtn;
   updateOverlayWidgetData = overlayWidgetUpdater;
-  showCompassBeaconPrompt = compassBeaconPromptFn;
   showBreakdownModal = breakdownModalFn;
   renderInventory = inventoryRenderer;
   renderBreakdown = breakdownRenderer;
 }
 
 /**
- * Start hourly tracking (shows prompt first)
+ * Detect and include all trackable hourly usage items.
+ */
+function autoDetectIncludedItems(): void {
+  const includedItems = getIncludedItems();
+  const itemDatabase = getItemDatabase();
+
+  includedItems.clear();
+
+  for (const [baseId, itemData] of Object.entries(itemDatabase)) {
+    const itemName = itemData.name ?? '';
+    const itemGroup = itemData.group ?? '';
+    const isExplicitTrackableGroup =
+      itemGroup === 'compass' ||
+      itemGroup === 'beacon' ||
+      itemGroup === 'probe' ||
+      itemGroup === 'scalpel';
+    const isResonance =
+      categorizers.resonance(itemName, itemGroup, baseId) ||
+      (itemGroup === 'currency' && (baseId === '5028' || baseId === '5040'));
+
+    if (isExplicitTrackableGroup || isResonance) {
+      includedItems.add(baseId);
+    }
+  }
+}
+
+/**
+ * Start hourly tracking with automatic item detection.
  */
 export function startHourlyTracking(): void {
-  // Show prompt asking if user wants to include compasses/beacons
-  showCompassBeaconPrompt();
+  autoDetectIncludedItems();
+  actuallyStartHourlyTracking();
 }
 
 /**

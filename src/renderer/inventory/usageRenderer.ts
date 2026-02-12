@@ -1,11 +1,11 @@
 // Usage section rendering (for compass/beacon tracking)
 
-import { getDisplayItems } from './inventoryLogic.js';
 import {
   getWealthMode,
   getIsHourlyActive,
-  getHourlyStartSnapshot,
-  getIncludedItems
+  getIncludedItems,
+  getHourlyUsage,
+  getHourlyStartSnapshot
 } from '../state/wealthState.js';
 import { getCurrentItems, getItemDatabase, getPriceCache } from '../state/inventoryState.js';
 
@@ -29,6 +29,7 @@ export function renderUsageSection(): void {
     usageSection.style.display = 'block';
 
     const currentItems = getCurrentItems();
+    const hourlyUsage = getHourlyUsage();
     const hourlyStartSnapshot = getHourlyStartSnapshot();
     const itemDatabase = getItemDatabase();
     const priceCache = getPriceCache();
@@ -36,12 +37,16 @@ export function renderUsageSection(): void {
     const usageItems: Array<{ baseId: string; itemName: string; netUsage: number; price: number }> = [];
 
     for (const baseId of includedItems) {
+      const used = hourlyUsage.get(baseId) || 0;
+
+      // Only show items that were actually used this session.
+      if (used <= 0) {
+        continue;
+      }
+
       const item = currentItems.find(i => i.baseId === baseId);
       const currentQty = item ? item.totalQuantity : 0;
       const startQty = hourlyStartSnapshot.get(baseId) || 0;
-
-      // Calculate net usage for display: (startQty - currentQty)
-      // Positive means used, negative means bought
       const netUsage = startQty - currentQty;
 
       // Get price from price_cache.json instead of inventory
@@ -52,7 +57,6 @@ export function renderUsageSection(): void {
       // Get item name from inventory if available, otherwise from database
       const itemName = item?.itemName ?? itemDatabase[baseId]?.name ?? `Unknown Item (${baseId})`;
 
-      // Always include tracked items, even if netUsage is 0
       usageItems.push({
         baseId,
         itemName,
@@ -69,8 +73,8 @@ export function renderUsageSection(): void {
     // Sort by total cost (highest absolute value first)
     // Selected compasses/beacons: use raw price without tax for sorting
     usageItems.sort((a, b) => {
-      const totalA = a.price > 0 ? Math.abs(a.netUsage * a.price) : 0;
-      const totalB = b.price > 0 ? Math.abs(b.netUsage * b.price) : 0;
+      const totalA = a.price > 0 ? Math.abs(a.netUsage) * a.price : 0;
+      const totalB = b.price > 0 ? Math.abs(b.netUsage) * b.price : 0;
       return totalB - totalA;
     });
     
@@ -81,13 +85,11 @@ export function renderUsageSection(): void {
       const unitPrice = price > 0 ? price : 0;
       const totalPrice = price > 0 ? Math.abs(netUsage) * price : 0;
       
-      // Calculate contribution to total (negative if used more, positive if gained more)
+      // Net impact can rise/fall as used items are also picked up.
       if (netUsage > 0) {
-        // Used more: subtract from total
-        totalUsageCost -= totalPrice; // No tax
+        totalUsageCost -= totalPrice;
       } else if (netUsage < 0) {
-        // Gained more: add to total
-        totalUsageCost += totalPrice; // No tax
+        totalUsageCost += totalPrice;
       }
       
       const quantityPrefix = netUsage > 0 ? '-' : netUsage < 0 ? '+' : '';

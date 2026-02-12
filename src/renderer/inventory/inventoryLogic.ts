@@ -14,7 +14,8 @@ import {
   getWealthMode,
   getIsHourlyActive,
   getHourlyStartSnapshot,
-  getIncludedItems
+  getIncludedItems,
+  getHourlyUsage
 } from '../state/wealthState.js';
 import { applyTax } from '../utils/tax.js';
 import { passesPriceFilters } from '../utils/filters.js';
@@ -35,13 +36,21 @@ export function getDisplayItems(): InventoryItem[] {
     
     const hourlyStartSnapshot = getHourlyStartSnapshot();
     const includedItems = getIncludedItems();
+    const hourlyUsage = getHourlyUsage();
     
     // In hourly mode, show items gained since start
-    // Exclude ONLY the compasses/beacons that the user selected (includedItems)
-    // Other compasses/beacons that weren't selected will still show in the item list
+    // Exclude tracked utility items only after they have been actually used.
+    // Unused drops still appear in inventory as normal gains.
     // Always show Flame Elementium (FE) even if gainedQty is 0 or negative
     return currentItems
-      .filter(item => !includedItems.has(item.baseId)) // Exclude only selected compasses/beacons
+      .filter(item => {
+        if (!includedItems.has(item.baseId)) {
+          return true;
+        }
+
+        const usedQty = hourlyUsage.get(item.baseId) || 0;
+        return usedQty <= 0;
+      })
       .map(item => {
         const currentQty = item.totalQuantity;
         const startQty = hourlyStartSnapshot.get(item.baseId) || 0;
