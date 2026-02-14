@@ -6,59 +6,150 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="overlay-widget">
-    <div class="widget">
-      <button class="widget-close-btn" id="closeBtn">X</button>
-      <div class="stat-row">
-        <span class="stat-label">Time</span>
-        <span class="stat-value duration" id="duration">00:00:00</span>
+    <div class="widget" id="widget">
+      <div class="widget-header">
+        <span class="widget-title">Fenix</span>
+        <div class="widget-header-actions">
+          <button class="widget-timer-btn" id="pauseHourly" title="Pause timer" aria-label="Pause timer">
+            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <rect x="6" y="4" width="4" height="16" rx="1"/>
+              <rect x="14" y="4" width="4" height="16" rx="1"/>
+            </svg>
+          </button>
+          <button class="widget-timer-btn" id="resumeHourly" title="Resume timer" aria-label="Resume timer">
+            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 5.14v13.72c0 .87.93 1.4 1.65.93l10.59-6.86c.64-.42.64-1.44 0-1.86L9.65 4.21C8.93 3.74 8 4.27 8 5.14z"/>
+            </svg>
+          </button>
+          <button class="widget-timer-btn" id="resetRealtimeBtn" title="Reset timer" aria-label="Reset timer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+          </button>
+          <button class="widget-lock-btn" id="lockBtn" title="Lock overlay" aria-label="Lock overlay">
+            <svg class="widget-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8h-1V6a4 4 0 1 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2zm-7-2a2 2 0 1 1 4 0v2h-4V6zm7 13H7v-9h10v9z"/></svg>
+          </button>
+          <button class="widget-edit-btn" id="editBtn" title="Edit visible stats" aria-label="Edit">
+            <svg class="widget-icon widget-edit-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.42-.32-.88-.58-1.37-.78l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.49.2-.95.47-1.37.78l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.42.32.88.58 1.37.78l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.49-.2.95-.47 1.37-.78l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            <span class="widget-edit-done">Done</span>
+          </button>
+          <button class="widget-close-btn" id="closeBtn" title="Close" aria-label="Close">×</button>
+        </div>
       </div>
-      <div class="stat-row tmp-row">
-        <span class="stat-label">TMP</span>
-        <span class="stat-value duration" id="tmp">00:00</span>
+      <div class="widget-separator"></div>
+      <div class="widget-stats">
+        <div class="stat-row" data-stat-id="time">
+          <div class="stat-cell">
+            <span class="stat-label">Duration</span>
+            <span class="stat-value duration" id="duration">00:00:00</span>
+          </div>
+          <label class="stat-checkbox-wrap" title="Show Duration"><input class="stat-checkbox" type="checkbox" data-stat-toggle="time" checked /></label>
+        </div>
+        <div class="stat-row" data-stat-id="timePerMap">
+          <div class="stat-cell">
+            <span class="stat-label">Time per map</span>
+            <span class="stat-value duration" id="timePerMap">00:00</span>
+          </div>
+          <label class="stat-checkbox-wrap" title="Show Time per map"><input class="stat-checkbox" type="checkbox" data-stat-toggle="timePerMap" checked /></label>
+        </div>
+        <div class="stat-row" data-stat-id="totalProfit">
+          <div class="stat-cell">
+            <span class="stat-label">Total profit</span>
+            <span class="stat-value-with-icon">
+              <span class="stat-value total" id="total">0.00</span>
+              <img class="stat-fe-icon" src="../../assets/100300.webp" alt="FE">
+            </span>
+          </div>
+          <label class="stat-checkbox-wrap" title="Show Total profit"><input class="stat-checkbox" type="checkbox" data-stat-toggle="totalProfit" checked /></label>
+        </div>
+        <div class="stat-row" data-stat-id="perHour">
+          <div class="stat-cell">
+            <span class="stat-label">Per hour</span>
+            <span class="stat-value-with-icon">
+              <span class="stat-value hourly" id="hourly">0.00</span>
+              <img class="stat-fe-icon" src="../../assets/100300.webp" alt="FE">
+            </span>
+          </div>
+          <label class="stat-checkbox-wrap" title="Show Per hour"><input class="stat-checkbox" type="checkbox" data-stat-toggle="perHour" checked /></label>
+        </div>
+        <div class="stat-row" data-stat-id="totalMaps">
+          <div class="stat-cell">
+            <span class="stat-label">Total maps</span>
+            <span class="stat-value" id="totalMaps">0</span>
+          </div>
+          <label class="stat-checkbox-wrap" title="Show Total maps"><input class="stat-checkbox" type="checkbox" data-stat-toggle="totalMaps" checked /></label>
+        </div>
+        <div class="stat-row" data-stat-id="lastMapProfit">
+          <div class="stat-cell">
+            <span class="stat-label">Last map</span>
+            <span class="stat-value-with-icon">
+              <span class="stat-value" id="lastMapProfit">0.00</span>
+              <img class="stat-fe-icon" src="../../assets/100300.webp" alt="FE">
+            </span>
+          </div>
+          <label class="stat-checkbox-wrap" title="Show Last map profit"><input class="stat-checkbox" type="checkbox" data-stat-toggle="lastMapProfit" checked /></label>
+        </div>
       </div>
-      <div class="stat-row">
-        <span class="stat-label">FE/hr</span>
-        <span class="overlay-stat-value hourly" id="hourly">0.00</span>
+      <div class="widget-opacity-row" id="opacityRow">
+        <label class="widget-opacity-label" for="opacitySlider">Opacity</label>
+        <input type="range" class="widget-opacity-slider" id="opacitySlider" min="30" max="100" value="100" title="Overlay opacity" />
+        <span class="widget-opacity-value" id="opacityValue">100%</span>
       </div>
-      <div class="stat-row">
-        <span class="stat-label">Total</span>
-        <span class="overlay-stat-value total" id="total">0.00</span>
+      <div class="widget-opacity-row" id="transparencyRow">
+        <label class="widget-opacity-label" for="transparencySlider">Transparency</label>
+        <input type="range" class="widget-opacity-slider" id="transparencySlider" min="10" max="100" value="80" title="Background transparency" />
+        <span class="widget-opacity-value" id="transparencyValue">80%</span>
       </div>
-      <div class="timer-controls" id="timerControls">
-        <button class="timer-control-btn" id="pauseHourly" title="Pause">
-          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <rect x="6" y="4" width="4" height="16" rx="1"/>
-            <rect x="14" y="4" width="4" height="16" rx="1"/>
-          </svg>
-          <span>Pause</span>
-        </button>
-        <button class="timer-control-btn" id="resumeHourly" title="Resume">
-          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 5.14v13.72c0 .87.93 1.4 1.65.93l10.59-6.86c.64-.42.64-1.44 0-1.86L9.65 4.21C8.93 3.74 8 4.27 8 5.14z"/>
-          </svg>
-          <span>Resume</span>
-        </button>
-        <button class="timer-control-btn" id="resetRealtimeBtn" title="Reset Timer">
-          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 4v6h6M23 20v-6h-6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-          </svg>
-          <span>Reset Timer</span>
-        </button>
-      </div>
+      <div class="resize-handle" id="resizeHandle" title="Drag to resize"></div>
     </div>
 
     <script>
       const { ipcRenderer } = require('electron');
 
+      const widgetEl = document.getElementById('widget');
       const durationEl = document.getElementById('duration');
-      const tmpEl = document.getElementById('tmp');
+      const timePerMapEl = document.getElementById('timePerMap');
       const hourlyEl = document.getElementById('hourly');
       const totalEl = document.getElementById('total');
+      const lastMapProfitEl = document.getElementById('lastMapProfit');
+      const totalMapsEl = document.getElementById('totalMaps');
       const closeBtn = document.getElementById('closeBtn');
-      const timerControls = document.getElementById('timerControls');
+      const editBtn = document.getElementById('editBtn');
+      const lockBtn = document.getElementById('lockBtn');
       const pauseBtn = document.getElementById('pauseHourly');
       const resumeBtn = document.getElementById('resumeHourly');
       const resetBtn = document.getElementById('resetRealtimeBtn');
+      const widgetStatsEl = document.querySelector('.widget-stats');
+      const statRows = Array.from(document.querySelectorAll('.stat-row[data-stat-id]'));
+      const statCheckboxes = Array.from(document.querySelectorAll('.stat-checkbox'));
+      const OVERLAY_VISIBILITY_KEY = 'fenix-overlay-visible';
+      const OVERLAY_ORDER_KEY = 'fenix-overlay-order';
+      const OVERLAY_TRANSPARENCY_KEY = 'fenix-overlay-transparency';
+      const DEFAULT_TRANSPARENCY = 80;
+      const opacitySlider = document.getElementById('opacitySlider');
+      const opacityValueEl = document.getElementById('opacityValue');
+      const transparencySlider = document.getElementById('transparencySlider');
+      const transparencyValueEl = document.getElementById('transparencyValue');
+      const defaultVisibility = {
+        time: true,
+        timePerMap: true,
+        totalProfit: true,
+        lastMapProfit: true,
+        totalMaps: true,
+        perHour: true
+      };
+      let visibleStats = { ...defaultVisibility };
+      const defaultStatOrder = statRows.map((row) => row.dataset.statId).filter(Boolean);
+      let statOrder = [...defaultStatOrder];
+      let isEditMode = false;
+      let isLocked = false;
+      let isClickThrough = false;
+      let lastMouseX = -1;
+      let lastMouseY = -1;
+      let rowDragState = null;
+      /** Height to restore when leaving edit mode (we add fixed height on enter) */
+      let editModeRestoreHeight = null;
 
       function formatTime(seconds) {
         const hrs = Math.floor(seconds / 3600);
@@ -77,19 +168,417 @@
         return value.toFixed(2);
       }
 
+      function formatInteger(value) {
+        return Number.isFinite(value) ? Math.max(0, Math.floor(value)).toString() : '0';
+      }
+
+      function loadVisibilitySettings() {
+        const raw = localStorage.getItem(OVERLAY_VISIBILITY_KEY);
+        if (!raw) {
+          return { ...defaultVisibility };
+        }
+
+        try {
+          const parsed = JSON.parse(raw);
+          return { ...defaultVisibility, ...parsed };
+        } catch (_error) {
+          return { ...defaultVisibility };
+        }
+      }
+
+      function saveVisibilitySettings() {
+        localStorage.setItem(OVERLAY_VISIBILITY_KEY, JSON.stringify(visibleStats));
+      }
+
+      function normalizeStatOrder(order) {
+        const knownStatIds = new Set(defaultStatOrder);
+        const dedupedKnown = [];
+        if (Array.isArray(order)) {
+          order.forEach((statId) => {
+            if (typeof statId !== 'string') return;
+            if (!knownStatIds.has(statId)) return;
+            if (dedupedKnown.includes(statId)) return;
+            dedupedKnown.push(statId);
+          });
+        }
+        defaultStatOrder.forEach((statId) => {
+          if (!dedupedKnown.includes(statId)) {
+            dedupedKnown.push(statId);
+          }
+        });
+        return dedupedKnown;
+      }
+
+      function loadOrderSettings() {
+        const raw = localStorage.getItem(OVERLAY_ORDER_KEY);
+        if (!raw) {
+          return [...defaultStatOrder];
+        }
+        try {
+          const parsed = JSON.parse(raw);
+          return normalizeStatOrder(parsed);
+        } catch (_error) {
+          return [...defaultStatOrder];
+        }
+      }
+
+      function saveOrderSettings() {
+        localStorage.setItem(OVERLAY_ORDER_KEY, JSON.stringify(statOrder));
+      }
+
+      function applyRowOrder() {
+        if (!widgetStatsEl) return;
+        statOrder = normalizeStatOrder(statOrder);
+        statOrder.forEach((statId) => {
+          const row = statRows.find((candidate) => candidate.dataset.statId === statId);
+          if (!row) return;
+          widgetStatsEl.appendChild(row);
+        });
+        saveOrderSettings();
+      }
+
+      function applyRowVisibility() {
+        statRows.forEach((row) => {
+          const statId = row.dataset.statId;
+          if (!statId) return;
+
+          const shouldShow = Boolean(visibleStats[statId]);
+          if (isEditMode || shouldShow) {
+            row.classList.remove('hidden');
+          } else {
+            row.classList.add('hidden');
+          }
+        });
+      }
+
+      function syncCheckboxes() {
+        statCheckboxes.forEach((checkbox) => {
+          const statId = checkbox.dataset.statToggle;
+          if (!statId) return;
+          checkbox.checked = Boolean(visibleStats[statId]);
+        });
+      }
+
+      const EDIT_MODE_EXTRA_HEIGHT = 120;
+
+      function setEditMode(enabled) {
+        if (!enabled) {
+          cancelRowDrag();
+        }
+        isEditMode = enabled;
+        widgetEl.classList.toggle('edit-mode', enabled);
+        const icon = editBtn.querySelector('.widget-edit-icon');
+        const doneText = editBtn.querySelector('.widget-edit-done');
+        if (icon) icon.style.display = enabled ? 'none' : '';
+        if (doneText) doneText.style.display = enabled ? 'inline' : 'none';
+        editBtn.title = enabled ? 'Done' : 'Edit visible stats';
+        applyRowVisibility();
+        updateRowDragState();
+
+        if (enabled) {
+          ipcRenderer.invoke('get-overlay-bounds').then((bounds) => {
+            if (!bounds) return;
+            editModeRestoreHeight = bounds.height;
+            ipcRenderer.send('set-overlay-bounds', { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height + EDIT_MODE_EXTRA_HEIGHT });
+          });
+        } else {
+          if (editModeRestoreHeight != null) {
+            ipcRenderer.invoke('get-overlay-bounds').then((bounds) => {
+              if (!bounds) return;
+              ipcRenderer.send('set-overlay-bounds', { x: bounds.x, y: bounds.y, width: bounds.width, height: editModeRestoreHeight });
+              ipcRenderer.send('save-overlay-bounds', { x: bounds.x, y: bounds.y, width: bounds.width, height: editModeRestoreHeight });
+              editModeRestoreHeight = null;
+            });
+          }
+        }
+      }
+
+      function updateRowDragState() {
+        statRows.forEach((row) => {
+          if (isEditMode) {
+            row.title = 'Drag to reorder';
+          } else {
+            row.removeAttribute('title');
+            row.classList.remove('drag-over');
+            row.classList.remove('dragging');
+            row.classList.remove('reorder-floating');
+            row.style.removeProperty('left');
+            row.style.removeProperty('top');
+            row.style.removeProperty('width');
+            row.style.removeProperty('height');
+          }
+        });
+      }
+
+      function updateOrderFromDom() {
+        if (!widgetStatsEl) return;
+        const domOrder = Array.from(widgetStatsEl.querySelectorAll('.stat-row[data-stat-id]'))
+          .map((row) => row.dataset.statId)
+          .filter(Boolean);
+        statOrder = normalizeStatOrder(domOrder);
+        saveOrderSettings();
+      }
+
+      function createPlaceholderForRow(row) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'stat-row stat-row-placeholder';
+        placeholder.style.height = `${row.getBoundingClientRect().height}px`;
+        return placeholder;
+      }
+
+      function beginRowDrag(event, row) {
+        if (!widgetStatsEl || rowDragState) return;
+        const rowRect = row.getBoundingClientRect();
+        const placeholder = createPlaceholderForRow(row);
+        widgetStatsEl.insertBefore(placeholder, row.nextSibling);
+
+        row.classList.add('dragging');
+        row.classList.add('reorder-floating');
+        row.style.left = `${rowRect.left}px`;
+        row.style.top = `${rowRect.top}px`;
+        row.style.width = `${rowRect.width}px`;
+        row.style.height = `${rowRect.height}px`;
+
+        rowDragState = {
+          pointerId: event.pointerId,
+          row,
+          placeholder,
+          startClientX: event.clientX,
+          startClientY: event.clientY,
+          offsetX: event.clientX - rowRect.left,
+          offsetY: event.clientY - rowRect.top,
+          hasMoved: false
+        };
+      }
+
+      function movePlaceholderToPointerY(pointerY) {
+        if (!widgetStatsEl || !rowDragState) return;
+        const { row, placeholder } = rowDragState;
+        const rows = Array.from(widgetStatsEl.querySelectorAll('.stat-row[data-stat-id]')).filter((candidate) => candidate !== row);
+
+        let insertBefore = null;
+        for (const candidate of rows) {
+          const rect = candidate.getBoundingClientRect();
+          const candidateMidY = rect.top + rect.height / 2;
+          if (pointerY < candidateMidY) {
+            insertBefore = candidate;
+            break;
+          }
+        }
+
+        if (insertBefore) {
+          if (insertBefore !== placeholder.nextSibling) {
+            widgetStatsEl.insertBefore(placeholder, insertBefore);
+          }
+        } else if (widgetStatsEl.lastElementChild !== placeholder) {
+          widgetStatsEl.appendChild(placeholder);
+        }
+      }
+
+      function updateRowDrag(event) {
+        if (!rowDragState) return;
+        const { row, offsetX, offsetY } = rowDragState;
+        row.style.left = `${event.clientX - offsetX}px`;
+        row.style.top = `${event.clientY - offsetY}px`;
+        movePlaceholderToPointerY(event.clientY);
+      }
+
+      function finishRowDrag() {
+        if (!rowDragState) return;
+        const { row, placeholder } = rowDragState;
+        if (widgetStatsEl && placeholder.parentElement === widgetStatsEl) {
+          widgetStatsEl.insertBefore(row, placeholder);
+        }
+        row.classList.remove('dragging');
+        row.classList.remove('reorder-floating');
+        row.style.removeProperty('left');
+        row.style.removeProperty('top');
+        row.style.removeProperty('width');
+        row.style.removeProperty('height');
+        if (placeholder.parentElement) {
+          placeholder.parentElement.removeChild(placeholder);
+        }
+        rowDragState = null;
+        updateOrderFromDom();
+        checkStatsOverflow();
+      }
+
+      function cancelRowDrag() {
+        if (!rowDragState) return;
+        const { row, placeholder } = rowDragState;
+        row.classList.remove('dragging');
+        row.classList.remove('reorder-floating');
+        row.style.removeProperty('left');
+        row.style.removeProperty('top');
+        row.style.removeProperty('width');
+        row.style.removeProperty('height');
+        if (placeholder.parentElement) {
+          placeholder.parentElement.removeChild(placeholder);
+        }
+        rowDragState = null;
+      }
+
+      function setupRowReorder() {
+        statRows.forEach((row) => {
+          row.addEventListener('pointerdown', (event) => {
+            if (!isEditMode) return;
+            if (event.button !== 0) return;
+            const interactiveTarget = event.target.closest('input, button, label, a');
+            if (interactiveTarget) return;
+
+            beginRowDrag(event, row);
+            row.setPointerCapture(event.pointerId);
+            event.preventDefault();
+          });
+
+          row.addEventListener('pointermove', (event) => {
+            if (!rowDragState || rowDragState.pointerId !== event.pointerId || rowDragState.row !== row) return;
+            const movedX = Math.abs(event.clientX - rowDragState.startClientX);
+            const movedY = Math.abs(event.clientY - rowDragState.startClientY);
+            if (!rowDragState.hasMoved && movedX + movedY >= 3) {
+              rowDragState.hasMoved = true;
+            }
+            if (!rowDragState.hasMoved) return;
+            updateRowDrag(event);
+          });
+
+          const finishHandler = (event) => {
+            if (!rowDragState || rowDragState.pointerId !== event.pointerId || rowDragState.row !== row) return;
+            finishRowDrag();
+          };
+
+          row.addEventListener('pointerup', finishHandler);
+          row.addEventListener('pointercancel', finishHandler);
+          row.addEventListener('lostpointercapture', (event) => {
+            if (!rowDragState || rowDragState.pointerId !== event.pointerId || rowDragState.row !== row) return;
+            finishRowDrag();
+          });
+        });
+      }
+
       function updateTimerButtons(isHourlyMode, isPaused) {
         if (isHourlyMode) {
-          timerControls.classList.add('visible');
           pauseBtn.classList.toggle('visible', !isPaused);
           resumeBtn.classList.toggle('visible', isPaused);
           resetBtn.classList.remove('visible');
         } else {
-          timerControls.classList.add('visible');
           pauseBtn.classList.remove('visible');
           resumeBtn.classList.remove('visible');
           resetBtn.classList.add('visible');
         }
       }
+
+      function setOverlayClickThrough(enabled) {
+        if (isClickThrough === enabled) {
+          return;
+        }
+        isClickThrough = enabled;
+        ipcRenderer.send('set-overlay-click-through', enabled);
+      }
+
+      function isPointOverLockButton(x, y) {
+        const rect = lockBtn.getBoundingClientRect();
+        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      }
+
+      function syncLockHoverState() {
+        if (!isLocked) {
+          setOverlayClickThrough(false);
+          return;
+        }
+        if (lastMouseX < 0 || lastMouseY < 0) {
+          setOverlayClickThrough(true);
+          return;
+        }
+        setOverlayClickThrough(!isPointOverLockButton(lastMouseX, lastMouseY));
+      }
+
+      function setLockedState(enabled) {
+        isLocked = enabled;
+        widgetEl.classList.toggle('locked', enabled);
+        lockBtn.classList.toggle('active', enabled);
+        lockBtn.title = enabled ? 'Unlock overlay' : 'Lock overlay';
+        if (enabled) {
+          // Lock should immediately become click-through.
+          setOverlayClickThrough(true);
+        } else {
+          setOverlayClickThrough(false);
+        }
+      }
+
+      visibleStats = loadVisibilitySettings();
+      statOrder = loadOrderSettings();
+      applyRowOrder();
+      setupRowReorder();
+      updateRowDragState();
+      syncCheckboxes();
+      applyRowVisibility();
+
+      // Load and apply saved overlay opacity (slider 30–100% maps to 0.3–1)
+      ipcRenderer.invoke('get-overlay-opacity').then((opacity) => {
+        if (typeof opacity === 'number' && opacity >= 0 && opacity <= 1) {
+          const pct = Math.round(opacity * 100);
+          if (opacitySlider) {
+            opacitySlider.value = String(Math.max(30, Math.min(100, pct)));
+            updateOpacityDisplay(Number(opacitySlider.value));
+          }
+        }
+      });
+      function updateOpacityDisplay(pct) {
+        const value = pct / 100;
+        if (opacityValueEl) opacityValueEl.textContent = pct + '%';
+        ipcRenderer.send('set-overlay-opacity', value);
+      }
+      if (opacitySlider) {
+        opacitySlider.addEventListener('input', () => {
+          const pct = Number(opacitySlider.value);
+          updateOpacityDisplay(pct);
+        });
+      }
+
+      function loadTransparency() {
+        const raw = localStorage.getItem(OVERLAY_TRANSPARENCY_KEY);
+        if (raw === null) return DEFAULT_TRANSPARENCY;
+        const n = Number(raw);
+        return Number.isFinite(n) && n >= 10 && n <= 100 ? n : DEFAULT_TRANSPARENCY;
+      }
+      function applyTransparency(pct) {
+        const alpha = pct / 100;
+        widgetEl.style.setProperty('--widget-bg-alpha', String(alpha));
+        if (transparencyValueEl) transparencyValueEl.textContent = pct + '%';
+        localStorage.setItem(OVERLAY_TRANSPARENCY_KEY, String(pct));
+      }
+      const savedTransparency = loadTransparency();
+      if (transparencySlider) {
+        transparencySlider.value = String(savedTransparency);
+        applyTransparency(savedTransparency);
+        transparencySlider.addEventListener('input', () => {
+          const pct = Number(transparencySlider.value);
+          applyTransparency(pct);
+        });
+      } else {
+        applyTransparency(DEFAULT_TRANSPARENCY);
+      }
+
+      const ROW_GAP = 10;
+      function checkStatsOverflow() {
+        let anyOverflow = false;
+        statRows.forEach((row) => {
+          if (row.classList.contains('hidden')) return;
+          const cell = row.querySelector('.stat-cell');
+          if (!cell) return;
+          const labelEl = cell.querySelector('.stat-label');
+          const valueEl = cell.querySelector('.stat-value-with-icon') || cell.querySelector('.stat-value');
+          if (!labelEl || !valueEl) return;
+          const need = labelEl.offsetWidth + valueEl.offsetWidth + ROW_GAP;
+          if (need > cell.offsetWidth) anyOverflow = true;
+        });
+        widgetEl.classList.toggle('stats-stacked', anyOverflow);
+      }
+
+      const resizeObserver = new ResizeObserver(() => checkStatsOverflow());
+      resizeObserver.observe(widgetEl);
+      checkStatsOverflow();
 
       // Listen for updates from main process
       ipcRenderer.on('widget-update', (event, data) => {
@@ -97,20 +586,50 @@
           durationEl.textContent = formatTime(data.duration);
         }
         if (data.avgTimePerMap !== undefined) {
-          tmpEl.textContent = formatTimeShort(data.avgTimePerMap);
+          timePerMapEl.textContent = formatTimeShort(data.avgTimePerMap);
         }
         if (data.hourly !== undefined) {
           hourlyEl.textContent = formatValue(data.hourly);
         }
         if (data.total !== undefined) {
           totalEl.textContent = formatValue(data.total);
+          totalEl.classList.toggle('negative', data.total < 0);
+        }
+        if (data.lastMapProfit !== undefined) {
+          lastMapProfitEl.textContent = formatValue(data.lastMapProfit);
+          lastMapProfitEl.classList.toggle('negative', data.lastMapProfit < 0);
+        }
+        if (data.totalMaps !== undefined) {
+          totalMapsEl.textContent = formatInteger(data.totalMaps);
+        }
+        if (data.hourly !== undefined) {
+          hourlyEl.classList.toggle('negative', data.hourly < 0);
         }
         // Update button visibility
         updateTimerButtons(data.isHourlyMode, data.isPaused);
+        checkStatsOverflow();
       });
 
       closeBtn.addEventListener('click', () => {
         ipcRenderer.send('close-overlay-widget');
+      });
+
+      editBtn.addEventListener('click', () => {
+        setEditMode(!isEditMode);
+      });
+
+      lockBtn.addEventListener('click', () => {
+        setLockedState(!isLocked);
+      });
+
+      statCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+          const statId = checkbox.dataset.statToggle;
+          if (!statId) return;
+          visibleStats[statId] = checkbox.checked;
+          saveVisibilitySettings();
+          applyRowVisibility();
+        });
       });
 
       pauseBtn.addEventListener('click', () => {
@@ -123,6 +642,43 @@
 
       resetBtn.addEventListener('click', () => {
         ipcRenderer.send('widget-reset-realtime');
+      });
+
+      document.addEventListener('mousemove', (event) => {
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+        syncLockHoverState();
+      });
+
+      // Resize handle (frameless window has no OS resize)
+      const resizeHandle = document.getElementById('resizeHandle');
+      resizeHandle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        ipcRenderer.invoke('get-overlay-bounds').then((bounds) => {
+          if (!bounds) return;
+          const startX = e.screenX;
+          const startY = e.screenY;
+          const startW = bounds.width;
+          const startH = bounds.height;
+          const minW = 160;
+
+          function onMove(ev) {
+            const w = Math.max(minW, startW + (ev.screenX - startX));
+            const h = Math.max(0, startH + (ev.screenY - startY));
+            ipcRenderer.send('set-overlay-bounds', { x: bounds.x, y: bounds.y, width: Math.round(w), height: Math.round(h) });
+          }
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            ipcRenderer.invoke('get-overlay-bounds').then((b) => {
+              if (!b) return;
+              if (isEditMode) editModeRestoreHeight = b.height;
+              ipcRenderer.send('save-overlay-bounds', { x: b.x, y: b.y, width: b.width, height: b.height });
+            });
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
       });
     </script>
   </body>

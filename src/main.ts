@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
 import { loadItemDatabase, loadPriceCache, savePriceCache, PriceCacheEntry } from './core/database';
-import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings, getLogPath, parseMapEvents, resetMapEventPosition, getWindowBounds, saveWindowBounds } from './core/logParser';
+import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings, getLogPath, parseMapEvents, resetMapEventPosition, getWindowBounds, saveWindowBounds, getOverlayBounds, saveOverlayBounds, getOverlayOpacity, saveOverlayOpacity } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
@@ -53,6 +53,8 @@ let overlayDisplayData = {
   hourly: 0,
   total: 0,
   avgTimePerMap: 0,
+  lastMapProfit: 0,
+  totalMaps: 0,
   isHourlyMode: false,
   isPaused: false
 };
@@ -444,25 +446,40 @@ function createOverlayWidget() {
     return;
   }
 
-  overlayWidget = new BrowserWindow({
-    width: 150,
-    height: 165,
+  const bounds = getOverlayBounds();
+  const winOptions: Electron.BrowserWindowConstructorOptions = {
+    width: bounds.width,
+    height: bounds.height,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
+    resizable: true,
+    minWidth: 160,
     hasShadow: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     }
-  });
+  };
+  if (bounds.x != null && bounds.y != null) {
+    winOptions.x = bounds.x;
+    winOptions.y = bounds.y;
+  }
+  overlayWidget = new BrowserWindow(winOptions);
 
   overlayWidget.loadFile(path.join(__dirname, 'ui/overlay-widget.html'));
   
   overlayWidget.setAlwaysOnTop(true, 'screen-saver');
-  
+  overlayWidget.setOpacity(getOverlayOpacity());
+
+  overlayWidget.on('close', () => {
+    if (overlayWidget && !overlayWidget.isDestroyed()) {
+      const b = overlayWidget.getBounds();
+      saveOverlayBounds({ x: b.x, y: b.y, width: b.width, height: b.height });
+    }
+  });
+
   overlayWidget.on('closed', () => {
     overlayWidget = null;
   });
@@ -853,7 +870,7 @@ ipcMain.on('close-overlay-widget', () => {
 });
 
 // Receives already-calculated display values from renderer
-ipcMain.on('update-overlay-widget', (_event, data: { duration: number; hourly: number; total: number; avgTimePerMap: number; isHourlyMode: boolean; isPaused: boolean }) => {
+ipcMain.on('update-overlay-widget', (_event, data: { duration: number; hourly: number; total: number; avgTimePerMap: number; lastMapProfit: number; totalMaps: number; isHourlyMode: boolean; isPaused: boolean }) => {
   overlayDisplayData = data;
   updateOverlayWidget();
 });
@@ -874,6 +891,38 @@ ipcMain.on('widget-resume-hourly', () => {
 ipcMain.on('widget-reset-realtime', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('widget-reset-realtime');
+  }
+});
+
+// Overlay resize (frameless window has no OS resize handle)
+ipcMain.handle('get-overlay-bounds', () => {
+  if (overlayWidget && !overlayWidget.isDestroyed()) {
+    return overlayWidget.getBounds();
+  }
+  return null;
+});
+ipcMain.on('set-overlay-bounds', (_event, bounds: { x: number; y: number; width: number; height: number }) => {
+  if (overlayWidget && !overlayWidget.isDestroyed()) {
+    overlayWidget.setBounds(bounds);
+  }
+});
+
+ipcMain.on('save-overlay-bounds', (_event, bounds: { x: number; y: number; width: number; height: number }) => {
+  saveOverlayBounds(bounds);
+});
+
+ipcMain.on('set-overlay-click-through', (_event, enabled: boolean) => {
+  if (overlayWidget && !overlayWidget.isDestroyed()) {
+    overlayWidget.setIgnoreMouseEvents(enabled, { forward: enabled });
+  }
+});
+
+ipcMain.handle('get-overlay-opacity', () => getOverlayOpacity());
+ipcMain.on('set-overlay-opacity', (_event, opacity: number) => {
+  const value = Math.max(0, Math.min(1, Number(opacity)));
+  saveOverlayOpacity(value);
+  if (overlayWidget && !overlayWidget.isDestroyed()) {
+    overlayWidget.setOpacity(value);
   }
 });
 

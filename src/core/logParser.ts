@@ -163,6 +163,71 @@ export function saveWindowBounds(bounds: WindowBounds): void {
   saveConfig(config);
 }
 
+export interface OverlayBounds {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+}
+
+const DEFAULT_OVERLAY_WIDTH = 320;
+const DEFAULT_OVERLAY_HEIGHT = 240;
+
+/**
+ * Get last saved overlay widget position and size from config
+ */
+export function getOverlayBounds(): OverlayBounds {
+  const config = loadConfig();
+  const b = config.overlayBounds;
+  if (b && typeof b.width === 'number' && typeof b.height === 'number') {
+    const out: OverlayBounds = {
+      width: Math.max(160, b.width),
+      height: Math.max(180, b.height)
+    };
+    if (typeof b.x === 'number' && typeof b.y === 'number') {
+      out.x = b.x;
+      out.y = b.y;
+    }
+    return out;
+  }
+  return { width: DEFAULT_OVERLAY_WIDTH, height: DEFAULT_OVERLAY_HEIGHT };
+}
+
+/**
+ * Save overlay widget position and size to config
+ */
+export function saveOverlayBounds(bounds: OverlayBounds): void {
+  const config = loadConfig();
+  config.overlayBounds = {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height
+  };
+  saveConfig(config);
+}
+
+const DEFAULT_OVERLAY_OPACITY = 1;
+
+/**
+ * Get saved overlay opacity from config (0–1)
+ */
+export function getOverlayOpacity(): number {
+  const config = loadConfig();
+  const o = config.overlayOpacity;
+  if (typeof o === 'number' && o >= 0 && o <= 1) return o;
+  return DEFAULT_OVERLAY_OPACITY;
+}
+
+/**
+ * Save overlay opacity to config
+ */
+export function saveOverlayOpacity(opacity: number): void {
+  const config = loadConfig();
+  config.overlayOpacity = Math.max(0, Math.min(1, opacity));
+  saveConfig(config);
+}
+
 function extractBaseId(fullId: string): string {
   return fullId.split('_')[0];
 }
