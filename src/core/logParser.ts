@@ -138,6 +138,31 @@ export function saveSettings(settings: { keybind?: string; fullscreenMode?: bool
   saveConfig(config);
 }
 
+export interface WindowBounds {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  maximized?: boolean;
+}
+
+/**
+ * Get last saved main window bounds from config
+ */
+export function getWindowBounds(): WindowBounds {
+  const config = loadConfig();
+  return config.windowBounds || {};
+}
+
+/**
+ * Save main window bounds to config (preserves other settings)
+ */
+export function saveWindowBounds(bounds: WindowBounds): void {
+  const config = loadConfig();
+  config.windowBounds = bounds;
+  saveConfig(config);
+}
+
 function extractBaseId(fullId: string): string {
   return fullId.split('_')[0];
 }

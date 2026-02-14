@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
 import { loadItemDatabase, loadPriceCache, savePriceCache, PriceCacheEntry } from './core/database';
-import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings, getLogPath, parseMapEvents, resetMapEventPosition } from './core/logParser';
+import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings, getLogPath, parseMapEvents, resetMapEventPosition, getWindowBounds, saveWindowBounds } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
@@ -167,20 +167,75 @@ function getIconPath(): string {
   }
 }
 
+const DEFAULT_WINDOW_WIDTH = 1440;
+const DEFAULT_WINDOW_HEIGHT = 900;
+const MIN_WINDOW_WIDTH = 520;
+const MIN_WINDOW_HEIGHT = 500;
+
+/** Clamp window bounds to fit within the primary display work area */
+function clampBoundsToDisplay(
+  bounds: { x: number; y: number; width: number; height: number }
+): { x: number; y: number; width: number; height: number } {
+  const workArea = screen.getPrimaryDisplay().workArea;
+  const w = Math.max(MIN_WINDOW_WIDTH, Math.min(bounds.width, workArea.width));
+  const h = Math.max(MIN_WINDOW_HEIGHT, Math.min(bounds.height, workArea.height));
+  const x = Math.max(workArea.x, Math.min(bounds.x, workArea.x + workArea.width - w));
+  const y = Math.max(workArea.y, Math.min(bounds.y, workArea.y + workArea.height - h));
+  return { x, y, width: w, height: h };
+}
+
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   // Use bounds for fullscreen (includes taskbar area), workAreaSize for windowed
   const { x, y, width, height } = primaryDisplay.bounds;
-  
+
+  let winWidth: number;
+  let winHeight: number;
+  let winX: number | undefined;
+  let winY: number | undefined;
+  let savedMaximized = false;
+
+  if (fullscreenMode) {
+    winWidth = width;
+    winHeight = height;
+    winX = x;
+    winY = y;
+  } else {
+    const saved = getWindowBounds();
+    if (
+      typeof saved.width === 'number' &&
+      typeof saved.height === 'number' &&
+      saved.width >= MIN_WINDOW_WIDTH &&
+      saved.height >= MIN_WINDOW_HEIGHT
+    ) {
+      const clamped = clampBoundsToDisplay({
+        x: typeof saved.x === 'number' ? saved.x : primaryDisplay.workArea.x,
+        y: typeof saved.y === 'number' ? saved.y : primaryDisplay.workArea.y,
+        width: saved.width,
+        height: saved.height
+      });
+      winWidth = clamped.width;
+      winHeight = clamped.height;
+      winX = clamped.x;
+      winY = clamped.y;
+      savedMaximized = Boolean(saved.maximized);
+    } else {
+      winWidth = DEFAULT_WINDOW_WIDTH;
+      winHeight = DEFAULT_WINDOW_HEIGHT;
+      // No saved bounds: keep original behavior (start maximized)
+      savedMaximized = true;
+    }
+  }
+
   // Always create frameless window - we'll use custom title bar for windowed mode
   // This avoids needing to recreate the window when switching modes
   mainWindow = new BrowserWindow({
-    width: fullscreenMode ? width : 1440,
-    height: fullscreenMode ? height : 900,
-    x: fullscreenMode ? x : undefined,
-    y: fullscreenMode ? y : undefined,
-    minWidth: 520,
-    minHeight: 500,
+    width: winWidth,
+    height: winHeight,
+    x: winX,
+    y: winY,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     icon: getIconPath(),
     frame: false, // Always frameless - we'll add custom title bar
     skipTaskbar: fullscreenMode,
@@ -225,14 +280,52 @@ function createWindow() {
       mainWindow.setAlwaysOnTop(true, 'screen-saver');
       // Don't show automatically in fullscreen - user toggles with hotkey
     } else {
-      // In windowed mode, start maximized and add it to taskbar
+      // In windowed mode: restore saved size/position and maximized state
       mainWindow.setSkipTaskbar(false);
       mainWindow.setAlwaysOnTop(false);
-      mainWindow.maximize();
+      if (savedMaximized) {
+        mainWindow.maximize();
+      }
       mainWindow.show();
     }
   });
-  
+
+  // Remember window size/position when resized or moved (debounced)
+  let windowBoundsSaveTimeout: NodeJS.Timeout | null = null;
+  const scheduleSaveWindowBounds = () => {
+    if (windowBoundsSaveTimeout) clearTimeout(windowBoundsSaveTimeout);
+    windowBoundsSaveTimeout = setTimeout(() => {
+      windowBoundsSaveTimeout = null;
+      if (mainWindow && !mainWindow.isDestroyed() && !fullscreenMode) {
+        const b = mainWindow.getBounds();
+        saveWindowBounds({
+          x: b.x,
+          y: b.y,
+          width: b.width,
+          height: b.height,
+          maximized: mainWindow.isMaximized()
+        });
+      }
+    }, 300);
+  };
+  mainWindow.on('resize', scheduleSaveWindowBounds);
+  mainWindow.on('move', scheduleSaveWindowBounds);
+  mainWindow.on('maximize', scheduleSaveWindowBounds);
+  mainWindow.on('unmaximize', scheduleSaveWindowBounds);
+
+  mainWindow.on('close', () => {
+    if (mainWindow && !fullscreenMode) {
+      const b = mainWindow.getBounds();
+      saveWindowBounds({
+        x: b.x,
+        y: b.y,
+        width: b.width,
+        height: b.height,
+        maximized: mainWindow.isMaximized()
+      });
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
