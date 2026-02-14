@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg: #161616;
   --bg-shade: #272727;
   --text: #fafafa;
@@ -5172,10 +5172,29 @@ body.overlay-widget {
     max-width: 100%;
   }
 
-  /* Breakdown: horizontal grid (same height as graph, wider flow) */
+  /* Breakdown: horizontal grid (same height as graph, wider flow); scroll when items don't fit */
   .breakdown-content {
     max-height: calc(280px * var(--scale));
+    overflow-y: auto;
     grid-template-columns: repeat(auto-fill, minmax(calc(70px * var(--scale)), 1fr));
     grid-auto-flow: dense;
+  }
+
+  .breakdown-content::-webkit-scrollbar {
+    width: calc(8px * var(--scale));
+  }
+
+  .breakdown-content::-webkit-scrollbar-track {
+    background: var(--bg);
+    border-radius: calc(4px * var(--scale));
+  }
+
+  .breakdown-content::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: calc(4px * var(--scale));
+  }
+
+  .breakdown-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
   }
 }
