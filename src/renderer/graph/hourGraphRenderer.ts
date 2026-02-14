@@ -96,7 +96,7 @@ export function renderHourGraph(bucket: HourlyBucket, index: number): void {
               const value = item.parsed.y;
               // Format value - only show decimal if non-zero
               const formatted = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
-              return `${formatted} FE`;
+              return `${formatted}`;
             },
             label: (context: any) => {
               const dataIndex = context.dataIndex;

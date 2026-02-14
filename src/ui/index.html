@@ -9,12 +9,19 @@
     <script>
       // Set responsive scale based on 1920x1080 baseline
       // Use 1rem = 16px as base, so scale will multiply values correctly
+      // For vertical/narrow displays, use different scale formula for readability
       function updateScale() {
-        const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-        const clampedScale = Math.max(0.84, Math.min(1, scale));
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const isVertical = w < h || w < 900;
+        const scale = isVertical
+          ? Math.min(w / 900, h / 1080)
+          : Math.min(w / 1920, h / 1080);
+        const minScale = isVertical ? 0.5 : 0.84;
+        const clampedScale = Math.max(minScale, Math.min(1, scale));
         document.documentElement.style.setProperty('--scale', clampedScale);
 
-        const textScale = Math.max(0.9, Math.min(1, scale));
+        const textScale = Math.max(isVertical ? 0.75 : 0.9, Math.min(1, scale));
         document.documentElement.style.setProperty('--text-scale', textScale);
       }
       updateScale();
@@ -237,7 +244,7 @@
               </div>
             </div>
             <div class="breakdown-container">
-              <div class="breakdown-header">Breakdown (FE)</div>
+              <div class="breakdown-header">Breakdown</div>
               <div id="breakdown" class="breakdown-content"></div>
             </div>
           </div>
@@ -545,7 +552,7 @@
         <div class="breakdown-header-section">
           <div class="breakdown-title">Hourly Session Complete</div>
           <div class="breakdown-total-label">Total Earned</div>
-          <div class="breakdown-total" id="breakdownTotal">0.00 FE</div>
+          <div class="breakdown-total" id="breakdownTotal">0.00</div>
         </div>
 
         <div class="breakdown-hours" id="breakdownHours">

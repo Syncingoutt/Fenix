@@ -29,7 +29,7 @@ export function showBreakdownModal(): void {
   const totalEarnings = hourlyBuckets.reduce((sum, bucket) => sum + bucket.earnings, 0);
   
   // Animate total with count-up effect
-  totalEl.textContent = `${totalEarnings.toFixed(2)} FE`;
+  totalEl.textContent = `${totalEarnings.toFixed(2)}`;
   
   // Generate session cards
   hoursContainer.innerHTML = hourlyBuckets.map((bucket, index) => {
@@ -37,7 +37,7 @@ export function showBreakdownModal(): void {
       <div class="hour-card">
         <div class="hour-header">
           <div class="hour-label">Session ${bucket.hourNumber}</div>
-          <div class="hour-earnings">+${bucket.earnings.toFixed(2)} FE</div>
+          <div class="hour-earnings">+${bucket.earnings.toFixed(2)}</div>
         </div>
         <canvas class="hour-graph" id="hourGraph${index}"></canvas>
       </div>

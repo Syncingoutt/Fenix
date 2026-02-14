@@ -1102,14 +1102,13 @@ img:not(.header-logo-pic) {
   padding: calc(1rem * var(--scale));
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: calc(6px * var(--scale));
-  max-height: calc(600px * var(--scale));
+  gap: calc(24px * var(--scale));
 }
 
 .breakdown-group {
   display: flex;
   align-items: center;
-  gap: calc(8px * var(--scale));
+  gap: calc(6px * var(--scale));
   cursor: pointer;
   padding: calc(4px * var(--scale)) calc(8px * var(--scale));
   border-radius: calc(4px * var(--scale));
@@ -1125,11 +1124,22 @@ img:not(.header-logo-pic) {
   outline: 1px solid var(--border);
 }
 
-.breakdown-icon {
-  width: calc(16px * var(--scale));
-  height: calc(16px * var(--scale));
-  min-width: 14px;
-  min-height: 14px;
+.breakdown-icon-box {
+  width: calc(42px * var(--scale));
+  height: calc(42px * var(--scale));
+  flex-shrink: 0;
+  background: var(--bg-shade);
+  border-radius: calc(4px * var(--scale));
+  padding: calc(3px * var(--scale));
+  border: 1px solid var(--border-shade);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.breakdown-icon-box .breakdown-icon {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
@@ -5067,4 +5077,105 @@ body.overlay-widget {
 
 .container-small .subtext {
   opacity: 0.85;
+}
+
+/* ============================================
+   VERTICAL / NARROW DISPLAY LAYOUT
+   ============================================ */
+
+@media (max-width: 1240px) {
+  /* Page layout: segmented | graph+breakdown | stats row | search | inventory */
+  /* Scope to .active so we don't override .page { display: none } and break other pages */
+  #page-home.page.active {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-areas:
+      "seg seg seg seg seg seg"
+      "graph graph graph breakdown breakdown breakdown"
+      "perhour perhour total total timer timer"
+      "search search search search search search"
+      "inv inv inv inv inv inv";
+    gap: calc(15px * var(--scale));
+  }
+  #inventory, .inventory-container {
+    max-width: 1240px;
+  }
+  .stats-container {
+    display: contents;
+  }
+
+  .inventory-breakdown-wrapper {
+    display: contents;
+  }
+
+  .segmented-wrapper {
+    grid-area: seg;
+    flex-wrap: wrap;
+    gap: calc(10px * var(--scale));
+  }
+
+  .container-big {
+    grid-area: graph;
+    max-height: calc(420px * var(--scale));
+  }
+
+  .breakdown-section {
+    grid-area: breakdown;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: calc(8px * var(--scale));
+    min-height: calc(220px * var(--scale));
+  }
+
+  .breakdown-section .price-filter-container {
+    margin-top: 0;
+    max-width: 100%;
+  }
+
+  .breakdown-section .breakdown-container {
+    flex: 1;
+    min-height: 0;
+    max-width: 100%;
+    margin-top: 0;
+  }
+
+  .container-small:nth-child(2) {
+    grid-area: timer;
+  }
+
+  .container-small:nth-child(3) {
+    grid-area: perhour;
+  }
+
+  .container-small:nth-child(4) {
+    grid-area: total;
+  }
+
+
+  .search-container {
+    grid-area: search;
+    width: 100%;
+  }
+
+  .inventory-section {
+    grid-area: inv;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .container-small {
+    min-height: calc(180px * var(--scale));
+  }
+
+  .usage-container {
+    max-width: 100%;
+  }
+
+  /* Breakdown: horizontal grid (same height as graph, wider flow) */
+  .breakdown-content {
+    max-height: calc(280px * var(--scale));
+    grid-template-columns: repeat(auto-fill, minmax(calc(70px * var(--scale)), 1fr));
+    grid-auto-flow: dense;
+  }
 }

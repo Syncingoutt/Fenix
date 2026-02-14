@@ -179,8 +179,8 @@ function createWindow() {
     height: fullscreenMode ? height : 900,
     x: fullscreenMode ? x : undefined,
     y: fullscreenMode ? y : undefined,
-    minWidth: 1200,
-    minHeight: 700,
+    minWidth: 520,
+    minHeight: 500,
     icon: getIconPath(),
     frame: false, // Always frameless - we'll add custom title bar
     skipTaskbar: fullscreenMode,
