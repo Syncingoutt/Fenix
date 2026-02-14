@@ -3,22 +3,16 @@
 import { getHourlyWealthGain } from './wealthCalculations.js';
 import {
   getHourlyStartSnapshot,
-  setHourlyStartSnapshot,
   getHourlyStartTime,
   setHourlyStartTime,
   getHourlyElapsedSeconds,
   setHourlyElapsedSeconds,
-  getIsHourlyActive,
   setIsHourlyActive,
-  getHourlyPaused,
   setHourlyPaused,
   getIncludedItems,
   getPreviousQuantities,
-  setPreviousQuantities,
   getHourlyUsage,
-  setHourlyUsage,
   getHourlyPurchases,
-  setHourlyPurchases,
   getHourlyBuckets,
   setHourlyBuckets,
   getCurrentHourStartValue,
@@ -26,10 +20,8 @@ import {
   getHourlyHistory,
   setHourlyHistory,
   getWealthMode,
-  setWealthMode
 } from '../state/wealthState.js';
 import { getCurrentItems, getItemDatabase } from '../state/inventoryState.js';
-import { formatTime } from '../utils/formatting.js';
 import { ElectronAPI, HourlyBucket, PriceCache } from '../types.js';
 import { categorizers } from '../modals/compassBeaconModal.js';
 
@@ -138,10 +130,13 @@ export function actuallyStartHourlyTracking(): void {
   }
 
   const startTime = Date.now();
+  const sessionId = `session_${startTime}_${Math.random().toString(36).substr(2, 9)}`;
+  (window as any).currentSessionId = sessionId;
   setHourlyStartTime(startTime);
+  setHourlyElapsedSeconds(0);
   setHourlyHistory([]);
-  // Don't clear buckets when starting new session - preserve existing buckets
-  // setHourlyBuckets([]);
+  // Start each run with a fresh bucket collection.
+  setHourlyBuckets([]);
   setCurrentHourStartValue(0);
   
   // Start with 0 gain
@@ -230,20 +225,12 @@ export async function captureHourlyBucket(): Promise<void> {
   const currentHourStartValue = getCurrentHourStartValue();
   const hourlyHistory = getHourlyHistory();
   const hourlyBuckets = getHourlyBuckets();
-  const hourlyElapsedSeconds = getHourlyElapsedSeconds();
   const includedItems = getIncludedItems();
   const currentItems = getCurrentItems();
   const previousQuantities = getPreviousQuantities();
   const hourlyUsage = getHourlyUsage();
   const hourlyPurchases = getHourlyPurchases();
   const hourlyStartTime = getHourlyStartTime();
-
-  // Generate a unique session ID when starting a new session
-  // This will be used to ensure buckets from different sessions don't merge
-  if (hourlyBuckets.length === 0) {
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    (window as any).currentSessionId = sessionId;
-  }
 
   const sessionId = (window as any).currentSessionId || `session_${Date.now()}`;
 
@@ -268,6 +255,7 @@ export async function captureHourlyBucket(): Promise<void> {
   }
 
   const bucketEndTime = Date.now();
+  const bucketDurationSeconds = Math.max(0, Math.floor((bucketEndTime - hourlyStartTime) / 1000));
   const bucket: HourlyBucket = {
     hourNumber,
     startValue: currentHourStartValue,
@@ -275,7 +263,7 @@ export async function captureHourlyBucket(): Promise<void> {
     earnings: currentValue - currentHourStartValue,
     history: [...hourlyHistory],
     timestamp: hourlyStartTime, // Keep for backwards compatibility
-    duration: hourlyElapsedSeconds,
+    duration: bucketDurationSeconds,
     inventorySnapshot,
     pricesSnapshot: priceCache,
     includedItems: includedItemsArray,
@@ -362,7 +350,6 @@ export async function stopHourlyTracking(): Promise<void> {
   const hourlyBuckets = getHourlyBuckets();
   const hourlyHistory = getHourlyHistory();
   const currentHourStartValue = getCurrentHourStartValue();
-  const hourlyElapsedSeconds = getHourlyElapsedSeconds();
   const hourlyStartTime = getHourlyStartTime();
 
   // Get session ID for this tracking session
@@ -391,6 +378,7 @@ export async function stopHourlyTracking(): Promise<void> {
   }
 
   const bucketEndTime = Date.now();
+  const bucketDurationSeconds = Math.max(0, Math.floor((bucketEndTime - hourlyStartTime) / 1000));
   const bucket: HourlyBucket = {
     hourNumber,
     startValue: currentHourStartValue,
@@ -398,7 +386,7 @@ export async function stopHourlyTracking(): Promise<void> {
     earnings: finalGain - currentHourStartValue,
     history: [...hourlyHistory],
     timestamp: hourlyStartTime, // Keep for backwards compatibility
-    duration: hourlyElapsedSeconds,
+    duration: bucketDurationSeconds,
     inventorySnapshot,
     pricesSnapshot: priceCache,
     includedItems: includedItemsArray,

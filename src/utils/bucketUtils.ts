@@ -116,7 +116,7 @@ export function mergeConsecutiveHours(buckets: HourlyBucket[]): HourlyBucket[] {
     // Only merge if:
     // 1. Same session (same sessionId)
     // 2. Consecutive hours (hour difference of 1, or 23->0 for midnight crossing)
-    const sameSession = prev.sessionId === curr.sessionId;
+    const sameSession = !!prev.sessionId && prev.sessionId === curr.sessionId;
     const consecutiveHours = isConsecutiveHours(prev, curr);
 
     if (sameSession && consecutiveHours) {
@@ -207,7 +207,8 @@ function mergeBucketsGroup(buckets: HourlyBucket[]): HourlyBucket {
     usageSnapshot: mergedUsageSnapshot,
     customName: buckets.find(b => b.customName)?.customName,
     bucketStartTime: first.bucketStartTime || first.timestamp,
-    bucketEndTime: last.bucketEndTime || (last.timestamp + last.duration * 1000)
+    bucketEndTime: last.bucketEndTime || (last.timestamp + last.duration * 1000),
+    sessionId: first.sessionId
   };
 
   return mergedBucket;

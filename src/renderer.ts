@@ -48,6 +48,8 @@ import { processMapEvents, setOnMapEndCallback, initializeMapTracking, clearMapT
 import { clearMapHistory, getMapStats } from './renderer/state/mapHistoryState.js';
 
 declare const electronAPI: ElectronAPI;
+let lastHourlyTimerSeconds = 0;
+let lastCapturedHourCheckpoint = 0;
 
 /**
  * Update overlay widget with current data
@@ -223,6 +225,11 @@ electronAPI.onTimerTick((data) => {
     // Update wealth values every second
     updateRealtimeWealth();
   } else if (data.type === 'hourly') {
+      if (data.seconds < lastHourlyTimerSeconds) {
+        lastCapturedHourCheckpoint = 0;
+      }
+      lastHourlyTimerSeconds = data.seconds;
+
       setHourlyElapsedSeconds(data.seconds);
       hourlyTimerEl.textContent = formatTime(data.seconds);
     
@@ -239,9 +246,11 @@ electronAPI.onTimerTick((data) => {
     renderInventory();
       renderBreakdown(renderInventory);
 
-    // Check if we've completed an hour
-      if (data.seconds % 3600 === 0 && data.seconds > 0) {
-      captureHourlyBucket();
+    // Capture at most once per completed hour boundary.
+      const completedHours = Math.floor(data.seconds / 3600);
+      if (completedHours > lastCapturedHourCheckpoint) {
+      lastCapturedHourCheckpoint = completedHours;
+      void captureHourlyBucket();
     }
   }
 });
