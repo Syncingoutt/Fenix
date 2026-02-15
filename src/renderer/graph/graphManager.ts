@@ -24,7 +24,6 @@ export function initGraph(): void {
   chart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: [],
       datasets: [{
         label: 'Wealth (FE)',
         data: [],
@@ -39,23 +38,36 @@ export function initGraph(): void {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: false,
+      normalized: true,
       scales: {
         x: {
+          type: 'time',
           display: true,
+          bounds: 'data',
+          time: {
+            minUnit: 'minute',
+            tooltipFormat: 'HH:mm:ss',
+            displayFormats: {
+              minute: 'HH:mm',
+              hour: 'HH:mm',
+              day: 'MMM d, HH:mm'
+            }
+          },
           grid: { 
-            color: '#7E7E7E',
-            drawBorder: false
+            display: false
           },
           ticks: {
             color: '#FAFAFA',
+            autoSkip: true,
+            includeBounds: true,
             maxTicksLimit: 10
           }
         },
         y: {
           display: true,
           grid: { 
-            color: '#7E7E7E',
-            drawBorder: false
+            display: false
           },
           ticks: {
             color: '#FAFAFA',
@@ -67,6 +79,7 @@ export function initGraph(): void {
           }
         }
       },
+      parsing: false,
       plugins: {
         legend: { 
           display: false 
@@ -83,44 +96,35 @@ export function initGraph(): void {
           boxHeight: 0,
           callbacks: {
             title: (items: any[]) => {
-              if (items.length === 0 || !chart) return '';
+              if (items.length === 0) return '';
               const item = items[0];
               const value = item.parsed.y;
-              // Format value - only show decimal if non-zero
               const formatted = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
               return `Wealth: ${formatted} FE`;
             },
             label: (context: any) => {
-              if (!chart) return '';
-              const dataIndex = context.dataIndex;
-              
-              // Get current history from chart (updated dynamically)
-              const currentHistory = (chart as any).currentHistory || 
-                (getWealthMode() === 'realtime' ? getRealtimeHistory() : getHourlyHistory());
-              
-              if (dataIndex >= 0 && dataIndex < currentHistory.length) {
-                const point = currentHistory[dataIndex];
-                const date = new Date(point.time);
-                
-                // Round to nearest minute (60 seconds) for smoother timestamp updates
-                const roundedSeconds = Math.floor(date.getSeconds() / 60) * 60;
-                const roundedDate = new Date(date);
-                roundedDate.setSeconds(roundedSeconds);
-                roundedDate.setMilliseconds(0);
-                
-                const hours = roundedDate.getHours().toString().padStart(2, '0');
-                const minutes = roundedDate.getMinutes().toString().padStart(2, '0');
-                return `${hours}:${minutes}`;
-              }
-              return '';
+              const pointTime = context.parsed.x;
+              if (!pointTime) return '';
+              return new Date(pointTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              });
             },
-            footer: () => '' // Remove default footer
+            footer: () => ''
           }
+        },
+        decimation: {
+          enabled: true,
+          algorithm: 'lttb',
+          samples: 1000
         }
       },
       interaction: {
         intersect: false,
-        mode: 'index'
+        mode: 'nearest',
+        axis: 'x'
       }
     }
   });
@@ -187,49 +191,27 @@ export function updateGraph(): void {
 
   const wealthMode = getWealthMode();
   const currentHistory = wealthMode === 'realtime' ? getRealtimeHistory() : getHourlyHistory();
+  let data = currentHistory.map((p) => ({ x: p.time, y: p.value }));
 
-  // Calculate time interval based on session length
-  const sessionDurationHours = currentHistory.length / 3600;
-  let intervalMinutes = 60;
-  
-  if (sessionDurationHours > 5) {
-    intervalMinutes = 120;
-  }
-  if (sessionDurationHours > 10) {
-    intervalMinutes = 180;
-  }
-  if (sessionDurationHours > 20) {
-    intervalMinutes = 240;
-  }
+  chart.options.scales.x.ticks.maxTicksLimit = 10;
+  if (currentHistory.length > 0) {
+    const firstPointTime = currentHistory[0].time;
+    const firstMinuteStart = Math.floor(firstPointTime / 60000) * 60000;
+    const lastPointTime = currentHistory[currentHistory.length - 1].time;
 
-  const labels = currentHistory.map((p, index) => {
-    const date = new Date(p.time);
-    const minutes = date.getMinutes();
-    const hours = date.getHours();
-    
-    if (index === 0 || index === currentHistory.length - 1) {
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    // Add an anchor point at the left bound so the line starts exactly at the first timestamp tick.
+    if (firstMinuteStart < firstPointTime) {
+      data = [{ x: firstMinuteStart, y: currentHistory[0].value }, ...data];
     }
-    
-    if (currentHistory.length > 0) {
-      const elapsedMinutes = Math.floor((p.time - currentHistory[0].time) / 60000);
-      if (elapsedMinutes % intervalMinutes === 0) {
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-      }
-    }
-    
-    return '';
-  });
 
-  const data = currentHistory.map(p => p.value);
-
-  chart.data.labels = labels;
-  chart.data.datasets[0].data = data;
-  chart.options.scales.x.ticks.maxTicksLimit = Math.min(12, Math.ceil(sessionDurationHours));
-  
-  // Store history reference in chart for tooltip callbacks
-  (chart as any).currentHistory = currentHistory;
-  (chart as any).currentMode = wealthMode;
+    chart.data.datasets[0].data = data;
+    chart.options.scales.x.min = firstMinuteStart;
+    chart.options.scales.x.max = lastPointTime;
+  } else {
+    chart.data.datasets[0].data = data;
+    chart.options.scales.x.min = undefined;
+    chart.options.scales.x.max = undefined;
+  }
   
   chart.update('none');
 }

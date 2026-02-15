@@ -1105,7 +1105,7 @@ ipcMain.handle('set-username', async (event, username: string) => {
   }
 });
 
-ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string }) => {
+ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 }) => {
   try {
     saveSettings(settings);
     

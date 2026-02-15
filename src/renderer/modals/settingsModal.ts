@@ -10,7 +10,7 @@ import { updateUsernameDisplay } from '../settings/settingsManager.js';
 declare const electronAPI: ElectronAPI;
 
 let isRecordingKeybind = false;
-let currentSettings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string } = {};
+let currentSettings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 } = {};
 let currentUsernameInfo: { username?: string; tag?: string; displayName?: string; nextChangeAt?: number; canChange: boolean } | null = null;
 let pendingKeybind: string | null = null;
 let pendingFullscreenMode: boolean | null = null;
@@ -18,6 +18,7 @@ let pendingIncludeTax: boolean | null = null;
 let pendingUsername: string | null = null;
 let pendingCloudSyncEnabled: boolean | null = null;
 let pendingLeagueId: string | null = null;
+let pendingLayoutStyle: 1 | 2 | null = null;
 let currentCloudSyncEnabled: boolean | null = null;
 
 let settingsMenuOpen = false;
@@ -45,7 +46,17 @@ const cloudSyncHelperText = document.getElementById('cloudSyncHelperText') as HT
 const leagueIdInput = document.getElementById('leagueIdInput') as HTMLInputElement | null;
 const changeLogPathBtn = document.getElementById('changeLogPathBtn') as HTMLButtonElement | null;
 const logPathHelperText = document.getElementById('logPathHelperText') as HTMLElement | null;
+const layoutStyle1Radio = document.getElementById('layoutStyle1Radio') as HTMLInputElement | null;
+const layoutStyle2Radio = document.getElementById('layoutStyle2Radio') as HTMLInputElement | null;
 const settingsSidebarItems = document.querySelectorAll('.settings-sidebar-item');
+
+function applyLayoutStyle(style: 1 | 2): void {
+  if (style === 1) {
+    document.body.classList.add('layout-style-1');
+  } else {
+    document.body.classList.remove('layout-style-1');
+  }
+}
 
 export function initSettingsModal(
   inventoryRenderer: () => void,
@@ -80,6 +91,7 @@ export function initSettingsModal(
       pendingIncludeTax = currentSettings.includeTax !== undefined ? currentSettings.includeTax : false;
       setIncludeTax(pendingIncludeTax);
       pendingLeagueId = (currentSettings.leagueId || 's11-vorax').trim();
+      pendingLayoutStyle = currentSettings.layoutStyle === 2 ? 2 : 1;
       pendingUsername = currentUsernameInfo.username || '';
       const cloudSyncStatus = await electronAPI.getCloudSyncStatus();
       currentCloudSyncEnabled = cloudSyncStatus.enabled;
@@ -107,6 +119,11 @@ export function initSettingsModal(
 
       if (leagueIdInput) {
         leagueIdInput.value = pendingLeagueId || 's11-vorax';
+      }
+
+      if (layoutStyle1Radio && layoutStyle2Radio) {
+        layoutStyle1Radio.checked = (pendingLayoutStyle ?? 1) === 1;
+        layoutStyle2Radio.checked = (pendingLayoutStyle ?? 1) === 2;
       }
 
       // Set username input + helper text
@@ -313,6 +330,17 @@ export function initSettingsModal(
     });
   }
 
+  if (layoutStyle1Radio) {
+    layoutStyle1Radio.addEventListener('change', () => {
+      if (layoutStyle1Radio.checked) pendingLayoutStyle = 1;
+    });
+  }
+  if (layoutStyle2Radio) {
+    layoutStyle2Radio.addEventListener('change', () => {
+      if (layoutStyle2Radio.checked) pendingLayoutStyle = 2;
+    });
+  }
+
   if (changeLogPathBtn) {
     changeLogPathBtn.addEventListener('click', async () => {
       const selectedPath = await electronAPI.selectLogFile();
@@ -347,7 +375,7 @@ export function initSettingsModal(
     settingsSaveBtn.textContent = 'Saving...';
     
     try {
-      const settingsToSave: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string } = {};
+      const settingsToSave: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 } = {};
       
       if (pendingKeybind) {
         settingsToSave.keybind = pendingKeybind;
@@ -364,6 +392,9 @@ export function initSettingsModal(
       if (pendingLeagueId !== null) {
         settingsToSave.leagueId = pendingLeagueId.trim() || 's11-vorax';
       }
+
+      const layoutStyleValue = layoutStyle2Radio?.checked ? 2 : (pendingLayoutStyle ?? 1);
+      settingsToSave.layoutStyle = layoutStyleValue;
       
       let usernameError: string | null = null;
       if (currentUsernameInfo && pendingUsername !== null) {
@@ -412,6 +443,11 @@ export function initSettingsModal(
       
       if (result.success) {
         currentSettings = { ...currentSettings, ...settingsToSave };
+        
+        if (settingsToSave.layoutStyle !== undefined) {
+          applyLayoutStyle(settingsToSave.layoutStyle);
+          pendingLayoutStyle = settingsToSave.layoutStyle;
+        }
         
         if (settingsToSave.keybind) {
           pendingKeybind = settingsToSave.keybind;
@@ -503,6 +539,7 @@ function closeSettingsModal(): void {
   pendingUsername = null;
   pendingCloudSyncEnabled = null;
   pendingLeagueId = null;
+  pendingLayoutStyle = null;
   currentCloudSyncEnabled = null;
 }
 

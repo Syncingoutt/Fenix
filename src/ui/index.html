@@ -5,7 +5,8 @@
     <title>Fenix</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css?family=Manrope" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script>
       // Set responsive scale based on 1920x1080 baseline
       // Use 1rem = 16px as base, so scale will multiply values correctly
@@ -780,6 +781,20 @@
             <div class="settings-section" id="preferencesSection">
               <div class="settings-section-title">Preferences</div>
               
+              <div class="settings-group layout-style-row">
+                <div class="settings-group-label">Layout Style</div>
+                <label class="layout-style-option">
+                  <input type="radio" name="layoutStyle" value="1" id="layoutStyle1Radio">
+                  <span class="layout-style-indicator"></span>
+                  <span class="layout-style-label">Style 1</span>
+                </label>
+                <label class="layout-style-option">
+                  <input type="radio" name="layoutStyle" value="2" id="layoutStyle2Radio">
+                  <span class="layout-style-indicator"></span>
+                  <span class="layout-style-label">Style 2</span>
+                </label>
+              </div>
+
               <div class="settings-group">
                 <div class="settings-option">
                   <div class="settings-option-label">Include tax in price calculations</div>

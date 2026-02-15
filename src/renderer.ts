@@ -300,6 +300,13 @@ electronAPI.onInventoryUpdate(() => {
   ]);
   
   setIncludeTax(settings.includeTax !== undefined ? settings.includeTax : false);
+
+  const layoutStyle = settings.layoutStyle === 2 ? 2 : 1;
+  if (layoutStyle === 1) {
+    document.body.classList.add('layout-style-1');
+  } else {
+    document.body.classList.remove('layout-style-1');
+  }
   
   if (configured) {
     await loadInventory();
