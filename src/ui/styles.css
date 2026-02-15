@@ -5386,7 +5386,7 @@ body.overlay-widget {
     gap: calc(15px * var(--scale));
   }
   #inventory, .inventory-container {
-    max-width: 1240px;
+    max-width: 1920px;
   }
   .stats-container {
     display: contents;
