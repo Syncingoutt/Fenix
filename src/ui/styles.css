@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #161616;
   --bg-shade: #272727;
   --text: #fafafa;
@@ -5371,7 +5371,7 @@ body.overlay-widget {
    VERTICAL / NARROW DISPLAY LAYOUT
    ============================================ */
 
-@media (max-width: 1240px) {
+@media (max-width: 1440px) {
   /* Page layout: segmented | graph+breakdown | stats row | search | inventory */
   /* Scope to .active so we don't override .page { display: none } and break other pages */
   #page-home.page.active {
