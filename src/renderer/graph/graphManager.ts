@@ -21,6 +21,8 @@ export function initGraph(): void {
     chart.destroy();
   }
 
+  const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#7e7e7e';
+
   chart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -54,6 +56,7 @@ export function initGraph(): void {
               day: 'MMM d, HH:mm'
             }
           },
+          border: { color: borderColor },
           grid: { 
             display: false
           },
@@ -66,15 +69,16 @@ export function initGraph(): void {
         },
         y: {
           display: true,
+          border: { color: borderColor },
           grid: { 
             display: false
           },
           ticks: {
             color: '#FAFAFA',
+            precision: 0,
             callback: function(value: any) {
               const num = value as number;
-              // Only show decimal if non-zero
-              return num % 1 === 0 ? num.toFixed(0) : num.toFixed(1);
+              return num % 1 === 0 ? num.toString() : '';
             }
           }
         }
@@ -99,8 +103,7 @@ export function initGraph(): void {
               if (items.length === 0) return '';
               const item = items[0];
               const value = item.parsed.y;
-              const formatted = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
-              return `Wealth: ${formatted} FE`;
+              return `Wealth: ${Math.round(value)} FE`;
             },
             label: (context: any) => {
               const pointTime = context.parsed.x;

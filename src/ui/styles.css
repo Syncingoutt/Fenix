@@ -241,7 +241,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   color: var(--text);
   transition: all 0.2s ease;
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   min-width: calc(240px * var(--scale));
 }
 
@@ -327,7 +326,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   font-weight: 400;
   cursor: pointer;
   transition: background 0.2s ease;
-  font-family: "Manrope", sans-serif;
   text-align: left;
 }
 
@@ -445,7 +443,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   justify-content: space-between;
   align-items: center;
   transition: background 0.2s;
-  font-family: "Manrope", sans-serif;
 }
 
 .settings-menu-button:hover:not(:disabled) {
@@ -621,7 +618,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
-  font-family: "Manrope", sans-serif;
 }
 
 .overlay-segmented-btn svg {
@@ -641,7 +637,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   color: var(--text);
   font-weight: 500;
   font-size: calc(var(--text-small) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
 }
 
 /* ============================================
@@ -814,6 +809,19 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   background-color: var(--bg);
   border: 1px solid var(--border);
   border-top: none;
+  /* Full-height vertical column lines (checkbox|Name|Quantity|Price|Total), no line after Total */
+  background-image:
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px),
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px),
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px),
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px);
+  background-size: 1px 100%, 1px 100%, 1px 100%, 1px 100%;
+  background-position:
+    calc(35px * var(--scale) + 2rem * var(--scale)) 0,
+    calc(100% - (160px * var(--scale))) 0,
+    calc(100% - (290px * var(--scale) + 2rem * var(--scale))) 0,
+    calc(100% - (400px * var(--scale) + 4rem * var(--scale))) 0;
+  background-repeat: no-repeat repeat, no-repeat repeat, no-repeat repeat, no-repeat repeat;
 }
 
 /* Hide inventory border on History page */
@@ -828,21 +836,18 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
 
 .item-row {
   display: grid;
-  grid-template-columns: 1fr calc(120px * var(--scale)) calc(120px * var(--scale)) calc(120px * var(--scale));
+  grid-template-columns: calc(28px * var(--scale)) 1fr calc(120px * var(--scale)) calc(120px * var(--scale)) calc(120px * var(--scale));
   gap: calc(2rem * var(--scale));
   padding: calc(1rem * var(--scale)) calc(2rem * var(--scale)) calc(1rem * var(--scale)) calc(1.25rem * var(--scale));
-  border-bottom: 1px solid var(--bg-shade);
+  border-bottom: 1px solid var(--border-shade);
   color: var(--text);
   align-items: center;
-}
-
-.item-row:last-child {
-  border-bottom: none;
 }
 
 .header-row {
   font-weight: 600;
   background-color: var(--bg-shade);
+  border-bottom: 1px solid var(--border-shade);
 }
 
 /* ============================================
@@ -884,6 +889,62 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   position: relative;
   text-align: center;
   min-width: calc(120px * var(--scale));
+}
+
+/* Checkbox column */
+.item-checkbox-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-checkbox-cell {
+  min-width: calc(28px * var(--scale));
+}
+
+.inventory-item-checkbox {
+  min-width: calc(22px * var(--scale));
+  min-height: calc(22px * var(--scale));
+  padding: 0;
+  border: 1px solid var(--border-shade);
+  border-radius: 2px;
+  background: var(--bg-shade);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.inventory-item-checkbox:hover {
+  border-color: var(--text-muted);
+  background: rgba(var(--bg-shade), 0.15);
+}
+
+.inventory-item-checkbox.checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.inventory-item-checkbox.checked:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.inventory-item-checkbox svg {
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* No vertical lines on header row */
+.header-row .item-checkbox-cell,
+.header-row .item-name,
+.header-row .item-quantity,
+.header-row .item-single,
+.header-row .item-total {
+  border-right: none !important;
 }
 
 /* Only header items should be clickable for sorting */
@@ -1113,6 +1174,7 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   padding: calc(4px * var(--scale)) calc(8px * var(--scale));
   border-radius: calc(4px * var(--scale));
   transition: background-color 0.15s;
+  min-width: min-content;
 }
 
 .breakdown-group:hover {
@@ -1147,6 +1209,8 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 400;
   color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .breakdown-group.negative .breakdown-group-value {
@@ -1200,7 +1264,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   border: 1px solid var(--border);
   border-radius: calc(8px * var(--scale));
   color: var(--text);
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-small) * var(--text-scale));
   transition: border-color 0.2s;
 }
@@ -1268,7 +1331,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   color: white;
   border: none;
   border-radius: calc(6px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -1309,7 +1371,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   font-size: calc(var(--text-title) * var(--text-scale));
   font-weight: 700;
   color: #fafafa;
-  font-family: "Manrope", sans-serif;
 }
 
 .timer-display {
@@ -1570,7 +1631,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   color: white;
   border: none;
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-medium) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -1728,7 +1788,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   padding: calc(12px * var(--scale)) calc(32px * var(--scale));
   border: none;
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-medium) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -1932,7 +1991,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   padding: calc(14px * var(--scale)) calc(32px * var(--scale));
   border: none;
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-medium) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -1955,7 +2013,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   padding: calc(14px * var(--scale)) calc(40px * var(--scale));
   border: none;
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-medium) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -2111,7 +2168,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   border: 1px solid var(--border);
   border-radius: calc(8px * var(--scale));
   color: var(--text);
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-small) * var(--text-scale));
   transition: border-color 0.2s;
 }
@@ -2140,7 +2196,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   border: 1px solid var(--border);
   border-radius: calc(8px * var(--scale));
   color: var(--text);
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-small) * var(--text-scale));
   transition: border-color 0.2s;
 }
@@ -2233,7 +2288,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   color: white;
   border: none;
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -2284,7 +2338,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   color: white;
   border: none;
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -2465,7 +2518,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   color: white;
   border: none;
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-medium) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -2526,7 +2578,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   justify-content: center;
   transition: all 0.2s;
   z-index: 10;
-  font-family: "Manrope", sans-serif;
 }
 
 .settings-close-btn:hover {
@@ -2734,7 +2785,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   background: var(--bg);
   border: calc(1px * var(--scale)) solid var(--border);
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(16px * var(--text-scale));
   color: var(--text);
   transition: border-color 0.2s;
@@ -2760,7 +2810,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   display: flex;
   align-items: center;
   gap: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-medium) * var(--scale));
   color: var(--text);
   cursor: pointer;
@@ -2782,7 +2831,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   background: transparent;
   border: calc(1px * var(--scale)) solid var(--border);
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(16px * var(--text-scale));
   color: var(--text);
   cursor: pointer;
@@ -2902,7 +2950,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   padding: calc(12px * var(--scale)) calc(32px * var(--scale));
   border: none;
   border-radius: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-body) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -2919,7 +2966,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   border-radius: calc(8px * var(--scale));
   background: var(--primary);
   color: white;
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -3466,7 +3512,6 @@ body.overlay-widget {
   border-bottom: 1px solid var(--border-shade);
   color: var(--text);
   font-size: calc(var(--text-medium) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
   text-align: left;
   cursor: pointer;
   transition: all 0.15s;
@@ -3526,7 +3571,6 @@ body.overlay-widget {
   border: 1px solid var(--border);
   color: var(--text);
   font-size: calc(var(--text-small) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
   padding: calc(16px * var(--scale)) calc(16px * var(--scale));
   padding-right: calc(36px * var(--scale));
   cursor: pointer;
@@ -3553,7 +3597,6 @@ body.overlay-widget {
   border: none;
   color: var(--text);
   font-size: calc(var(--text-small) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
   outline: none;
   padding: 0;
 }
@@ -3865,7 +3908,6 @@ body.overlay-widget {
   padding: calc(8px * var(--scale)) calc(16px * var(--scale));
   border: none;
   border-radius: calc(6px * var(--scale));
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-medium) * var(--text-scale));
   font-weight: 600;
   cursor: pointer;
@@ -3959,7 +4001,6 @@ body.overlay-widget {
   border: 1px solid var(--border);
   color: var(--text);
   font-size: calc(var(--text-small) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
   height: calc(40px * var(--scale));
@@ -4000,7 +4041,6 @@ body.overlay-widget {
   border: none;
   color: var(--text);
   font-size: calc(var(--text-small) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
   cursor: pointer;
   border-radius: calc(4px * var(--scale));
   transition: all 0.2s ease;
@@ -4075,7 +4115,6 @@ body.overlay-widget {
   font-size: calc(var(--text-title-large) * var(--text-scale));
   color: var(--text);
   margin: 0 0 calc(1rem * var(--scale)) 0;
-  font-family: "Manrope", sans-serif;
   animation: fadeInUp 0.5s ease-out 0.15s backwards;
 }
 
@@ -4113,14 +4152,12 @@ body.overlay-widget {
   color: var(--text);
   opacity: 0.7;
   font-weight: 500;
-  font-family: "Manrope", sans-serif;
 }
 
 .history-stat-value {
   font-size: calc(var(--text-title) * var(--text-scale));
   font-weight: 700;
   color: var(--primary);
-  font-family: "Manrope", sans-serif;
 }
 
 /* Map Overview Section (matching history overview design) */
@@ -4148,7 +4185,6 @@ body.overlay-widget {
   font-size: calc(var(--text-title-large) * var(--text-scale));
   color: var(--text);
   margin: 0 0 calc(1rem * var(--scale)) 0;
-  font-family: "Manrope", sans-serif;
   animation: fadeInUp 0.5s ease-out 0.15s backwards;
 }
 
@@ -4182,14 +4218,12 @@ body.overlay-widget {
   color: var(--text);
   opacity: 0.7;
   font-weight: 500;
-  font-family: "Manrope", sans-serif;
 }
 
 .map-stat-value {
   font-size: calc(var(--text-title) * var(--text-scale));
   font-weight: 700;
   color: var(--primary);
-  font-family: "Manrope", sans-serif;
 }
 
 .map-stat-value.positive {
@@ -4231,7 +4265,6 @@ body.overlay-widget {
   font-size: calc(var(--text-medium) * var(--text-scale));
   font-weight: 600;
   color: var(--text);
-  font-family: "Manrope", sans-serif;
 }
 
 .history-sidebar-dates {
@@ -4247,7 +4280,6 @@ body.overlay-widget {
   border-radius: calc(6px * var(--scale));
   color: var(--text);
   font-size: calc(var(--text-small) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
@@ -4288,7 +4320,6 @@ body.overlay-widget {
   font-size: calc(var(--text-small) * var(--text-scale));
   color: var(--text);
   font-weight: 600;
-  font-family: "Manrope", sans-serif;
   letter-spacing: 0.02em;
   opacity: 0.9;
 }
@@ -4334,7 +4365,6 @@ body.overlay-widget {
   font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 500;
   color: var(--text);
-  font-family: "Manrope", sans-serif;
 }
 
 .custom-dropdown-arrow {
@@ -4393,7 +4423,6 @@ body.overlay-widget {
   font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 400;
   color: var(--text);
-  font-family: "Manrope", sans-serif;
   cursor: pointer;
   transition: all 0.15s ease;
   border-bottom: 1px solid var(--border-shade);
@@ -4428,6 +4457,7 @@ body.overlay-widget {
 .history-inventory-header {
   font-weight: 600;
   background-color: var(--bg-shade);
+  border-bottom: 1px solid var(--border-shade);
 }
 
 .history-inventory-header-row {
@@ -4446,7 +4476,6 @@ body.overlay-widget {
   font-weight: 600;
   color: var(--text);
   opacity: 0.8;
-  font-family: "Manrope", sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -4536,6 +4565,17 @@ body.overlay-widget {
   /* Hide scrollbar but allow scrolling */
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* Full-height vertical column lines (Name|Quantity|Price|Total), no line after Total */
+  background-image:
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px),
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px),
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px);
+  background-size: 1px 100%, 1px 100%, 1px 100%;
+  background-position:
+    calc(100% - (120px * var(--scale))) 0,
+    calc(100% - (240px * var(--scale) + 2rem * var(--scale))) 0,
+    calc(100% - (360px * var(--scale) + 4rem * var(--scale))) 0;
+  background-repeat: no-repeat repeat, no-repeat repeat, no-repeat repeat;
 }
 
 /* Hide scrollbar in Chrome, Safari, Edge */
@@ -4548,7 +4588,7 @@ body.overlay-widget {
   grid-template-columns: 1fr calc(120px * var(--scale)) calc(120px * var(--scale)) calc(120px * var(--scale));
   gap: calc(2rem * var(--scale));
   padding: calc(1rem * var(--scale)) calc(2rem * var(--scale)) calc(1rem * var(--scale)) calc(1.25rem * var(--scale));
-  border-bottom: 1px solid var(--bg-shade);
+  border-bottom: 1px solid var(--border-shade);
   color: var(--text);
   align-items: center;
   transition: background 0.2s ease;
@@ -4556,10 +4596,6 @@ body.overlay-widget {
 
 .history-inventory-item:hover {
   background: rgba(255, 255, 255, 0.02);
-}
-
-.history-inventory-item:last-child {
-  border-bottom: none;
 }
 
 .history-inventory-item-name {
@@ -4578,7 +4614,6 @@ body.overlay-widget {
 .history-inventory-item-label {
   font-size: calc(var(--text-medium) * var(--text-scale));
   color: var(--text);
-  font-family: "Manrope", sans-serif;
 }
 
 .history-inventory-item-name-content {
@@ -4617,7 +4652,6 @@ body.overlay-widget {
   border: 1px solid var(--border);
   border-radius: calc(8px * var(--scale));
   color: var(--text);
-  font-family: "Manrope", sans-serif;
   font-size: calc(var(--text-small) * var(--text-scale));
   transition: border-color 0.2s;
 }
@@ -4684,7 +4718,6 @@ body.overlay-widget {
   color: var(--text);
   opacity: 0.5;
   font-size: calc(var(--text-body) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
 }
 
 /* Clear History Button */
@@ -4700,7 +4733,6 @@ body.overlay-widget {
   gap: calc(6px * var(--scale));
   font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 600;
-  font-family: "Manrope", sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
   width: auto;
@@ -4757,7 +4789,6 @@ body.overlay-widget {
   font-size: calc(var(--text-body) * var(--text-scale));
   font-weight: 500;
   color: var(--text);
-  font-family: "Manrope", sans-serif;
 }
 
 .edit-mode-exit-btn {
@@ -4768,7 +4799,6 @@ body.overlay-widget {
   color: var(--text);
   font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 600;
-  font-family: "Manrope", sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -4793,7 +4823,6 @@ body.overlay-widget {
   border-radius: calc(6px * var(--scale));
   color: #E74C3C;
   font-size: calc(var(--text-small) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -4850,7 +4879,6 @@ body.overlay-widget {
 .edit-hour-checkbox-label {
   color: var(--text);
   font-size: calc(var(--text-small) * var(--text-scale));
-  font-family: "Manrope", sans-serif;
   flex: 1;
   cursor: pointer;
 }
@@ -4926,14 +4954,12 @@ body.overlay-widget {
   font-weight: 700;
   color: var(--text);
   margin-bottom: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
 }
 
 .clear-history-modal-subtitle {
   font-size: calc(var(--text-small) * var(--text-scale));
   color: #E74C3C;
   font-weight: 600;
-  font-family: "Manrope", sans-serif;
 }
 
 .clear-history-modal-body {
@@ -4945,7 +4971,6 @@ body.overlay-widget {
   color: var(--text);
   margin-bottom: calc(16px * var(--scale));
   line-height: 1.5;
-  font-family: "Manrope", sans-serif;
 }
 
 .clear-history-modal-message ul {
@@ -4964,7 +4989,6 @@ body.overlay-widget {
   padding: calc(12px * var(--scale));
   background: rgba(255, 255, 255, 0.05);
   border-radius: calc(6px * var(--scale));
-  font-family: "Manrope", sans-serif;
 }
 
 .clear-history-modal-actions {
@@ -4978,7 +5002,6 @@ body.overlay-widget {
   border-radius: calc(8px * var(--scale));
   font-size: calc(var(--text-body) * var(--text-scale));
   font-weight: 600;
-  font-family: "Manrope", sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
@@ -5054,14 +5077,12 @@ body.overlay-widget {
   font-weight: 700;
   color: var(--text);
   margin-bottom: calc(8px * var(--scale));
-  font-family: "Manrope", sans-serif;
 }
 
 .delete-hours-modal-subtitle {
   font-size: calc(var(--text-small) * var(--text-scale));
   color: #E74C3C;
   font-weight: 600;
-  font-family: "Manrope", sans-serif;
 }
 
 .delete-hours-modal-body {
@@ -5073,7 +5094,6 @@ body.overlay-widget {
   color: var(--text);
   margin-bottom: calc(16px * var(--scale));
   line-height: 1.5;
-  font-family: "Manrope", sans-serif;
 }
 
 .delete-hours-modal-message span {
@@ -5088,7 +5108,6 @@ body.overlay-widget {
   padding: calc(12px * var(--scale));
   background: rgba(255, 255, 255, 0.05);
   border-radius: calc(6px * var(--scale));
-  font-family: "Manrope", sans-serif;
 }
 
 .delete-hours-modal-actions {
@@ -5105,7 +5124,6 @@ body.overlay-widget {
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
-  font-family: "Manrope", sans-serif;
 }
 
 .delete-hours-modal-btn.secondary {
@@ -5158,7 +5176,6 @@ body.overlay-widget {
   font-size: calc(var(--text-title-large) * var(--text-scale));
   color: var(--text);
   margin: 0 0 calc(1rem * var(--scale)) 0;
-  font-family: "Manrope", sans-serif;
 }
 
 .map-history-stats {
@@ -5260,7 +5277,6 @@ body.overlay-widget {
   font-size: calc(var(--text-title) * var(--text-scale));
   color: var(--text);
   margin: 0 0 calc(1rem * var(--scale)) 0;
-  font-family: "Manrope", sans-serif;
 }
 
 .stats-grid {
@@ -5311,7 +5327,6 @@ body.overlay-widget {
   font-size: calc(var(--text-title) * var(--text-scale));
   color: var(--text);
   margin: 0 0 calc(1rem * var(--scale)) 0;
-  font-family: "Manrope", sans-serif;
 }
 
 .current-map-info {
@@ -5360,7 +5375,6 @@ body.overlay-widget {
   font-size: calc(var(--text-title) * var(--text-scale));
   color: var(--text);
   margin: 0;
-  font-family: "Manrope", sans-serif;
 }
 
 .empty-history {
@@ -5515,12 +5529,27 @@ body.layout-style-1 .container-small:nth-child(4) {
 body.layout-style-1 .search-container {
   grid-area: search;
   width: 100%;
+  margin-top: calc(12px * var(--scale));
+  margin-bottom: 0;
+}
+
+/* Sticky bar wrapper must not create a box so grid children stay correct */
+body.layout-style-1 .home-sticky-bar {
+  display: contents;
 }
 
 body.layout-style-1 .inventory-section {
   grid-area: inv;
   width: 100%;
   min-width: 0;
+  max-height: calc(100vh - (330px * var(--scale)));
+  min-height: calc(220px * var(--scale));
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+body.layout-style-1 .inventory-section::-webkit-scrollbar {
+  display: none;
 }
 
 body.layout-style-1 .container-small {

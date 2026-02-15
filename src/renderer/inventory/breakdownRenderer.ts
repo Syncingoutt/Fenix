@@ -1,7 +1,7 @@
 // Breakdown section rendering
 
 import { getDisplayItems } from './inventoryLogic.js';
-import { getItemDatabase, getSelectedGroupFilter, setSelectedGroupFilter } from '../state/inventoryState.js';
+import { getItemDatabase, getSelectedGroupFilter, setSelectedGroupFilter, isItemCountEnabled } from '../state/inventoryState.js';
 import { applyTax } from '../utils/tax.js';
 import { passesPriceFilters } from '../utils/filters.js';
 import { formatGroupName } from '../utils/formatting.js';
@@ -23,6 +23,7 @@ export function renderBreakdown(renderInventoryFn: () => void): void {
   
   for (const item of itemsToUse) {
     if (item.price === null) continue;
+    if (!isItemCountEnabled(item.baseId)) continue;
     // Skip items with 0 or negative quantity (only show gains in hourly mode)
     if (item.totalQuantity <= 0) continue;
     

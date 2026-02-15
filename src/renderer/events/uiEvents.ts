@@ -195,4 +195,66 @@ export function initUIEvents(
 
   // Export function to reconfigure tabs when mode changes
   (window as any).reconfigureHistoryTabs = configureHistoryPageTabs;
+
+  // Style 1: global wheel routing.
+  // Before stop point: normal page scroll.
+  // After stop point: wheel anywhere scrolls inventory until it reaches top/bottom.
+  document.addEventListener('wheel', onWheelRouteToInventory, { passive: false, capture: true });
+}
+
+function onWheelRouteToInventory(e: WheelEvent): void {
+  if (!document.body.classList.contains('layout-style-1')) return;
+
+  const pageHome = document.getElementById('page-home');
+  if (!pageHome?.classList.contains('active')) return;
+
+  const invSection = pageHome.querySelector('.inventory-section') as HTMLElement | null;
+  if (!invSection) return;
+
+  const deltaY = normalizeWheelDelta(e);
+  if (deltaY === 0) return;
+
+  const doc = document.documentElement;
+  const pageAtBottom = window.scrollY + window.innerHeight >= doc.scrollHeight - 2;
+  const maxInventoryScroll = Math.max(0, invSection.scrollHeight - invSection.clientHeight);
+  const inventoryCanScrollDown = invSection.scrollTop < maxInventoryScroll - 1;
+  const inventoryCanScrollUp = invSection.scrollTop > 1;
+  const eventTarget = e.target as Node | null;
+  const wheelOverInventory = !!eventTarget && invSection.contains(eventTarget);
+
+  // Before stop point, force wheel to keep scrolling the page even if cursor is over inventory.
+  if (!pageAtBottom && wheelOverInventory) {
+    e.preventDefault();
+    e.stopPropagation();
+    window.scrollBy({ top: deltaY, left: 0, behavior: 'auto' });
+    return;
+  }
+
+  // Scroll down:
+  // - Before stop point -> normal page scroll
+  // - At stop point -> route to inventory from anywhere
+  if (deltaY > 0) {
+    if (!pageAtBottom) return;
+    if (!inventoryCanScrollDown) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    invSection.scrollTop = Math.min(maxInventoryScroll, invSection.scrollTop + deltaY);
+    return;
+  }
+
+  // Scroll up:
+  // - If inventory has offset, consume up-scroll there first
+  // - Once inventory reaches top, let page scroll up normally
+  if (inventoryCanScrollUp) {
+    e.preventDefault();
+    e.stopPropagation();
+    invSection.scrollTop = Math.max(0, invSection.scrollTop + deltaY);
+  }
+}
+
+function normalizeWheelDelta(e: WheelEvent): number {
+  if (e.deltaMode === WheelEvent.DOM_DELTA_LINE) return e.deltaY * 16;
+  if (e.deltaMode === WheelEvent.DOM_DELTA_PAGE) return e.deltaY * window.innerHeight;
+  return e.deltaY;
 }

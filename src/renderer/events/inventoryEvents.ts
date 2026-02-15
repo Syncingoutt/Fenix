@@ -1,6 +1,6 @@
 // Inventory-related event handlers
 
-import { getCurrentSortBy, setCurrentSortBy, getCurrentSortOrder, setCurrentSortOrder, setSearchQuery, setMinPriceFilter, setMaxPriceFilter } from '../state/inventoryState.js';
+import { getCurrentSortBy, setCurrentSortBy, getCurrentSortOrder, setCurrentSortOrder, setSearchQuery, setMinPriceFilter, setMaxPriceFilter, toggleItemCountEnabled } from '../state/inventoryState.js';
 import { getWealthMode } from '../state/wealthState.js';
 import { getIsHourlyActive } from '../state/wealthState.js';
 import { SortBy } from '../types.js';
@@ -56,6 +56,25 @@ export function initInventoryEvents(
   
   minPriceInput?.addEventListener('input', updatePriceFilters);
   maxPriceInput?.addEventListener('input', updatePriceFilters);
+  
+  // Include/exclude from total: checkbox on each inventory row
+  const inventoryEl = document.getElementById('inventory');
+  inventoryEl?.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.inventory-item-checkbox');
+    if (!btn) return;
+    const baseId = (btn as HTMLElement).dataset.baseId;
+    if (!baseId) return;
+    e.preventDefault();
+    toggleItemCountEnabled(baseId);
+    renderInventory();
+    renderBreakdown();
+    const wealthMode = getWealthMode();
+    if (wealthMode === 'realtime') {
+      updateRealtimeWealth();
+    } else if (wealthMode === 'hourly' && getIsHourlyActive()) {
+      updateHourlyWealth();
+    }
+  });
   
   // Sort functionality
   document.querySelectorAll('[data-sort]').forEach(el => {

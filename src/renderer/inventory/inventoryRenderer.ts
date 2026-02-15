@@ -3,7 +3,7 @@
 import { InventoryItem } from '../types.js';
 import { getSortedAndFilteredItems } from './inventoryLogic.js';
 import { getWealthMode, getIsHourlyActive } from '../state/wealthState.js';
-import { getCurrentSortBy, getCurrentSortOrder } from '../state/inventoryState.js';
+import { getCurrentSortBy, getCurrentSortOrder, isItemCountEnabled } from '../state/inventoryState.js';
 import { applyTax } from '../utils/tax.js';
 import { getPriceAgeClass } from '../utils/formatting.js';
 import { renderUsageSection } from './usageRenderer.js';
@@ -44,6 +44,8 @@ export function renderInventory(): void {
     return;
   }
 
+  const CHECKED_SVG = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6L5 9L10 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
   container.innerHTML = items
     .map(item => {
       const totalValue = item.price !== null ? item.price * item.totalQuantity : null;
@@ -51,9 +53,13 @@ export function renderInventory(): void {
       const totalValueAfterTax = totalValue !== null ? applyTax(totalValue, item.baseId) : null;
 
       const priceAgeClass = getPriceAgeClass(item.priceTimestamp);
+      const counted = isItemCountEnabled(item.baseId);
 
       return `
       <div class="item-row">
+        <div class="item-checkbox-cell">
+          <button type="button" class="inventory-item-checkbox ${counted ? 'checked' : ''}" data-base-id="${item.baseId}" aria-label="${counted ? 'Exclude from total' : 'Include in total'}" title="${counted ? 'Exclude from total' : 'Include in total'}">${counted ? CHECKED_SVG : ''}</button>
+        </div>
         <div class="item-name">
           <img src="../../assets/${item.baseId}.webp"
                alt="${item.itemName}"

@@ -16,6 +16,8 @@ let searchQuery: string = '';
 let selectedGroupFilter: string | null = null;
 let minPriceFilter: number | null = null;
 let maxPriceFilter: number | null = null;
+// BaseIds unchecked = excluded from total/per hour (default: all checked = empty set)
+let excludedFromCountBaseIds: Set<string> = new Set();
 
 // Getters
 export function getCurrentItems(): InventoryItem[] {
@@ -48,6 +50,14 @@ export function getMinPriceFilter(): number | null {
 
 export function getMaxPriceFilter(): number | null {
   return maxPriceFilter;
+}
+
+export function isItemCountEnabled(baseId: string): boolean {
+  return !excludedFromCountBaseIds.has(baseId);
+}
+
+export function getExcludedFromCountBaseIds(): Set<string> {
+  return new Set(excludedFromCountBaseIds);
 }
 
 export function getPriceCache(): PriceCache {
@@ -89,4 +99,20 @@ export function setMinPriceFilter(min: number | null): void {
 
 export function setMaxPriceFilter(max: number | null): void {
   maxPriceFilter = max;
+}
+
+export function setItemCountEnabled(baseId: string, enabled: boolean): void {
+  if (enabled) {
+    excludedFromCountBaseIds.delete(baseId);
+  } else {
+    excludedFromCountBaseIds.add(baseId);
+  }
+}
+
+export function toggleItemCountEnabled(baseId: string): void {
+  if (excludedFromCountBaseIds.has(baseId)) {
+    excludedFromCountBaseIds.delete(baseId);
+  } else {
+    excludedFromCountBaseIds.add(baseId);
+  }
 }
