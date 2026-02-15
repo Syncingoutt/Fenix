@@ -82,7 +82,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openExternal: (url: string) => ipcRenderer.send('open-external', url),
   // Overlay widget methods
   toggleOverlayWidget: () => ipcRenderer.send('toggle-overlay-widget'),
-  updateOverlayWidget: (data: { duration: number; hourly: number; total: number; avgTimePerMap: number; lastMapProfit: number; totalMaps: number; isHourlyMode: boolean; isPaused: boolean }) => 
+  updateOverlayWidget: (data: { duration: number; hourly: number; total: number; avgTimePerMap: number; lastMapProfit: number; totalMaps: number; isHourlyMode: boolean; isPaused: boolean; wealthMode: 'realtime' | 'hourly'; isHourlyActive: boolean }) => 
     ipcRenderer.send('update-overlay-widget', data),
   onWidgetPauseHourly: (callback: () => void) => {
     ipcRenderer.on('widget-pause-hourly', callback);
@@ -92,6 +92,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onWidgetResetRealtime: (callback: () => void) => {
     ipcRenderer.on('widget-reset-realtime', callback);
+  },
+  onWidgetStartHourly: (callback: () => void) => {
+    ipcRenderer.on('widget-start-hourly', callback);
+  },
+  onWidgetStopHourly: (callback: () => void) => {
+    ipcRenderer.on('widget-stop-hourly', callback);
   },
   // Hourly history methods
   saveHourlySession: (buckets: any[]) => ipcRenderer.invoke('save-hourly-session', buckets),

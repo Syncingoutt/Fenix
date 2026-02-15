@@ -66,10 +66,12 @@ export interface ElectronAPI {
   getMaximizeState: () => Promise<boolean>;
   openExternal: (url: string) => void;
   toggleOverlayWidget: () => void;
-  updateOverlayWidget: (data: { duration: number; hourly: number; total: number; avgTimePerMap: number; lastMapProfit: number; totalMaps: number; isHourlyMode: boolean; isPaused: boolean }) => void;
+  updateOverlayWidget: (data: { duration: number; hourly: number; total: number; avgTimePerMap: number; lastMapProfit: number; totalMaps: number; isHourlyMode: boolean; isPaused: boolean; wealthMode: 'realtime' | 'hourly'; isHourlyActive: boolean }) => void;
   onWidgetPauseHourly: (callback: () => void) => void;
   onWidgetResumeHourly: (callback: () => void) => void;
   onWidgetResetRealtime: (callback: () => void) => void;
+  onWidgetStartHourly: (callback: () => void) => void;
+  onWidgetStopHourly: (callback: () => void) => void;
   saveHourlySession: (buckets: HourlyBucket[]) => Promise<void>;
   loadHourlySessions: () => Promise<SavedHourlySession[]>;
   deleteHourlySession: (sessionId: string) => Promise<void>;

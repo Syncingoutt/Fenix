@@ -97,7 +97,9 @@ function updateOverlayWidgetData(): void {
     lastMapProfit,
     totalMaps,
     isHourlyMode,
-    isPaused: hourlyPaused
+    isPaused: hourlyPaused,
+    wealthMode,
+    isHourlyActive
   });
 }
 

@@ -48,7 +48,18 @@ let currentLeagueId: string = 's11-vorax';
 const PRICE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 // Overlay widget display values (sent directly from renderer)
-let overlayDisplayData = {
+let overlayDisplayData: {
+  duration: number;
+  hourly: number;
+  total: number;
+  avgTimePerMap: number;
+  lastMapProfit: number;
+  totalMaps: number;
+  isHourlyMode: boolean;
+  isPaused: boolean;
+  wealthMode: 'realtime' | 'hourly';
+  isHourlyActive: boolean;
+} = {
   duration: 0,
   hourly: 0,
   total: 0,
@@ -56,7 +67,9 @@ let overlayDisplayData = {
   lastMapProfit: 0,
   totalMaps: 0,
   isHourlyMode: false,
-  isPaused: false
+  isPaused: false,
+  wealthMode: 'hourly',
+  isHourlyActive: false
 };
 
 // Timer state managed in main process (never throttled)
@@ -870,8 +883,8 @@ ipcMain.on('close-overlay-widget', () => {
 });
 
 // Receives already-calculated display values from renderer
-ipcMain.on('update-overlay-widget', (_event, data: { duration: number; hourly: number; total: number; avgTimePerMap: number; lastMapProfit: number; totalMaps: number; isHourlyMode: boolean; isPaused: boolean }) => {
-  overlayDisplayData = data;
+ipcMain.on('update-overlay-widget', (_event, data: { duration: number; hourly: number; total: number; avgTimePerMap: number; lastMapProfit: number; totalMaps: number; isHourlyMode: boolean; isPaused: boolean; wealthMode?: 'realtime' | 'hourly'; isHourlyActive?: boolean }) => {
+  overlayDisplayData = { ...overlayDisplayData, ...data };
   updateOverlayWidget();
 });
 
@@ -891,6 +904,18 @@ ipcMain.on('widget-resume-hourly', () => {
 ipcMain.on('widget-reset-realtime', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('widget-reset-realtime');
+  }
+});
+
+ipcMain.on('widget-start-hourly', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('widget-start-hourly');
+  }
+});
+
+ipcMain.on('widget-stop-hourly', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('widget-stop-hourly');
   }
 });
 

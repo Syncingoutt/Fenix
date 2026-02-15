@@ -149,6 +149,18 @@ export function initWealthEvents(
     }
   });
 
+  electronAPI.onWidgetStartHourly(() => {
+    if (getWealthMode() === 'hourly' && !getIsHourlyActive()) {
+      startHourlyTracking();
+    }
+  });
+
+  electronAPI.onWidgetStopHourly(() => {
+    if (getWealthMode() === 'hourly' && getIsHourlyActive()) {
+      stopHourlyTracking();
+    }
+  });
+
   // Breakdown modal close button
   document.getElementById('closeBreakdown')?.addEventListener('click', closeBreakdownModal);
 }

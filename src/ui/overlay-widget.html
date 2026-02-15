@@ -10,6 +10,11 @@
       <div class="widget-header">
         <span class="widget-title">Fenix</span>
         <div class="widget-header-actions">
+          <button class="widget-timer-btn" id="startHourlyBtn" title="Start timer" aria-label="Start timer">
+            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 5.14v13.72c0 .87.93 1.4 1.65.93l10.59-6.86c.64-.42.64-1.44 0-1.86L9.65 4.21C8.93 3.74 8 4.27 8 5.14z"/>
+            </svg>
+          </button>
           <button class="widget-timer-btn" id="pauseHourly" title="Pause timer" aria-label="Pause timer">
             <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
               <rect x="6" y="4" width="4" height="16" rx="1"/>
@@ -19,6 +24,11 @@
           <button class="widget-timer-btn" id="resumeHourly" title="Resume timer" aria-label="Resume timer">
             <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
               <path d="M8 5.14v13.72c0 .87.93 1.4 1.65.93l10.59-6.86c.64-.42.64-1.44 0-1.86L9.65 4.21C8.93 3.74 8 4.27 8 5.14z"/>
+            </svg>
+          </button>
+          <button class="widget-timer-btn" id="stopHourlyBtn" title="Stop timer" aria-label="Stop timer">
+            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <rect x="6" y="6" width="12" height="12" rx="1"/>
             </svg>
           </button>
           <button class="widget-timer-btn" id="resetRealtimeBtn" title="Reset timer" aria-label="Reset timer">
@@ -117,8 +127,10 @@
       const closeBtn = document.getElementById('closeBtn');
       const editBtn = document.getElementById('editBtn');
       const lockBtn = document.getElementById('lockBtn');
+      const startBtn = document.getElementById('startHourlyBtn');
       const pauseBtn = document.getElementById('pauseHourly');
       const resumeBtn = document.getElementById('resumeHourly');
+      const stopBtn = document.getElementById('stopHourlyBtn');
       const resetBtn = document.getElementById('resetRealtimeBtn');
       const widgetStatsEl = document.querySelector('.widget-stats');
       const statRows = Array.from(document.querySelectorAll('.stat-row[data-stat-id]'));
@@ -456,14 +468,25 @@
         });
       }
 
-      function updateTimerButtons(isHourlyMode, isPaused) {
-        if (isHourlyMode) {
-          pauseBtn.classList.toggle('visible', !isPaused);
-          resumeBtn.classList.toggle('visible', isPaused);
-          resetBtn.classList.remove('visible');
-        } else {
+      function updateTimerButtons(wealthMode, isHourlyActive, isPaused) {
+        const isHourlyView = wealthMode === 'hourly';
+        if (isHourlyView && !isHourlyActive) {
+          startBtn.classList.add('visible');
           pauseBtn.classList.remove('visible');
           resumeBtn.classList.remove('visible');
+          stopBtn.classList.remove('visible');
+          resetBtn.classList.remove('visible');
+        } else if (isHourlyView && isHourlyActive) {
+          startBtn.classList.remove('visible');
+          pauseBtn.classList.toggle('visible', !isPaused);
+          resumeBtn.classList.toggle('visible', isPaused);
+          stopBtn.classList.add('visible');
+          resetBtn.classList.remove('visible');
+        } else {
+          startBtn.classList.remove('visible');
+          pauseBtn.classList.remove('visible');
+          resumeBtn.classList.remove('visible');
+          stopBtn.classList.remove('visible');
           resetBtn.classList.add('visible');
         }
       }
@@ -606,7 +629,9 @@
           hourlyEl.classList.toggle('negative', data.hourly < 0);
         }
         // Update button visibility
-        updateTimerButtons(data.isHourlyMode, data.isPaused);
+        const wealthMode = data.wealthMode ?? (data.isHourlyMode ? 'hourly' : 'realtime');
+        const isHourlyActive = data.isHourlyActive ?? data.isHourlyMode;
+        updateTimerButtons(wealthMode, isHourlyActive, data.isPaused);
         checkStatsOverflow();
       });
 
@@ -632,12 +657,20 @@
         });
       });
 
+      startBtn.addEventListener('click', () => {
+        ipcRenderer.send('widget-start-hourly');
+      });
+
       pauseBtn.addEventListener('click', () => {
         ipcRenderer.send('widget-pause-hourly');
       });
 
       resumeBtn.addEventListener('click', () => {
         ipcRenderer.send('widget-resume-hourly');
+      });
+
+      stopBtn.addEventListener('click', () => {
+        ipcRenderer.send('widget-stop-hourly');
       });
 
       resetBtn.addEventListener('click', () => {
