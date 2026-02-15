@@ -19,6 +19,9 @@ const restoreIcon = `<svg width="17" height="17" viewBox="0 0 17 17" fill="none"
 </svg>`;
 
 let closeSettingsModal: () => void;
+// Handoff starts when viewport top reaches graph top (+ optional offset).
+// Increase this value to hand off slightly earlier; decrease for slightly later.
+const STYLE1_SCROLL_STOP_FROM_GRAPH_TOP_OFFSET_PX = 110;
 
 export function initUIEvents(
   settingsModalCloseFn: () => void
@@ -214,32 +217,38 @@ function onWheelRouteToInventory(e: WheelEvent): void {
   const deltaY = normalizeWheelDelta(e);
   if (deltaY === 0) return;
 
-  const doc = document.documentElement;
-  const pageAtBottom = window.scrollY + window.innerHeight >= doc.scrollHeight - 2;
+  const graphAnchor = (pageHome.querySelector('.wealth-graph-wrap') as HTMLElement | null)
+    ?? (pageHome.querySelector('.container-big') as HTMLElement | null);
+  const graphTopInDocument = graphAnchor
+    ? (graphAnchor.getBoundingClientRect().top + window.scrollY)
+    : Number.POSITIVE_INFINITY;
+  const stopScrollY = Math.max(0, graphTopInDocument - STYLE1_SCROLL_STOP_FROM_GRAPH_TOP_OFFSET_PX);
+  const beforeStopPoint = window.scrollY < stopScrollY;
+  const atHandoffPoint = !beforeStopPoint;
   const maxInventoryScroll = Math.max(0, invSection.scrollHeight - invSection.clientHeight);
   const inventoryCanScrollDown = invSection.scrollTop < maxInventoryScroll - 1;
   const inventoryCanScrollUp = invSection.scrollTop > 1;
-  const eventTarget = e.target as Node | null;
-  const wheelOverInventory = !!eventTarget && invSection.contains(eventTarget);
-
-  // Before stop point, force wheel to keep scrolling the page even if cursor is over inventory.
-  if (!pageAtBottom && wheelOverInventory) {
-    e.preventDefault();
-    e.stopPropagation();
-    window.scrollBy({ top: deltaY, left: 0, behavior: 'auto' });
-    return;
-  }
 
   // Scroll down:
-  // - Before stop point -> normal page scroll
-  // - At stop point -> route to inventory from anywhere
+  // - Scroll page until graph-top stop line
+  // - Then route remaining delta to inventory from anywhere
   if (deltaY > 0) {
-    if (!pageAtBottom) return;
-    if (!inventoryCanScrollDown) return;
-
     e.preventDefault();
     e.stopPropagation();
-    invSection.scrollTop = Math.min(maxInventoryScroll, invSection.scrollTop + deltaY);
+
+    let remainingDelta = deltaY;
+    if (beforeStopPoint) {
+      const remainingToStop = Math.max(0, stopScrollY - window.scrollY);
+      const pageDelta = Math.min(remainingDelta, remainingToStop);
+      if (pageDelta > 0) {
+        window.scrollBy({ top: pageDelta, left: 0, behavior: 'auto' });
+      }
+      remainingDelta -= pageDelta;
+    }
+
+    if (remainingDelta > 0 && atHandoffPoint && inventoryCanScrollDown) {
+      invSection.scrollTop = Math.min(maxInventoryScroll, invSection.scrollTop + remainingDelta);
+    }
     return;
   }
 

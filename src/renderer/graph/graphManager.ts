@@ -227,6 +227,15 @@ export function updateGraph(): void {
   const currentHistory = wealthMode === 'realtime' ? getRealtimeHistory() : getHourlyHistory();
   let data = currentHistory.map((p) => ({ x: p.time, y: p.value }));
 
+  const placeholder = document.getElementById('wealth-graph-placeholder');
+  if (placeholder) {
+    if (wealthMode === 'hourly' && currentHistory.length === 0) {
+      placeholder.classList.add('visible');
+    } else {
+      placeholder.classList.remove('visible');
+    }
+  }
+
   chart.options.scales.x.ticks.maxTicksLimit = 10;
   if (currentHistory.length > 0) {
     const firstPointTime = currentHistory[0].time;
