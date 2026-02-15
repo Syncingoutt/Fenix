@@ -56,7 +56,26 @@ export function initInventoryEvents(
   
   minPriceInput?.addEventListener('input', updatePriceFilters);
   maxPriceInput?.addEventListener('input', updatePriceFilters);
-  
+
+  // Filters dropdown toggle
+  const filtersBtn = document.getElementById('filtersBtn');
+  const filtersDropdown = document.getElementById('filtersDropdown');
+  if (filtersBtn && filtersDropdown) {
+    filtersBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !filtersDropdown.hidden;
+      filtersDropdown.hidden = isOpen;
+      filtersBtn.setAttribute('aria-expanded', String(!isOpen));
+    });
+    document.addEventListener('click', () => {
+      if (!filtersDropdown.hidden) {
+        filtersDropdown.hidden = true;
+        filtersBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    filtersDropdown.addEventListener('click', (e) => e.stopPropagation());
+  }
+
   // Include/exclude from total: checkbox on each inventory row
   const inventoryEl = document.getElementById('inventory');
   inventoryEl?.addEventListener('click', (e) => {

@@ -6,6 +6,20 @@ import { getWealthMode, getRealtimeHistory, getHourlyHistory, setRealtimeHistory
 declare const Chart: any;
 
 let chart: any = null;
+let resizeObserver: ResizeObserver | null = null;
+let resizeRafId: number | null = null;
+
+function scheduleGraphResize(): void {
+  if (!chart) return;
+  if (resizeRafId !== null) {
+    cancelAnimationFrame(resizeRafId);
+  }
+  resizeRafId = requestAnimationFrame(() => {
+    resizeRafId = null;
+    chart.resize();
+    chart.update('none');
+  });
+}
 
 /**
  * Initialize the main wealth graph
@@ -20,6 +34,8 @@ export function initGraph(): void {
   if (chart) {
     chart.destroy();
   }
+  resizeObserver?.disconnect();
+  resizeObserver = null;
 
   const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#7e7e7e';
 
@@ -40,6 +56,7 @@ export function initGraph(): void {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      devicePixelRatio: typeof window !== 'undefined' ? Math.min(window.devicePixelRatio, 3) : 2,
       animation: false,
       normalized: true,
       scales: {
@@ -132,7 +149,21 @@ export function initGraph(): void {
     }
   });
 
+  // Keep the canvas backing store in sync with CSS-driven container size changes.
+  if (typeof ResizeObserver !== 'undefined') {
+    const resizeTarget = canvas.parentElement ?? canvas;
+    resizeObserver = new ResizeObserver(() => {
+      scheduleGraphResize();
+    });
+    resizeObserver.observe(resizeTarget);
+  }
+
+  scheduleGraphResize();
   updateGraph();
+}
+
+export function resizeGraph(): void {
+  scheduleGraphResize();
 }
 
 /**

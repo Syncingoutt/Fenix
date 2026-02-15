@@ -5,6 +5,7 @@
     <title>Fenix</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css?family=Manrope" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script>
@@ -161,26 +162,68 @@
         <div class="home-sticky-bar">
         <div class="stats-container">
             <div class="container-big">
-              <canvas class="wealth-graph" id="wealth-graph"></canvas> 
+              <div class="style1-graph-header" id="style1GraphHeader" aria-hidden="true">
+                <div class="style1-time-group">
+                  <span class="style1-time-label">Time</span>
+                  <div id="style1TimeValueWrap" class="style1-time-value-wrap"></div>
+                  <div id="style1TimeControlsSlot" class="style1-time-controls-slot"></div>
+                </div>
+                <div class="style1-wealth-group">
+                  <div class="style1-per-hour-group">
+                    <div id="style1PerHourValue" class="style1-per-hour-value"></div>
+                    <span class="style1-per-hour-label"><img src="../../assets/100300.webp" alt="FEICON">/hr</span>
+                  </div>
+                  <div class="style1-total-group">
+                    <span class="style1-total-label">Total</span>
+                    <div id="style1TotalValue" class="style1-total-value"></div>
+                    <img src="../../assets/100300.webp" alt="FEICON">
+                  </div>
+                </div>
+              </div>
+              <div class="wealth-graph-wrap">
+                <canvas class="wealth-graph" id="wealth-graph"></canvas>
+              </div>
             </div>
           <div class="container-small" id="timer-container">
             <div id="timer" class="maintext">00:00:00</div>
             <div class="subtext" id="avgTimePerMap">Avg time per map: 00:00</div>
-            <button class="timer-btn" id="resetRealtimeBtn" style="display: none;">Reset Timer</button>
+            <button class="timer-btn timer-reset-icon-btn" id="resetRealtimeBtn" style="display: none;" title="Reset timer" aria-label="Reset timer">
+              <svg class="timer-reset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+            </button>
             
             <div class="hourly-controls" id="hourlyControls">
               <div class="timer-display">
                 <span class="hourly-timer" id="hourlyTimer">00:00:00</span>
               </div>
               <div class="hourly-controls-row">
-                <button class="timer-btn" id="startHourly">Start Hour</button>
-                <button class="timer-btn" id="pauseHourly" style="display: none;">Pause</button>
-                <button class="timer-btn" id="resumeHourly" style="display: none;">Resume</button>
-                <button class="timer-btn stop" id="stopHourly" style="display: none;">Stop</button>
+                <button class="timer-btn timer-icon-btn" id="startHourly" title="Start session" aria-label="Start session">
+                  <svg class="timer-action-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 5.14v13.72c0 .87.93 1.4 1.65.93l10.59-6.86c.64-.42.64-1.44 0-1.86L9.65 4.21C8.93 3.74 8 4.27 8 5.14z"/>
+                  </svg>
+                </button>
+                <button class="timer-btn timer-icon-btn" id="pauseHourly" style="display: none;" title="Pause" aria-label="Pause">
+                  <svg class="timer-action-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="4" width="4" height="16" rx="1"/>
+                    <rect x="14" y="4" width="4" height="16" rx="1"/>
+                  </svg>
+                </button>
+                <button class="timer-btn timer-icon-btn" id="resumeHourly" style="display: none;" title="Resume" aria-label="Resume">
+                  <svg class="timer-action-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 5.14v13.72c0 .87.93 1.4 1.65.93l10.59-6.86c.64-.42.64-1.44 0-1.86L9.65 4.21C8.93 3.74 8 4.27 8 5.14z"/>
+                  </svg>
+                </button>
+                <button class="timer-btn timer-icon-btn stop" id="stopHourly" style="display: none;" title="Stop" aria-label="Stop">
+                  <svg class="timer-action-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="12" height="12" rx="1"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
-          <div class="container-small">
+          <div class="container-small" id="perhour-container">
             <div class="maintext">
             <img src="../../assets/100300.webp" alt="FEICON">
             <div id="wealthHourly">
@@ -189,7 +232,7 @@
             </div>
             <div class="subtext">Per hour</div>
           </div>
-          <div class="container-small">
+          <div class="container-small" id="total-container">
             <div class="maintext">
               <img src="../../assets/100300.webp" alt="FEICON"> 
               <div id="wealthValue">0</div>
@@ -198,12 +241,38 @@
           </div>
         </div>
 
-        <div class="search-container">
-          <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="#7E7E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M19 19L14.65 14.65" stroke="#7E7E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <input type="text" id="searchInput" placeholder="Search items..." />
+        <div class="search-filters-row">
+          <div class="search-container">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="#7E7E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M19 19L14.65 14.65" stroke="#7E7E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search items..." />
+          </div>
+          <div class="filters-btn-wrapper">
+            <button type="button" id="filtersBtn" class="filters-btn" aria-haspopup="true" aria-expanded="false" aria-controls="filtersDropdown">
+              <svg class="filters-btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6H20M4 12H14M4 18H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Filters</span>
+            </button>
+            <div id="filtersDropdown" class="filters-dropdown" role="menu" aria-labelledby="filtersBtn" hidden>
+              <div class="filters-dropdown-title">Filters</div>
+              <div class="filters-dropdown-section">
+                <div class="filters-dropdown-label">Total Price Range</div>
+                <div class="filters-dropdown-row">
+                  <div class="filters-dropdown-field">
+                    <label class="filters-dropdown-field-label" for="minPriceInput">Minimum</label>
+                    <input type="text" id="minPriceInput" class="price-filter-input filters-dropdown-input" placeholder="No minimum" inputmode="numeric" pattern="[0-9]*">
+                  </div>
+                  <div class="filters-dropdown-field">
+                    <label class="filters-dropdown-field-label" for="maxPriceInput">Maximum</label>
+                    <input type="text" id="maxPriceInput" class="price-filter-input filters-dropdown-input" placeholder="No maximum" inputmode="numeric" pattern="[0-9]*">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         </div>
         
@@ -235,18 +304,6 @@
           </div>
         
           <div class="breakdown-section">
-            <div class="price-filter-container">
-              <div class="price-filter-section">
-                <div class="price-filter-row">
-                  <label class="price-filter-label" for="minPriceInput">Min:</label>
-                  <input type="text" id="minPriceInput" class="price-filter-input" placeholder="0" inputmode="numeric" pattern="[0-9]*">
-                </div>
-                <div class="price-filter-row">
-                  <label class="price-filter-label" for="maxPriceInput">Max:</label>
-                  <input type="text" id="maxPriceInput" class="price-filter-input" placeholder="Any" inputmode="numeric" pattern="[0-9]*">
-                </div>
-              </div>
-            </div>
             <div class="breakdown-container">
               <div class="breakdown-header">Breakdown</div>
               <div id="breakdown" class="breakdown-content"></div>

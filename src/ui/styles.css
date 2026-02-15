@@ -1,4 +1,5 @@
 :root {
+  --font-family: "Inter", sans-serif;
   --bg: #161616;
   --bg-shade: #272727;
   --text: #fafafa;
@@ -23,6 +24,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: inherit;
 }
 
 html::-webkit-scrollbar {
@@ -30,7 +32,7 @@ html::-webkit-scrollbar {
 }
 
 body {
-  font-family: "Manrope", sans-serif;
+  font-family: var(--font-family);
   background: var(--bg);
   color: var(--text);
   padding: calc(20px * var(--scale));
@@ -505,7 +507,7 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: calc(2em * var(--scale)) 0 calc(1em * var(--scale)) 0;
+  margin: calc(2em * var(--scale)) 0 calc(0.5em * var(--scale)) 0;
 }
 
 .mode-controls {
@@ -728,6 +730,16 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   margin: calc(30px * var(--scale));
 }
 
+.wealth-graph-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.style1-graph-header {
+  display: none;
+}
+
 /* ============================================
    INVENTORY & BREAKDOWN LAYOUT
    ============================================ */
@@ -766,6 +778,31 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
 
 .usage-content {
   padding: 0;
+  /* Full-height vertical column lines (Name|Quantity|Price|Total), no line after Total */
+  background-image:
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px),
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px),
+    linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px);
+  background-size: 1px 100%, 1px 100%, 1px 100%;
+  background-position:
+  calc(100% - (160px * var(--scale))) 0,
+  calc(100% - (290px * var(--scale) + 2rem * var(--scale))) 0,
+  calc(100% - (400px * var(--scale) + 4rem * var(--scale))) 0;
+  background-repeat: no-repeat repeat, no-repeat repeat, no-repeat repeat;
+}
+
+/* Usage rows: no checkbox column, same column widths as inventory (name | qty | single | total) */
+.usage-content .item-row {
+  grid-template-columns: 1fr calc(120px * var(--scale)) calc(120px * var(--scale)) calc(120px * var(--scale));
+  gap: calc(2rem * var(--scale));
+  padding: calc(1rem * var(--scale)) calc(2rem * var(--scale)) calc(1rem * var(--scale)) calc(1.25rem * var(--scale));
+  align-items: center;
+}
+
+.usage-content .item-row .item-quantity,
+.usage-content .item-row .price-single,
+.usage-content .item-row .price-total {
+  text-align: center;
 }
 
 .usage-footer {
@@ -801,7 +838,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   max-width: calc(1100px * var(--scale));
   background-color: var(--bg);
   border: 1px solid var(--border);
-  margin-top: calc(1rem * var(--scale));
 }
 
 #inventory {
@@ -822,6 +858,7 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
     calc(100% - (290px * var(--scale) + 2rem * var(--scale))) 0,
     calc(100% - (400px * var(--scale) + 4rem * var(--scale))) 0;
   background-repeat: no-repeat repeat, no-repeat repeat, no-repeat repeat, no-repeat repeat;
+  font-family: "Manrope", sans-serif;
 }
 
 /* Hide inventory border on History page */
@@ -1250,6 +1287,22 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   font-size: calc(var(--text-small) * var(--text-scale));
 }
 
+.search-filters-row {
+  display: flex;
+  align-items: center;
+  gap: calc(12px * var(--scale));
+  margin-top: calc(30px * var(--scale));
+  margin-bottom: calc(-4px * var(--scale));
+  width: calc(1100px * var(--scale));
+}
+
+.search-filters-row .search-container {
+  position: relative;
+  flex: 0 0 91%;
+  min-width: 0;
+  margin: 0;
+}
+
 .search-container {
   position: relative;
   margin-top: calc(30px * var(--scale));
@@ -1303,6 +1356,101 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   color: var(--text);
 }
 
+.filters-btn-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.filters-btn {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--scale));
+  padding: calc(10px * var(--scale)) calc(16px * var(--scale));
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  color: var(--text);
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.filters-btn:hover {
+  border-color: var(--primary);
+  background: rgba(222, 92, 11, 0.08);
+}
+
+.filters-btn-icon {
+  flex-shrink: 0;
+}
+
+.filters-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: calc(6px * var(--scale));
+  min-width: calc(280px * var(--scale));
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  box-shadow: 0 calc(8px * var(--scale)) calc(24px * var(--scale)) rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  padding: calc(12px * var(--scale));
+}
+
+.filters-dropdown[hidden] {
+  display: none !important;
+}
+
+.filters-dropdown-title {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: calc(12px * var(--scale));
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--scale));
+}
+
+.filters-dropdown-section {
+  margin-bottom: 0;
+}
+
+.filters-dropdown-label {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: calc(8px * var(--scale));
+}
+
+.filters-dropdown-row {
+  display: flex;
+  gap: calc(12px * var(--scale));
+}
+
+.filters-dropdown-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--scale));
+}
+
+.filters-dropdown-field-label {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  color: var(--border);
+  font-weight: 400;
+}
+
+.filters-dropdown-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .hourly-controls {
   display: none;
   flex-direction: column;
@@ -1350,6 +1498,18 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   fill: none;
 }
 
+.timer-icon-btn {
+  min-width: auto;
+  padding: calc(6px * var(--scale));
+}
+
+.timer-icon-btn .timer-action-icon {
+  fill: currentColor;
+  width: calc(16px * var(--scale));
+  height: calc(16px * var(--scale));
+  display: block;
+}
+
 .timer-btn:hover {
   background: #c24f09;
   transform: translateY(calc(-1px * var(--scale)));
@@ -1384,6 +1544,7 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   position: relative;
   display: flex;
   flex-direction: column;
+  font-family: "Manrope", sans-serif;
 }
 
 .earnings-animation {
@@ -2039,6 +2200,7 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
    ============================================ */
 
 .settings-modal {
+  font-family: "Manrope", sans-serif;
   display: none;
   position: fixed;
   top: 0;
@@ -4462,7 +4624,7 @@ body.overlay-widget {
 
 .history-inventory-header-row {
   display: grid;
-  grid-template-columns: 1fr calc(120px * var(--scale)) calc(120px * var(--scale)) calc(120px * var(--scale));
+  grid-template-columns: 1fr calc(100px * var(--scale)) calc(120px * var(--scale)) calc(120px * var(--scale));
   gap: calc(2rem * var(--scale));
   align-items: center;
   padding: calc(1rem * var(--scale)) calc(2rem * var(--scale)) calc(1rem * var(--scale)) calc(1.25rem * var(--scale));
@@ -4572,9 +4734,9 @@ body.overlay-widget {
     linear-gradient(to right, var(--border-shade) 0, var(--border-shade) 1px, transparent 1px);
   background-size: 1px 100%, 1px 100%, 1px 100%;
   background-position:
-    calc(100% - (120px * var(--scale))) 0,
-    calc(100% - (240px * var(--scale) + 2rem * var(--scale))) 0,
-    calc(100% - (360px * var(--scale) + 4rem * var(--scale))) 0;
+  calc(100% - (160px * var(--scale))) 0,
+  calc(100% - (290px * var(--scale) + 2rem * var(--scale))) 0,
+  calc(100% - (400px * var(--scale) + 4rem * var(--scale))) 0;
   background-repeat: no-repeat repeat, no-repeat repeat, no-repeat repeat;
 }
 
@@ -5463,7 +5625,6 @@ body.layout-style-1 #page-home.page.active {
   grid-template-areas:
     "seg seg seg seg seg seg"
     "graph graph graph breakdown breakdown breakdown"
-    "perhour perhour total total timer timer"
     "search search search search search search"
     "inv inv inv inv inv inv";
   gap: calc(15px * var(--scale));
@@ -5490,7 +5651,12 @@ body.layout-style-1 .segmented-wrapper {
 
 body.layout-style-1 .container-big {
   grid-area: graph;
-  max-height: calc(420px * var(--scale));
+  height: calc(400px * var(--scale));
+  max-height: calc(400px * var(--scale));
+  display: flex;
+  flex-direction: column;
+  padding: calc(16px * var(--scale)) calc(20px * var(--scale)) calc(14px * var(--scale));
+  gap: calc(10px * var(--scale));
 }
 
 body.layout-style-1 .breakdown-section {
@@ -5502,11 +5668,6 @@ body.layout-style-1 .breakdown-section {
   min-height: calc(220px * var(--scale));
 }
 
-body.layout-style-1 .breakdown-section .price-filter-container {
-  margin-top: 0;
-  max-width: 100%;
-}
-
 body.layout-style-1 .breakdown-section .breakdown-container {
   flex: 1;
   min-height: 0;
@@ -5514,23 +5675,22 @@ body.layout-style-1 .breakdown-section .breakdown-container {
   margin-top: 0;
 }
 
-body.layout-style-1 .container-small:nth-child(2) {
-  grid-area: timer;
+body.layout-style-1 #timer-container,
+body.layout-style-1 #perhour-container,
+body.layout-style-1 #total-container {
+  display: none;
 }
 
-body.layout-style-1 .container-small:nth-child(3) {
-  grid-area: perhour;
-}
-
-body.layout-style-1 .container-small:nth-child(4) {
-  grid-area: total;
+body.layout-style-1 .search-filters-row {
+  grid-area: search;
+  width: 100%;
+  margin-top: calc(8px * var(--scale));
+  margin-bottom: 0;
 }
 
 body.layout-style-1 .search-container {
-  grid-area: search;
-  width: 100%;
-  margin-top: calc(12px * var(--scale));
-  margin-bottom: 0;
+  width: auto;
+  margin: 0;
 }
 
 /* Sticky bar wrapper must not create a box so grid children stay correct */
@@ -5542,7 +5702,7 @@ body.layout-style-1 .inventory-section {
   grid-area: inv;
   width: 100%;
   min-width: 0;
-  max-height: calc(100vh - (330px * var(--scale)));
+  max-height: calc(100vh - (360px * var(--scale)));
   min-height: calc(220px * var(--scale));
   overflow-y: auto;
   scrollbar-width: none;
@@ -5554,6 +5714,179 @@ body.layout-style-1 .inventory-section::-webkit-scrollbar {
 
 body.layout-style-1 .container-small {
   min-height: calc(180px * var(--scale));
+}
+
+body.layout-style-1 .style1-graph-header {
+  display: flex;
+  justify-content: space-between;
+  gap: calc(16px * var(--scale));
+  min-height: calc(42px * var(--scale));
+}
+
+body.layout-style-1 .style1-time-group {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--scale));
+}
+
+body.layout-style-1 .style1-wealth-group,
+body.layout-style-1 .style1-per-hour-group,
+body.layout-style-1 .style1-total-group,
+body.layout-style-1 .style1-time-value-wrap {
+  display: flex;
+  align-items: center;
+}
+
+
+body.layout-style-1 .style1-time-label {
+  font-size: calc(var(--text-medium) * var(--text-scale));
+  color: var(--text);
+  line-height: 1;
+}
+
+body.layout-style-1 .style1-total-label {
+  font-size: calc(var(--text-medium) * var(--text-scale));
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+}
+
+body.layout-style-1 .style1-time-value-wrap #timer,
+body.layout-style-1 .style1-time-controls-slot .hourly-timer {
+  font-size: calc(var(--text-medium) * var(--text-scale));
+  font-weight: 600;
+  color: #fafafa;
+}
+
+body.layout-style-1 .style1-time-controls-slot {
+  display: flex;
+  align-items: center;
+}
+
+body.layout-style-1 .style1-time-controls-slot #hourlyControls {
+  /* Pull left so Session has 8px from Time to timer (same as Overview): 8px + 8px + margin = 8px => margin = -8px */
+  margin-left: calc(-8px * var(--scale));
+  flex-direction: row;
+  align-items: center;
+  gap: calc(4px * var(--scale));
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  margin-top: 0;
+}
+
+body.layout-style-1 .style1-time-controls-slot #hourlyControls .timer-display {
+  margin: 0;
+}
+
+body.layout-style-1 .style1-time-controls-slot #hourlyControls .hourly-controls-row {
+  display: flex;
+  gap: calc(6px * var(--scale));
+  margin: 0;
+}
+
+body.layout-style-1 .style1-time-controls-slot #hourlyControls .timer-icon-btn {
+  min-width: auto;
+  padding: calc(6px * var(--scale));
+  background: transparent;
+  color: var(--primary);
+  border: none;
+}
+
+body.layout-style-1 .style1-time-controls-slot #hourlyControls .timer-icon-btn:hover {
+  background: rgba(222, 92, 11, 0.15);
+  color: var(--primary);
+  transform: none;
+}
+
+body.layout-style-1 .style1-time-controls-slot #hourlyControls .timer-icon-btn.stop {
+  color: #ef4444;
+}
+
+body.layout-style-1 .style1-time-controls-slot #hourlyControls .timer-icon-btn.stop:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+body.layout-style-1 .style1-time-controls-slot #hourlyControls .timer-icon-btn .timer-action-icon {
+  width: calc(20px * var(--scale));
+  height: calc(20px * var(--scale));
+}
+
+body.layout-style-1 #resetRealtimeBtn {
+  min-width: auto;
+  padding: calc(6px * var(--scale));
+  line-height: 0;
+  color: var(--primary);
+  background: transparent;
+  border: none;
+}
+
+body.layout-style-1 #resetRealtimeBtn:hover {
+  background: rgba(222, 92, 11, 0.15);
+  color: var(--primary);
+}
+
+body.layout-style-1 #resetRealtimeBtn .timer-reset-icon {
+  width: calc(20px * var(--scale));
+  height: calc(20px * var(--scale));
+  display: block;
+}
+
+body.layout-style-1 #resetRealtimeBtn:not([style*="display: none"]) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+body.layout-style-1 .style1-wealth-group {
+  margin-left: auto;
+  gap: calc(18px * var(--scale));
+}
+
+body.layout-style-1 .style1-per-hour-group {
+  gap: calc(2px * var(--scale));
+}
+
+body.layout-style-1 #style1PerHourValue,
+body.layout-style-1 #style1TotalValue {
+  font-size: calc(var(--text-medium) * var(--text-scale));
+  font-weight: 600;
+  color: #fafafa;
+}
+
+body.layout-style-1 .style1-per-hour-label {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(2px * var(--scale));
+  font-size: calc(var(--text-medium) * var(--text-scale));
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+}
+
+body.layout-style-1 .style1-total-group {
+  gap: calc(8px * var(--scale));
+}
+
+body.layout-style-1 .style1-per-hour-group img,
+body.layout-style-1 .style1-total-group img {
+  width: calc(20px * var(--scale));
+  height: calc(20px * var(--scale));
+  min-width: calc(20px * var(--scale));
+  min-height: calc(20px * var(--scale));
+}
+
+body.layout-style-1 .container-big .wealth-graph {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  display: block;
+}
+
+body.layout-style-1 .container-big .wealth-graph-wrap {
+  flex: 1;
+  min-height: 0;
 }
 
 body.layout-style-1 .usage-container {

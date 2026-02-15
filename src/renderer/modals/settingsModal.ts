@@ -4,6 +4,7 @@ import { ElectronAPI } from '../types.js';
 import { getIncludeTax, setIncludeTax } from '../state/settingsState.js';
 import { formatKeybind } from '../utils/formatting.js';
 import { getCurrentItems } from '../state/inventoryState.js';
+import { resizeGraph } from '../graph/graphManager.js';
 import { showSyncDisableConfirmModal } from './syncDisableConfirmModal.js';
 import { updateUsernameDisplay } from '../settings/settingsManager.js';
 
@@ -56,6 +57,7 @@ function applyLayoutStyle(style: 1 | 2): void {
   } else {
     document.body.classList.remove('layout-style-1');
   }
+  resizeGraph();
 }
 
 export function initSettingsModal(

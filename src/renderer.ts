@@ -21,7 +21,8 @@ import { renderInventory, updateSortIndicators } from './renderer/inventory/inve
 import { renderBreakdown } from './renderer/inventory/breakdownRenderer.js';
 
 // Graph
-import { initGraph, pushRealtimePoint, updateGraph } from './renderer/graph/graphManager.js';
+import { initGraph, pushRealtimePoint, resizeGraph, updateGraph } from './renderer/graph/graphManager.js';
+import { initStyle1GraphHeaderLayout } from './renderer/layout/style1GraphHeaderLayout.js';
 
 // Modals
 import { showBreakdownModal, initBreakdownModal, closeBreakdownModal } from './renderer/modals/breakdownModal.js';
@@ -165,6 +166,7 @@ async function initialize(): Promise<void> {
   
   // Initialize graph
   initGraph();
+  initStyle1GraphHeaderLayout();
   
   // Initialize modals
   initBreakdownModal(renderInventory, () => renderBreakdown(renderInventory));
@@ -307,6 +309,7 @@ electronAPI.onInventoryUpdate(() => {
   } else {
     document.body.classList.remove('layout-style-1');
   }
+  resizeGraph();
   
   if (configured) {
     await loadInventory();
