@@ -341,6 +341,26 @@
       function beginRowDrag(event, row) {
         if (!widgetStatsEl || rowDragState) return;
         const rowRect = row.getBoundingClientRect();
+
+        rowDragState = {
+          pointerId: event.pointerId,
+          row,
+          startClientX: event.clientX,
+          startClientY: event.clientY,
+          rowRect,
+          offsetX: event.clientX - rowRect.left,
+          offsetY: event.clientY - rowRect.top,
+          rowWidth: rowRect.width,
+          rowHeight: rowRect.height,
+          hasMoved: false,
+          isActive: false,
+          placeholder: null
+        };
+      }
+
+      function activateRowDrag(event) {
+        if (!widgetStatsEl || !rowDragState || rowDragState.isActive) return;
+        const { row, rowRect } = rowDragState;
         const placeholder = createPlaceholderForRow(row);
         widgetStatsEl.insertBefore(placeholder, row.nextSibling);
 
@@ -351,35 +371,110 @@
         row.style.width = `${rowRect.width}px`;
         row.style.height = `${rowRect.height}px`;
 
-        rowDragState = {
-          pointerId: event.pointerId,
-          row,
-          placeholder,
-          startClientX: event.clientX,
-          startClientY: event.clientY,
-          offsetX: event.clientX - rowRect.left,
-          offsetY: event.clientY - rowRect.top,
-          hasMoved: false
+        rowDragState.placeholder = placeholder;
+        rowDragState.isActive = true;
+        updateRowDrag(event);
+      }
+
+      function parseTrackSizesPx(value) {
+        if (typeof value !== 'string' || value.trim() === '' || value.trim() === 'none') {
+          return [];
+        }
+        return value
+          .trim()
+          .split(/\s+/)
+          .map((part) => Number.parseFloat(part))
+          .filter((n) => Number.isFinite(n) && n > 0);
+      }
+
+      function inferColumnCountFromRows(layoutRows) {
+        if (!layoutRows.length) return 1;
+        const topValues = layoutRows.map((row) => row.getBoundingClientRect().top);
+        const firstTop = Math.min(...topValues);
+        const sameRowThreshold = 6;
+        const firstRowCount = topValues.filter((top) => Math.abs(top - firstTop) <= sameRowThreshold).length;
+        return Math.max(1, firstRowCount);
+      }
+
+      function getExplicitGridLayout(layoutRows, fallbackHeight) {
+        if (!widgetStatsEl) {
+          return {
+            columnCount: 1,
+            columnCenters: [],
+            firstRowCenterY: 0,
+            rowStep: Math.max(1, fallbackHeight)
+          };
+        }
+        const statsRect = widgetStatsEl.getBoundingClientRect();
+        const style = window.getComputedStyle(widgetStatsEl);
+        const columnTrackSizes = parseTrackSizesPx(style.gridTemplateColumns);
+        const columnGap = Number.parseFloat(style.columnGap) || 0;
+        const rowGap = Number.parseFloat(style.rowGap) || 0;
+
+        const inferredColumns = inferColumnCountFromRows(layoutRows);
+        const columnCount = Math.max(1, columnTrackSizes.length || inferredColumns);
+        const normalizedTrackSizes =
+          columnTrackSizes.length === columnCount
+            ? columnTrackSizes
+            : Array.from({ length: columnCount }, () => statsRect.width / columnCount);
+
+        const columnCenters = [];
+        let offsetLeft = statsRect.left;
+        normalizedTrackSizes.forEach((trackWidth, index) => {
+          columnCenters.push(offsetLeft + trackWidth / 2);
+          offsetLeft += trackWidth + (index < normalizedTrackSizes.length - 1 ? columnGap : 0);
+        });
+
+        const rowRects = layoutRows.map((item) => item.getBoundingClientRect());
+        const averageHeight =
+          rowRects.length > 0
+            ? rowRects.reduce((sum, rect) => sum + rect.height, 0) / rowRects.length
+            : Math.max(1, fallbackHeight);
+        const topMost = rowRects.length > 0 ? Math.min(...rowRects.map((rect) => rect.top)) : statsRect.top;
+        const firstRowCenterY = topMost + averageHeight / 2;
+        const rowStep = Math.max(1, averageHeight + rowGap);
+
+        return {
+          columnCount,
+          columnCenters,
+          firstRowCenterY,
+          rowStep
         };
       }
 
-      function movePlaceholderToPointerY(pointerY) {
-        if (!widgetStatsEl || !rowDragState) return;
-        const { row, placeholder } = rowDragState;
-        const rows = Array.from(widgetStatsEl.querySelectorAll('.stat-row[data-stat-id]')).filter((candidate) => candidate !== row);
+      function movePlaceholderToPoint(clientX, clientY) {
+        if (!widgetStatsEl || !rowDragState || !rowDragState.isActive || !rowDragState.placeholder) return;
+        const { row, placeholder, rowHeight } = rowDragState;
+        const rows = Array.from(widgetStatsEl.querySelectorAll('.stat-row[data-stat-id]')).filter((el) => el !== row);
+        const layoutRows = Array.from(widgetStatsEl.querySelectorAll('.stat-row')).filter((el) => el !== row);
 
-        let insertBefore = null;
-        for (const candidate of rows) {
-          const rect = candidate.getBoundingClientRect();
-          const candidateMidY = rect.top + rect.height / 2;
-          if (pointerY < candidateMidY) {
-            insertBefore = candidate;
-            break;
+        if (rows.length === 0) {
+          if (widgetStatsEl.firstElementChild !== placeholder) {
+            widgetStatsEl.insertBefore(placeholder, widgetStatsEl.firstElementChild);
+          }
+          return;
+        }
+
+        const { columnCount, columnCenters, firstRowCenterY, rowStep } = getExplicitGridLayout(layoutRows, rowHeight);
+
+        let bestColumn = 0;
+        let bestColumnDistance = Number.POSITIVE_INFINITY;
+        for (let colIndex = 0; colIndex < columnCenters.length; colIndex++) {
+          const distance = Math.abs(clientX - columnCenters[colIndex]);
+          if (distance < bestColumnDistance) {
+            bestColumnDistance = distance;
+            bestColumn = colIndex;
           }
         }
 
+        const rawRow = Math.round((clientY - firstRowCenterY) / rowStep);
+        const bestRow = Math.max(0, rawRow);
+        let bestIndex = bestRow * columnCount + bestColumn;
+        bestIndex = Math.max(0, Math.min(rows.length, bestIndex));
+
+        const insertBefore = bestIndex < rows.length ? rows[bestIndex] : null;
         if (insertBefore) {
-          if (insertBefore !== placeholder.nextSibling) {
+          if (placeholder.nextSibling !== insertBefore) {
             widgetStatsEl.insertBefore(placeholder, insertBefore);
           }
         } else if (widgetStatsEl.lastElementChild !== placeholder) {
@@ -388,46 +483,45 @@
       }
 
       function updateRowDrag(event) {
-        if (!rowDragState) return;
+        if (!rowDragState || !rowDragState.isActive) return;
         const { row, offsetX, offsetY } = rowDragState;
-        row.style.left = `${event.clientX - offsetX}px`;
-        row.style.top = `${event.clientY - offsetY}px`;
-        movePlaceholderToPointerY(event.clientY);
+        const left = event.clientX - offsetX;
+        const top = event.clientY - offsetY;
+        row.style.left = `${left}px`;
+        row.style.top = `${top}px`;
+        movePlaceholderToPoint(event.clientX, event.clientY);
       }
 
-      function finishRowDrag() {
+      function finishRowDrag(options = {}) {
         if (!rowDragState) return;
-        const { row, placeholder } = rowDragState;
-        if (widgetStatsEl && placeholder.parentElement === widgetStatsEl) {
+        const { cancelled = false } = options;
+        const { row, placeholder, isActive } = rowDragState;
+        rowDragState = null;
+
+        const shouldCommit = isActive && !cancelled && widgetStatsEl && placeholder && placeholder.parentElement === widgetStatsEl;
+        if (shouldCommit) {
           widgetStatsEl.insertBefore(row, placeholder);
         }
+
         row.classList.remove('dragging');
         row.classList.remove('reorder-floating');
         row.style.removeProperty('left');
         row.style.removeProperty('top');
         row.style.removeProperty('width');
         row.style.removeProperty('height');
-        if (placeholder.parentElement) {
+
+        if (placeholder && placeholder.parentElement) {
           placeholder.parentElement.removeChild(placeholder);
         }
-        rowDragState = null;
-        updateOrderFromDom();
-        checkStatsOverflow();
+
+        if (shouldCommit) {
+          updateOrderFromDom();
+          checkStatsOverflow();
+        }
       }
 
       function cancelRowDrag() {
-        if (!rowDragState) return;
-        const { row, placeholder } = rowDragState;
-        row.classList.remove('dragging');
-        row.classList.remove('reorder-floating');
-        row.style.removeProperty('left');
-        row.style.removeProperty('top');
-        row.style.removeProperty('width');
-        row.style.removeProperty('height');
-        if (placeholder.parentElement) {
-          placeholder.parentElement.removeChild(placeholder);
-        }
-        rowDragState = null;
+        finishRowDrag({ cancelled: true });
       }
 
       function setupRowReorder() {
@@ -447,23 +541,27 @@
             if (!rowDragState || rowDragState.pointerId !== event.pointerId || rowDragState.row !== row) return;
             const movedX = Math.abs(event.clientX - rowDragState.startClientX);
             const movedY = Math.abs(event.clientY - rowDragState.startClientY);
-            if (!rowDragState.hasMoved && movedX + movedY >= 3) {
+            if (!rowDragState.hasMoved && movedX + movedY >= 4) {
               rowDragState.hasMoved = true;
+              activateRowDrag(event);
             }
-            if (!rowDragState.hasMoved) return;
+            if (!rowDragState.isActive) return;
             updateRowDrag(event);
           });
 
-          const finishHandler = (event) => {
+          row.addEventListener('pointerup', (event) => {
             if (!rowDragState || rowDragState.pointerId !== event.pointerId || rowDragState.row !== row) return;
             finishRowDrag();
-          };
+          });
 
-          row.addEventListener('pointerup', finishHandler);
-          row.addEventListener('pointercancel', finishHandler);
+          row.addEventListener('pointercancel', (event) => {
+            if (!rowDragState || rowDragState.pointerId !== event.pointerId || rowDragState.row !== row) return;
+            finishRowDrag({ cancelled: true });
+          });
+
           row.addEventListener('lostpointercapture', (event) => {
             if (!rowDragState || rowDragState.pointerId !== event.pointerId || rowDragState.row !== row) return;
-            finishRowDrag();
+            finishRowDrag({ cancelled: true });
           });
         });
       }
