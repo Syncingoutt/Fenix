@@ -105,16 +105,21 @@ export function initUIEvents(
     const activePage = document.getElementById(`page-${pageId}`);
     if (activePage) activePage.classList.add('active');
 
-    // Hide header for history page using CSS class
-    if (pageId === 'history' && header) {
+    // Hide header for history and settings pages using CSS class
+    if ((pageId === 'history' || pageId === 'settings') && header) {
       header.classList.add('hidden');
-      renderHistoryPage();
-      // Configure tabs based on current mode
-      configureHistoryPageTabs();
+      if (pageId === 'history') {
+        renderHistoryPage();
+        // Configure tabs based on current mode
+        configureHistoryPageTabs();
+      }
     } else if (header) {
       header.classList.remove('hidden');
     }
   }
+
+  // Expose for settings module (open/close via navigation)
+  (window as any).navigateToPage = navigateToPage;
 
   // Configure History page tabs based on current wealth mode
   function configureHistoryPageTabs(): void {
@@ -181,6 +186,14 @@ export function initUIEvents(
   if (historyBackBtn) {
     historyBackBtn.addEventListener('click', () => {
       navigateToPage('home');
+    });
+  }
+
+  // Settings back button navigation (resets keybind state etc. via closeSettingsModal)
+  const settingsBackBtn = document.getElementById('settingsBackBtn');
+  if (settingsBackBtn) {
+    settingsBackBtn.addEventListener('click', () => {
+      closeSettingsModal();
     });
   }
 

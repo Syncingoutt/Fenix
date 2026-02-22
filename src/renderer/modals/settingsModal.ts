@@ -18,7 +18,6 @@ let pendingFullscreenMode: boolean | null = null;
 let pendingIncludeTax: boolean | null = null;
 let pendingUsername: string | null = null;
 let pendingCloudSyncEnabled: boolean | null = null;
-let pendingLeagueId: string | null = null;
 let pendingLayoutStyle: 1 | 2 | null = null;
 let currentCloudSyncEnabled: boolean | null = null;
 
@@ -27,24 +26,22 @@ let renderInventory: () => void;
 let renderBreakdown: () => void;
 let updateStats: (items: any[]) => void;
 
-const settingsModal = document.getElementById('settingsModal')!;
-const settingsCloseBtn = document.getElementById('settingsCloseBtn') as HTMLButtonElement;
 const keybindInput = document.getElementById('keybindInput') as HTMLInputElement;
-const changeKeybindBtn = document.getElementById('changeKeybindBtn') as HTMLButtonElement;
+const changeKeybindBtn = document.getElementById('changeKeybindBtn') as HTMLButtonElement | null;
 const resetKeybindBtn = document.getElementById('resetKeybindBtn') as HTMLButtonElement;
 const keybindStatus = document.getElementById('keybindStatus')!;
-const settingsSaveBtn = document.getElementById('settingsSaveBtn') as HTMLButtonElement;
-const settingsFooterMessage = document.getElementById('settingsFooterMessage')!;
+const settingsSaveBtn = document.getElementById('settingsSaveBtn') as HTMLButtonElement | null;
+const settingsToast = document.getElementById('settingsToast')!;
 const generalSection = document.getElementById('generalSection')!;
 const preferencesSection = document.getElementById('preferencesSection')!;
 const fullscreenModeRadio = document.getElementById('fullscreenModeRadio') as HTMLInputElement;
 const normalModeRadio = document.getElementById('normalModeRadio') as HTMLInputElement;
 const includeTaxCheckbox = document.getElementById('includeTaxCheckbox') as HTMLInputElement | null;
 const usernameInput = document.getElementById('usernameInput') as HTMLInputElement | null;
+const usernameTagDisplay = document.getElementById('usernameTagDisplay') as HTMLElement | null;
 const usernameHelperText = document.getElementById('usernameHelperText') as HTMLElement | null;
 const cloudSyncCheckbox = document.getElementById('cloudSyncCheckbox') as HTMLInputElement | null;
 const cloudSyncHelperText = document.getElementById('cloudSyncHelperText') as HTMLElement | null;
-const leagueIdInput = document.getElementById('leagueIdInput') as HTMLInputElement | null;
 const changeLogPathBtn = document.getElementById('changeLogPathBtn') as HTMLButtonElement | null;
 const logPathHelperText = document.getElementById('logPathHelperText') as HTMLElement | null;
 const layoutStyle1Radio = document.getElementById('layoutStyle1Radio') as HTMLInputElement | null;
@@ -58,6 +55,123 @@ function applyLayoutStyle(style: 1 | 2): void {
     document.body.classList.remove('layout-style-1');
   }
   resizeGraph();
+}
+
+async function saveSettingsNow(): Promise<void> {
+  settingsSaveBtn?.setAttribute('disabled', 'true');
+  if (settingsSaveBtn) settingsSaveBtn.textContent = 'Saving...';
+
+  try {
+    const settingsToSave: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 } = {};
+
+    if (pendingKeybind) {
+      settingsToSave.keybind = pendingKeybind;
+    }
+
+    if (pendingFullscreenMode !== null) {
+      settingsToSave.fullscreenMode = pendingFullscreenMode;
+    }
+
+    const checkboxElement = document.getElementById('includeTaxCheckbox') as HTMLInputElement | null;
+    const currentTaxValue = checkboxElement ? checkboxElement.checked : (pendingIncludeTax ?? false);
+    settingsToSave.includeTax = currentTaxValue;
+
+    const layoutStyleValue = layoutStyle2Radio?.checked ? 2 : (pendingLayoutStyle ?? 1);
+    settingsToSave.layoutStyle = layoutStyleValue;
+
+    if (pendingCloudSyncEnabled !== null && currentCloudSyncEnabled !== null) {
+      if (pendingCloudSyncEnabled !== currentCloudSyncEnabled) {
+        if (!pendingCloudSyncEnabled) {
+          const confirmDisable = await showSyncDisableConfirmModal();
+          if (!confirmDisable) {
+            if (cloudSyncCheckbox) {
+              cloudSyncCheckbox.checked = currentCloudSyncEnabled;
+            }
+            pendingCloudSyncEnabled = currentCloudSyncEnabled;
+          } else {
+            const syncResult = await electronAPI.setCloudSyncEnabled(false);
+            if (!syncResult.success) {
+              settingsToast.textContent = syncResult.error || 'Failed to update Cloud Sync';
+              settingsToast.className = 'settings-toast error show';
+              settingsSaveBtn?.removeAttribute('disabled');
+              if (settingsSaveBtn) settingsSaveBtn.textContent = 'Save';
+              return;
+            } else {
+              currentCloudSyncEnabled = false;
+            }
+          }
+        } else {
+            const syncResult = await electronAPI.setCloudSyncEnabled(true);
+            if (!syncResult.success) {
+              settingsToast.textContent = syncResult.error || 'Failed to update Cloud Sync';
+              settingsToast.className = 'settings-toast error show';
+              settingsSaveBtn?.removeAttribute('disabled');
+              if (settingsSaveBtn) settingsSaveBtn.textContent = 'Save';
+              return;
+            } else {
+            currentCloudSyncEnabled = true;
+          }
+        }
+      }
+    }
+
+    const result = await electronAPI.saveSettings(settingsToSave);
+
+    if (result.success) {
+      currentSettings = { ...currentSettings, ...settingsToSave };
+
+      if (settingsToSave.layoutStyle !== undefined) {
+        applyLayoutStyle(settingsToSave.layoutStyle);
+        pendingLayoutStyle = settingsToSave.layoutStyle;
+      }
+
+      if (settingsToSave.keybind) {
+        pendingKeybind = settingsToSave.keybind;
+      }
+      if (settingsToSave.fullscreenMode !== undefined) {
+        pendingFullscreenMode = settingsToSave.fullscreenMode;
+      }
+
+      setIncludeTax(currentTaxValue);
+      pendingIncludeTax = currentTaxValue;
+
+      renderInventory();
+      renderBreakdown();
+      updateStats(getCurrentItems());
+
+      settingsToast.textContent = 'Saved';
+      settingsToast.className = 'settings-toast success show';
+
+      keybindStatus.textContent = '';
+      keybindStatus.className = 'keybind-status';
+
+      if (cloudSyncCheckbox && cloudSyncHelperText && currentCloudSyncEnabled !== null) {
+        cloudSyncCheckbox.checked = currentCloudSyncEnabled;
+        cloudSyncHelperText.textContent = currentCloudSyncEnabled
+          ? 'Cloud Sync is enabled. Disabling it will stop all cloud reads and writes.'
+          : 'Cloud Sync is disabled. You will only see local prices.';
+      }
+
+      setTimeout(() => {
+        settingsToast.classList.remove('show');
+      }, 2000);
+    } else {
+      settingsToast.textContent = result.error || 'Failed to save settings';
+      settingsToast.className = 'settings-toast error show';
+
+      keybindStatus.textContent = '';
+      keybindStatus.className = 'keybind-status';
+    }
+  } catch (error: any) {
+    settingsToast.textContent = error.message || 'Failed to save settings';
+    settingsToast.className = 'settings-toast error show';
+
+    keybindStatus.textContent = '';
+    keybindStatus.className = 'keybind-status';
+  } finally {
+    settingsSaveBtn?.removeAttribute('disabled');
+    if (settingsSaveBtn) settingsSaveBtn.textContent = 'Save';
+  }
 }
 
 export function initSettingsModal(
@@ -92,7 +206,6 @@ export function initSettingsModal(
       pendingFullscreenMode = currentSettings.fullscreenMode !== undefined ? currentSettings.fullscreenMode : false;
       pendingIncludeTax = currentSettings.includeTax !== undefined ? currentSettings.includeTax : false;
       setIncludeTax(pendingIncludeTax);
-      pendingLeagueId = (currentSettings.leagueId || 's11-vorax').trim();
       pendingLayoutStyle = currentSettings.layoutStyle === 2 ? 2 : 1;
       pendingUsername = currentUsernameInfo.username || '';
       const cloudSyncStatus = await electronAPI.getCloudSyncStatus();
@@ -119,26 +232,25 @@ export function initSettingsModal(
         includeTaxCheckbox.checked = pendingIncludeTax;
       }
 
-      if (leagueIdInput) {
-        leagueIdInput.value = pendingLeagueId || 's11-vorax';
-      }
-
       if (layoutStyle1Radio && layoutStyle2Radio) {
         layoutStyle1Radio.checked = (pendingLayoutStyle ?? 1) === 1;
         layoutStyle2Radio.checked = (pendingLayoutStyle ?? 1) === 2;
       }
 
-      // Set username input + helper text
-      if (usernameInput && usernameHelperText && currentUsernameInfo) {
+      // Set username input, tag (inline suffix), and next-change tip (only when can't change)
+      if (usernameInput && usernameTagDisplay && usernameHelperText && currentUsernameInfo) {
         usernameInput.value = pendingUsername || '';
-        const tagLabel = currentUsernameInfo.tag ? `Tag: #${currentUsernameInfo.tag}` : 'Tag: not set';
+        usernameTagDisplay.textContent = currentUsernameInfo.tag ? `#${currentUsernameInfo.tag}` : '';
         if (currentUsernameInfo.canChange) {
-          usernameHelperText.textContent = `${tagLabel}. You can change your username now.`;
+          usernameHelperText.textContent = '';
+          usernameHelperText.classList.add('hidden');
         } else if (currentUsernameInfo.nextChangeAt) {
           const nextChange = new Date(currentUsernameInfo.nextChangeAt).toLocaleString();
-          usernameHelperText.textContent = `${tagLabel}. Next change available at ${nextChange}.`;
+          usernameHelperText.textContent = `Next change available at ${nextChange}.`;
+          usernameHelperText.classList.remove('hidden');
         } else {
-          usernameHelperText.textContent = `${tagLabel}.`;
+          usernameHelperText.textContent = '';
+          usernameHelperText.classList.add('hidden');
         }
       }
 
@@ -153,13 +265,9 @@ export function initSettingsModal(
         logPathHelperText.textContent = currentLogPath ? `${currentLogPath}` : 'Current: Not set';
       }
       
-      // Reset save button state
-      settingsSaveBtn.disabled = false;
-      settingsSaveBtn.textContent = 'Save';
-      
-      // Clear footer message
-      settingsFooterMessage.textContent = '';
-      settingsFooterMessage.classList.remove('show', 'success', 'error');
+      // Clear toast
+      settingsToast.textContent = '';
+      settingsToast.classList.remove('show', 'success', 'error');
       
       // Show general section by default
       generalSection.classList.add('active');
@@ -175,28 +283,17 @@ export function initSettingsModal(
         }
       });
       
-      settingsModal.classList.add('active');
+      (window as any).navigateToPage?.('settings');
     });
   }
   
-  // Close settings modal
-  settingsCloseBtn.addEventListener('click', () => {
-    closeSettingsModal();
-  });
-  
-  settingsModal.addEventListener('click', (e) => {
-    if (e.target === settingsModal) {
-      closeSettingsModal();
-    }
-  });
-  
-  // Change keybind button
-  changeKeybindBtn.addEventListener('click', () => {
+  // Click keybind input to start or cancel recording (same as old "Change" button)
+  keybindInput.addEventListener('click', () => {
     if (isRecordingKeybind) {
       isRecordingKeybind = false;
       keybindInput.classList.remove('recording');
       keybindInput.value = formatKeybind(pendingKeybind || currentSettings.keybind || 'CommandOrControl+`');
-      changeKeybindBtn.textContent = 'Change';
+      if (changeKeybindBtn) changeKeybindBtn.textContent = 'Change';
       keybindStatus.textContent = '';
       keybindStatus.className = 'keybind-status';
       keybindInput.blur();
@@ -204,22 +301,24 @@ export function initSettingsModal(
       isRecordingKeybind = true;
       keybindInput.classList.add('recording');
       keybindInput.value = 'Press keys...';
-      changeKeybindBtn.textContent = 'Cancel';
+      if (changeKeybindBtn) changeKeybindBtn.textContent = 'Cancel';
       keybindStatus.textContent = 'Press your desired key combination';
       keybindStatus.className = 'keybind-status';
       keybindInput.focus();
     }
   });
-  
+
   // Reset keybind button
-  resetKeybindBtn.addEventListener('click', () => {
+  resetKeybindBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     pendingKeybind = 'CommandOrControl+`';
     keybindInput.value = formatKeybind(pendingKeybind);
     keybindInput.classList.remove('recording');
     isRecordingKeybind = false;
-    changeKeybindBtn.textContent = 'Change';
+    if (changeKeybindBtn) changeKeybindBtn.textContent = 'Change';
     keybindStatus.textContent = 'Reset to default keybind';
     keybindStatus.className = 'keybind-status';
+    saveSettingsNow();
   });
   
   // Keybind input - capture key presses
@@ -243,7 +342,7 @@ export function initSettingsModal(
       keybindInput.classList.remove('recording');
       const currentKeybind = pendingKeybind || currentSettings.keybind || 'CommandOrControl+`';
       keybindInput.value = formatKeybind(currentKeybind);
-      changeKeybindBtn.textContent = 'Change';
+      if (changeKeybindBtn) changeKeybindBtn.textContent = 'Change';
       keybindStatus.textContent = '';
       keybindStatus.className = 'keybind-status';
       keybindInput.blur();
@@ -282,9 +381,10 @@ export function initSettingsModal(
         keybindInput.value = formatKeybind(keybind);
         keybindInput.classList.remove('recording');
         isRecordingKeybind = false;
-        changeKeybindBtn.textContent = 'Change';
+        if (changeKeybindBtn) changeKeybindBtn.textContent = 'Change';
         keybindStatus.textContent = 'Keybind set successfully';
         keybindStatus.className = 'keybind-status success';
+        saveSettingsNow();
       } else {
         keybindStatus.textContent = testResult.error || 'Keybind is already in use';
         keybindStatus.className = 'keybind-status error';
@@ -296,20 +396,23 @@ export function initSettingsModal(
   fullscreenModeRadio.addEventListener('change', () => {
     if (fullscreenModeRadio.checked) {
       pendingFullscreenMode = true;
+      saveSettingsNow();
     }
   });
-  
+
   normalModeRadio.addEventListener('change', () => {
     if (normalModeRadio.checked) {
       pendingFullscreenMode = false;
+      saveSettingsNow();
     }
   });
-  
+
   // Handle tax checkbox change
   if (includeTaxCheckbox) {
     includeTaxCheckbox.addEventListener('change', () => {
       if (includeTaxCheckbox) {
         pendingIncludeTax = includeTaxCheckbox.checked;
+        saveSettingsNow();
       }
     });
   }
@@ -320,26 +423,78 @@ export function initSettingsModal(
     });
   }
 
-  if (cloudSyncCheckbox) {
-    cloudSyncCheckbox.addEventListener('change', () => {
-      pendingCloudSyncEnabled = cloudSyncCheckbox.checked;
+  const saveUsernameBtn = document.getElementById('saveUsernameBtn') as HTMLButtonElement | null;
+  if (saveUsernameBtn && usernameInput && usernameTagDisplay && usernameHelperText) {
+    saveUsernameBtn.addEventListener('click', async () => {
+      const newUsername = usernameInput.value.trim();
+      pendingUsername = newUsername;
+      const currentUsername = currentUsernameInfo?.username ?? '';
+      if (newUsername === currentUsername) {
+        settingsToast.textContent = 'No change';
+        settingsToast.className = 'settings-toast success show';
+        setTimeout(() => settingsToast.classList.remove('show'), 1500);
+        return;
+      }
+      saveUsernameBtn.disabled = true;
+      saveUsernameBtn.textContent = 'Saving...';
+      try {
+        const usernameResult = await electronAPI.setUsername(newUsername);
+        if (usernameResult.success) {
+          currentUsernameInfo = await electronAPI.getUsernameInfo();
+          if (currentUsernameInfo) {
+            usernameInput.value = currentUsernameInfo.username || '';
+            usernameTagDisplay.textContent = currentUsernameInfo.tag ? `#${currentUsernameInfo.tag}` : '';
+            if (currentUsernameInfo.canChange) {
+              usernameHelperText.textContent = '';
+              usernameHelperText.classList.add('hidden');
+            } else if (currentUsernameInfo.nextChangeAt) {
+              const nextChange = new Date(currentUsernameInfo.nextChangeAt).toLocaleString();
+              usernameHelperText.textContent = `Next change available at ${nextChange}.`;
+              usernameHelperText.classList.remove('hidden');
+            } else {
+              usernameHelperText.textContent = '';
+              usernameHelperText.classList.add('hidden');
+            }
+          }
+          updateUsernameDisplay();
+          settingsToast.textContent = 'Saved';
+          settingsToast.className = 'settings-toast success show';
+          setTimeout(() => settingsToast.classList.remove('show'), 2000);
+        } else {
+          settingsToast.textContent = usernameResult.error || 'Failed to update username';
+          settingsToast.className = 'settings-toast error show';
+        }
+      } catch (e: any) {
+        settingsToast.textContent = e?.message || 'Failed to update username';
+        settingsToast.className = 'settings-toast error show';
+      } finally {
+        saveUsernameBtn.disabled = false;
+        saveUsernameBtn.textContent = 'Save';
+      }
     });
   }
 
-  if (leagueIdInput) {
-    leagueIdInput.addEventListener('input', () => {
-      pendingLeagueId = leagueIdInput.value.trim();
+  if (cloudSyncCheckbox) {
+    cloudSyncCheckbox.addEventListener('change', () => {
+      pendingCloudSyncEnabled = cloudSyncCheckbox.checked;
+      saveSettingsNow();
     });
   }
 
   if (layoutStyle1Radio) {
     layoutStyle1Radio.addEventListener('change', () => {
-      if (layoutStyle1Radio.checked) pendingLayoutStyle = 1;
+      if (layoutStyle1Radio.checked) {
+        pendingLayoutStyle = 1;
+        saveSettingsNow();
+      }
     });
   }
   if (layoutStyle2Radio) {
     layoutStyle2Radio.addEventListener('change', () => {
-      if (layoutStyle2Radio.checked) pendingLayoutStyle = 2;
+      if (layoutStyle2Radio.checked) {
+        pendingLayoutStyle = 2;
+        saveSettingsNow();
+      }
     });
   }
 
@@ -370,177 +525,18 @@ export function initSettingsModal(
       }
     });
   });
-  
-  // Save settings
-  settingsSaveBtn.addEventListener('click', async () => {
-    settingsSaveBtn.disabled = true;
-    settingsSaveBtn.textContent = 'Saving...';
-    
-    try {
-      const settingsToSave: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 } = {};
-      
-      if (pendingKeybind) {
-        settingsToSave.keybind = pendingKeybind;
-      }
-      
-      if (pendingFullscreenMode !== null) {
-        settingsToSave.fullscreenMode = pendingFullscreenMode;
-      }
-      
-      const checkboxElement = document.getElementById('includeTaxCheckbox') as HTMLInputElement | null;
-      const currentTaxValue = checkboxElement ? checkboxElement.checked : (pendingIncludeTax ?? false);
-      settingsToSave.includeTax = currentTaxValue;
-
-      if (pendingLeagueId !== null) {
-        settingsToSave.leagueId = pendingLeagueId.trim() || 's11-vorax';
-      }
-
-      const layoutStyleValue = layoutStyle2Radio?.checked ? 2 : (pendingLayoutStyle ?? 1);
-      settingsToSave.layoutStyle = layoutStyleValue;
-      
-      let usernameError: string | null = null;
-      if (currentUsernameInfo && pendingUsername !== null) {
-        const currentUsername = currentUsernameInfo.username || '';
-        if (pendingUsername !== currentUsername) {
-          const usernameResult = await electronAPI.setUsername(pendingUsername);
-          if (!usernameResult.success) {
-            usernameError = usernameResult.error || 'Failed to update username';
-          } else {
-            currentUsernameInfo = await electronAPI.getUsernameInfo();
-            // Update username display in header
-            updateUsernameDisplay();
-          }
-        }
-      }
-
-      if (pendingCloudSyncEnabled !== null && currentCloudSyncEnabled !== null) {
-        if (pendingCloudSyncEnabled !== currentCloudSyncEnabled) {
-          if (!pendingCloudSyncEnabled) {
-            const confirmDisable = await showSyncDisableConfirmModal();
-            if (!confirmDisable) {
-              if (cloudSyncCheckbox) {
-                cloudSyncCheckbox.checked = currentCloudSyncEnabled;
-              }
-              pendingCloudSyncEnabled = currentCloudSyncEnabled;
-            } else {
-              const syncResult = await electronAPI.setCloudSyncEnabled(false);
-              if (!syncResult.success) {
-                usernameError = syncResult.error || 'Failed to update Cloud Sync';
-              } else {
-                currentCloudSyncEnabled = false;
-              }
-            }
-          } else {
-            const syncResult = await electronAPI.setCloudSyncEnabled(true);
-            if (!syncResult.success) {
-              usernameError = syncResult.error || 'Failed to update Cloud Sync';
-            } else {
-              currentCloudSyncEnabled = true;
-            }
-          }
-        }
-      }
-
-      const result = await electronAPI.saveSettings(settingsToSave);
-      
-      if (result.success) {
-        currentSettings = { ...currentSettings, ...settingsToSave };
-        
-        if (settingsToSave.layoutStyle !== undefined) {
-          applyLayoutStyle(settingsToSave.layoutStyle);
-          pendingLayoutStyle = settingsToSave.layoutStyle;
-        }
-        
-        if (settingsToSave.keybind) {
-          pendingKeybind = settingsToSave.keybind;
-        }
-        if (settingsToSave.fullscreenMode !== undefined) {
-          pendingFullscreenMode = settingsToSave.fullscreenMode;
-        }
-        
-        setIncludeTax(currentTaxValue);
-        pendingIncludeTax = currentTaxValue;
-
-        if (settingsToSave.leagueId) {
-          pendingLeagueId = settingsToSave.leagueId;
-        }
-        
-        renderInventory();
-        renderBreakdown();
-        // Get current items from state for stats update
-        updateStats(getCurrentItems());
-        
-        if (usernameError) {
-          settingsFooterMessage.textContent = usernameError;
-          settingsFooterMessage.className = 'settings-footer-message error show';
-        } else {
-          settingsFooterMessage.textContent = 'Settings saved successfully';
-          settingsFooterMessage.className = 'settings-footer-message success show';
-        }
-        
-        keybindStatus.textContent = '';
-        keybindStatus.className = 'keybind-status';
-        
-        if (usernameInput && usernameHelperText && currentUsernameInfo) {
-          usernameInput.value = currentUsernameInfo.username || '';
-          const tagLabel = currentUsernameInfo.tag ? `Tag: #${currentUsernameInfo.tag}` : 'Tag: not set';
-          if (currentUsernameInfo.canChange) {
-            usernameHelperText.textContent = `${tagLabel}. You can change your username now.`;
-          } else if (currentUsernameInfo.nextChangeAt) {
-            const nextChange = new Date(currentUsernameInfo.nextChangeAt).toLocaleString();
-            usernameHelperText.textContent = `${tagLabel}. Next change available at ${nextChange}.`;
-          } else {
-            usernameHelperText.textContent = `${tagLabel}.`;
-          }
-        }
-
-        if (cloudSyncCheckbox && cloudSyncHelperText && currentCloudSyncEnabled !== null) {
-          cloudSyncCheckbox.checked = currentCloudSyncEnabled;
-          cloudSyncHelperText.textContent = currentCloudSyncEnabled
-            ? 'Cloud Sync is enabled. Disabling it will stop all cloud reads and writes.'
-            : 'Cloud Sync is disabled. You will only see local prices.';
-        }
-
-        settingsSaveBtn.disabled = false;
-        settingsSaveBtn.textContent = 'Save';
-        
-        setTimeout(() => {
-          settingsFooterMessage.classList.remove('show');
-        }, 3000);
-      } else {
-        settingsFooterMessage.textContent = result.error || 'Failed to save settings';
-        settingsFooterMessage.className = 'settings-footer-message error show';
-        
-        keybindStatus.textContent = '';
-        keybindStatus.className = 'keybind-status';
-        
-        settingsSaveBtn.disabled = false;
-        settingsSaveBtn.textContent = 'Save';
-      }
-    } catch (error: any) {
-      settingsFooterMessage.textContent = error.message || 'Failed to save settings';
-      settingsFooterMessage.className = 'settings-footer-message error show';
-      
-      keybindStatus.textContent = '';
-      keybindStatus.className = 'keybind-status';
-      
-      settingsSaveBtn.disabled = false;
-      settingsSaveBtn.textContent = 'Save';
-    }
-  });
 }
 
 function closeSettingsModal(): void {
-  settingsModal.classList.remove('active');
+  (window as any).navigateToPage?.('home');
   isRecordingKeybind = false;
   keybindInput.classList.remove('recording');
-  changeKeybindBtn.textContent = 'Change';
+  if (changeKeybindBtn) changeKeybindBtn.textContent = 'Change';
   pendingKeybind = null;
   pendingFullscreenMode = null;
   pendingIncludeTax = null;
   pendingUsername = null;
   pendingCloudSyncEnabled = null;
-  pendingLeagueId = null;
   pendingLayoutStyle = null;
   currentCloudSyncEnabled = null;
 }

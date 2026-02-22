@@ -44,7 +44,9 @@ let lastSentInventoryUpdate = 0; // Prevent duplicate inventory-updated events
 const WATCH_INTERVAL = 500;
 let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
 let fullscreenMode: boolean = false; // Default to windowed mode
-let currentLeagueId: string = 's11-vorax';
+/** League/season ID for price snapshots. Change this in code when a new season starts. */
+const LEAGUE_ID = 's11-vorax';
+let currentLeagueId: string = LEAGUE_ID;
 const PRICE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 // Overlay widget display values (sent directly from renderer)
@@ -618,10 +620,7 @@ app.whenReady().then(async () => {
   itemDatabase = loadItemDatabase();
 
   const initialSettings = getSettings();
-  if (initialSettings.leagueId && initialSettings.leagueId.trim() !== '') {
-    currentLeagueId = initialSettings.leagueId.trim();
-  }
-  
+
   priceSyncService = new PriceSyncService();
   const priceCache = await loadPriceCache((options) => priceSyncService.syncPrices({ ...options, leagueId: currentLeagueId }));
   
@@ -1119,10 +1118,6 @@ ipcMain.handle('save-settings', async (event, settings: { keybind?: string; full
       }
     }
     
-    if (settings.leagueId && settings.leagueId.trim() !== '') {
-      currentLeagueId = settings.leagueId.trim();
-    }
-
     // Check if window mode changed
     const windowModeChanged = settings.fullscreenMode !== undefined && settings.fullscreenMode !== fullscreenMode;
     

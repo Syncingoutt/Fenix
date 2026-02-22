@@ -382,6 +382,135 @@
           </div>
         </section>
 
+        <!-- Page: Settings -->
+        <section id="page-settings" class="page">
+          <div class="settings-container">
+            <div class="settings-page-header">
+              <button id="settingsBackBtn" class="history-back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Back</span>
+              </button>
+            </div>
+            <div class="settings-content">
+              <div class="settings-layout">
+                <div class="settings-sidebar">
+                  <div class="settings-sidebar-item active" data-section="general">
+                    General
+                  </div>
+                  <div class="settings-sidebar-item" data-section="preferences">
+                    Preferences
+                  </div>
+                </div>
+                <div class="settings-main">
+                  <div class="settings-section" id="generalSection">
+                    <div class="settings-section-title">General Settings</div>
+                    
+                    <div class="settings-group">
+                      <div class="settings-option-box layout-style-row">
+                        <div class="settings-group-label">Window Mode</div>
+                        <label class="layout-style-option">
+                          <input type="radio" name="windowMode" value="fullscreen" id="fullscreenModeRadio">
+                          <span class="layout-style-indicator"></span>
+                          <span class="layout-style-label">Fullscreen Mode</span>
+                        </label>
+                        <label class="layout-style-option">
+                          <input type="radio" name="windowMode" value="normal" id="normalModeRadio">
+                          <span class="layout-style-indicator"></span>
+                          <span class="layout-style-label">Windowed Mode</span>
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                      <div class="settings-option-box">
+                        <div class="settings-input-inline">
+                          <span class="settings-option-label">Overlay Keybind</span>
+                          <div class="keybind-input-wrapper">
+                            <input type="text" id="keybindInput" class="keybind-input" readonly placeholder="Press keys...">
+                          </div>
+                          <button id="resetKeybindBtn" class="keybind-btn secondary settings-inline-action-btn">Reset</button>
+                        </div>
+                        <div class="keybind-status" id="keybindStatus"></div>
+                      </div>
+                    </div>
+
+                    <div class="settings-group">
+                      <div class="settings-option-box">
+                        <div class="settings-input-inline">
+                          <span class="settings-option-label">Username</span>
+                          <div class="settings-username-with-tag">
+                            <input type="text" id="usernameInput" class="settings-text-input" placeholder="Leave blank for anonymous">
+                            <span id="usernameTagDisplay" class="settings-username-tag"></span>
+                          </div>
+                          <button type="button" id="saveUsernameBtn" class="keybind-btn settings-inline-action-btn">Save</button>
+                        </div>
+                        <div class="settings-option-tip settings-username-next-change hidden" id="usernameHelperText"></div>
+                      </div>
+                    </div>
+
+                    <div class="settings-group">
+                      <div class="settings-option">
+                        <div class="settings-option-label-inline">
+                          <span class="settings-option-label">Cloud Sync</span>
+                          <span class="settings-option-tip-inline" id="cloudSyncHelperText">Sync prices and data across devices.</span>
+                        </div>
+                        <label class="settings-checkbox-wrapper">
+                          <input type="checkbox" id="cloudSyncCheckbox">
+                          <span class="settings-checkbox"></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="settings-section" id="preferencesSection">
+                    <div class="settings-section-title">Preferences</div>
+                    
+                    <div class="settings-group">
+                      <div class="settings-option-box layout-style-row">
+                        <div class="settings-group-label">Layout Style</div>
+                        <label class="layout-style-option">
+                          <input type="radio" name="layoutStyle" value="1" id="layoutStyle1Radio">
+                          <span class="layout-style-indicator"></span>
+                          <span class="layout-style-label">Style 1</span>
+                        </label>
+                        <label class="layout-style-option">
+                          <input type="radio" name="layoutStyle" value="2" id="layoutStyle2Radio">
+                          <span class="layout-style-indicator"></span>
+                          <span class="layout-style-label">Style 2</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="settings-group">
+                      <div class="settings-option">
+                        <div class="settings-option-label">Include tax in price calculations</div>
+                        <label class="settings-checkbox-wrapper">
+                          <input type="checkbox" id="includeTaxCheckbox">
+                          <span class="settings-checkbox"></span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="settings-group">
+                      <div class="settings-option-box">
+                        <div class="settings-input-inline">
+                          <span class="settings-option-label">Log File Path</span>
+                          <div class="settings-path-field">
+                            <div class="settings-path-text" id="logPathHelperText">Not set</div>
+                          </div>
+                          <button class="settings-action-btn settings-path-btn settings-inline-action-btn" id="changeLogPathBtn">Change File Path</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="settingsToast" class="settings-toast" aria-live="polite"></div>
+            </div>
+          </div>
+        </section>
+
         <!-- Page: History -->
         <section id="page-history" class="page">
           <div class="history-container">
@@ -766,142 +895,6 @@
         <div class="delete-hours-modal-actions">
           <button class="delete-hours-modal-btn secondary" id="deleteHoursCancelBtn">Cancel</button>
           <button class="delete-hours-modal-btn danger" id="deleteHoursConfirmBtn">Delete</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div class="settings-modal" id="settingsModal">
-      <div class="settings-modal-content">
-        <button class="settings-close-btn" id="settingsCloseBtn" title="Close">✕</button>
-        <div class="settings-layout">
-          <div class="settings-sidebar">
-            <div class="settings-sidebar-item active" data-section="general">
-              General
-            </div>
-            <div class="settings-sidebar-item" data-section="preferences">
-              Preferences
-            </div>
-          </div>
-          <div class="settings-main">
-            <div class="settings-section" id="generalSection">
-              <div class="settings-section-title">General Settings</div>
-              
-              <div class="settings-group">
-                <div class="settings-group-label">Window Mode</div>
-                <div class="settings-group-description">Choose how the app window behaves</div>
-                <div class="window-mode-toggle">
-                  <label class="window-mode-option">
-                    <input type="radio" name="windowMode" value="fullscreen" id="fullscreenModeRadio">
-                    <div class="window-mode-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 8H8V4M20 8H16V4M4 16H8V20M20 16H16V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </div>
-                    <div class="window-mode-content">
-                      <span class="window-mode-title">Fullscreen Mode</span>
-                      <div class="window-mode-description">Always-on-top fullscreen overlay for gaming</div>
-                    </div>
-                  </label>
-                  <label class="window-mode-option">
-                    <input type="radio" name="windowMode" value="normal" id="normalModeRadio">
-                    <div class="window-mode-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-                        <path d="M3 8H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                      </svg>
-                    </div>
-                    <div class="window-mode-content">
-                      <span class="window-mode-title">Windowed Mode</span>
-                      <div class="window-mode-description">Resizable window with title bar and controls</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-              
-              <div class="settings-group">
-                <div class="settings-group-label">Toggle Overlay Keybind</div>
-                <div class="settings-group-description">Press a key combination to toggle the overlay window</div>
-                <div class="keybind-input-wrapper">
-                  <input type="text" id="keybindInput" class="keybind-input" readonly placeholder="Press keys...">
-                  <button id="changeKeybindBtn" class="keybind-btn">Change</button>
-                  <button id="resetKeybindBtn" class="keybind-btn secondary">Reset</button>
-                </div>
-                <div class="keybind-status" id="keybindStatus"></div>
-              </div>
-
-              <div class="settings-group">
-                <div class="settings-group-label">Username</div>
-                <div class="settings-group-description">Optional public name (3-20 characters). Changeable every 24 hours.</div>
-                <div class="settings-input-row">
-                  <input type="text" id="usernameInput" class="settings-text-input" placeholder="Leave blank for anonymous">
-                </div>
-                <div class="settings-helper-text" id="usernameHelperText"></div>
-              </div>
-            </div>
-            <div class="settings-section" id="preferencesSection">
-              <div class="settings-section-title">Preferences</div>
-              
-              <div class="settings-group layout-style-row">
-                <div class="settings-group-label">Layout Style</div>
-                <label class="layout-style-option">
-                  <input type="radio" name="layoutStyle" value="1" id="layoutStyle1Radio">
-                  <span class="layout-style-indicator"></span>
-                  <span class="layout-style-label">Style 1</span>
-                </label>
-                <label class="layout-style-option">
-                  <input type="radio" name="layoutStyle" value="2" id="layoutStyle2Radio">
-                  <span class="layout-style-indicator"></span>
-                  <span class="layout-style-label">Style 2</span>
-                </label>
-              </div>
-
-              <div class="settings-group">
-                <div class="settings-option">
-                  <div class="settings-option-label">Include tax in price calculations</div>
-                  <label class="settings-checkbox-wrapper">
-                    <input type="checkbox" id="includeTaxCheckbox">
-                    <span class="settings-checkbox"></span>
-                  </label>
-                </div>
-              </div>
-
-              <div class="settings-group">
-                <div class="settings-option">
-                  <div class="settings-option-label">Cloud Sync</div>
-                  <label class="settings-checkbox-wrapper">
-                    <input type="checkbox" id="cloudSyncCheckbox">
-                    <span class="settings-checkbox"></span>
-                  </label>
-                </div>
-                <div class="settings-group-description" id="cloudSyncHelperText">
-                  Cloud Sync is enabled. Disabling it will stop all cloud reads and writes.
-                </div>
-              </div>
-
-              <div class="settings-group">
-                <div class="settings-group-label">League/Season ID</div>
-                <div class="settings-group-description">Controls which snapshot doc is used for prices (default: s11-vorax).</div>
-                <div class="settings-input-row">
-                  <input type="text" id="leagueIdInput" class="settings-text-input" placeholder="s11-vorax">
-                </div>
-                <div class="settings-helper-text">Example: s11-vorax</div>
-              </div>
-
-              <div class="settings-group">
-                <div class="settings-group-label">Log File Path</div>
-                <div class="settings-group-description">Change the UE_Game.log file location if your install moved.</div>
-                <div class="settings-path-field">
-                  <div class="settings-path-text" id="logPathHelperText">Not set</div>
-                  <button class="settings-action-btn settings-path-btn" id="changeLogPathBtn">Change File Path</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="settings-footer">
-          <div class="settings-footer-message" id="settingsFooterMessage"></div>
-          <button class="settings-save-btn" id="settingsSaveBtn">Save</button>
         </div>
       </div>
     </div>
