@@ -261,6 +261,13 @@
             row.classList.add('hidden');
           }
         });
+        updateVisibleStatCount();
+      }
+
+      function updateVisibleStatCount() {
+        if (!widgetStatsEl) return;
+        const count = statRows.filter((row) => Boolean(visibleStats[row.dataset.statId])).length;
+        widgetStatsEl.style.setProperty('--visible-stat-count', String(Math.max(1, count)));
       }
 
       function syncCheckboxes() {

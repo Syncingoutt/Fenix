@@ -3315,27 +3315,28 @@ body.overlay-widget {
 }
 
 .widget-stats {
+  --visible-stat-count: 6;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(min(var(--visible-stat-count), 1), 1fr);
   gap: 10px 20px;
 }
 
-/* Breakpoints by widget width. 1 col → 2 cols → 3 cols → 6 cols (1 row). Rows always even. */
+/* Breakpoints by widget width. Column count = min(visible stats, max for breakpoint). */
 @container widget (min-width: 280px) {
   .widget-stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(min(var(--visible-stat-count), 2), 1fr);
   }
 }
 
 @container widget (min-width: 440px) {
   .widget-stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(min(var(--visible-stat-count), 3), 1fr);
   }
 }
 
 @container widget (min-width: 700px) {
   .widget-stats {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(min(var(--visible-stat-count), 6), 1fr);
   }
 }
 
