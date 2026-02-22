@@ -734,15 +734,18 @@
         checkStatsOverflow();
       });
 
-      closeBtn.addEventListener('click', () => {
+      closeBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
         ipcRenderer.send('close-overlay-widget');
       });
 
-      editBtn.addEventListener('click', () => {
+      editBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
         setEditMode(!isEditMode);
       });
 
-      lockBtn.addEventListener('click', () => {
+      lockBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
         setLockedState(!isLocked);
       });
 
@@ -756,23 +759,28 @@
         });
       });
 
-      startBtn.addEventListener('click', () => {
+      startBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
         ipcRenderer.send('widget-start-hourly');
       });
 
-      pauseBtn.addEventListener('click', () => {
+      pauseBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
         ipcRenderer.send('widget-pause-hourly');
       });
 
-      resumeBtn.addEventListener('click', () => {
+      resumeBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
         ipcRenderer.send('widget-resume-hourly');
       });
 
-      stopBtn.addEventListener('click', () => {
+      stopBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
         ipcRenderer.send('widget-stop-hourly');
       });
 
-      resetBtn.addEventListener('click', () => {
+      resetBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
         ipcRenderer.send('widget-reset-realtime');
       });
 
