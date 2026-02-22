@@ -34,6 +34,8 @@ if (!gotTheLock) {
 
 let mainWindow: BrowserWindow | null = null;
 let overlayWidget: BrowserWindow | null = null;
+let overlayLockButtonRect: { left: number; top: number; width: number; height: number } | null = null;
+let overlayLockCheckInterval: ReturnType<typeof setInterval> | null = null;
 let tray: Tray | null = null;
 let inventoryManager: InventoryManager;
 let priceSyncService: PriceSyncService;
@@ -496,6 +498,7 @@ function createOverlayWidget() {
   });
 
   overlayWidget.on('closed', () => {
+    stopOverlayLockHoverCheck();
     overlayWidget = null;
   });
 
@@ -939,6 +942,42 @@ ipcMain.on('set-overlay-click-through', (_event, enabled: boolean) => {
   if (overlayWidget && !overlayWidget.isDestroyed()) {
     overlayWidget.setIgnoreMouseEvents(enabled, { forward: enabled });
   }
+});
+
+function stopOverlayLockHoverCheck(): void {
+  if (overlayLockCheckInterval !== null) {
+    clearInterval(overlayLockCheckInterval);
+    overlayLockCheckInterval = null;
+  }
+  overlayLockButtonRect = null;
+  if (overlayWidget && !overlayWidget.isDestroyed()) {
+    overlayWidget.setIgnoreMouseEvents(false);
+  }
+}
+
+ipcMain.on('overlay-lock-button-bounds', (_event, rect: { left: number; top: number; width: number; height: number }) => {
+  overlayLockButtonRect = rect;
+  stopOverlayLockHoverCheck();
+  if (!overlayWidget || overlayWidget.isDestroyed()) return;
+  overlayWidget.setIgnoreMouseEvents(true, { forward: true });
+  const CHECK_MS = 50;
+  overlayLockCheckInterval = setInterval(() => {
+    if (!overlayWidget || overlayWidget.isDestroyed() || !overlayLockButtonRect) {
+      stopOverlayLockHoverCheck();
+      return;
+    }
+    const bounds = overlayWidget.getBounds();
+    const r = overlayLockButtonRect;
+    const screenX = bounds.x + r.left;
+    const screenY = bounds.y + r.top;
+    const point = screen.getCursorScreenPoint();
+    const overLock = point.x >= screenX && point.x <= screenX + r.width && point.y >= screenY && point.y <= screenY + r.height;
+    overlayWidget.setIgnoreMouseEvents(!overLock, { forward: !overLock });
+  }, CHECK_MS);
+});
+
+ipcMain.on('overlay-unlocked', () => {
+  stopOverlayLockHoverCheck();
 });
 
 ipcMain.handle('get-overlay-opacity', () => getOverlayOpacity());

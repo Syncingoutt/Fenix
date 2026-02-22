@@ -3280,6 +3280,12 @@ body.overlay-widget {
   -webkit-app-region: no-drag;
 }
 
+.widget.locked .widget-timer-btn,
+.widget.locked .widget-edit-btn,
+.widget.locked .widget-close-btn {
+  display: none !important;
+}
+
 .widget-header {
   display: flex;
   align-items: center;
