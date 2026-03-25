@@ -19,6 +19,17 @@ export interface PriceCacheEntry {
   history?: { date: string; price: number }[];
 }
 
+export interface PriceHistoryPoint {
+  date: string;
+  timestamp: number;
+  price: number;
+  listingCount?: number;
+}
+
+export interface PriceHistoryByItem {
+  [baseId: string]: PriceHistoryPoint[];
+}
+
 export interface PriceCache {
   [baseId: string]: PriceCacheEntry;
 }
@@ -27,6 +38,8 @@ export interface ElectronAPI {
   getInventory: () => Promise<InventoryItem[]>;
   getItemDatabase: () => Promise<Record<string, { name: string; tradable?: boolean; group?: string }>>;
   getPriceCache: () => Promise<PriceCache>;
+  getPriceHistory: (payload: { baseId: string; leagueId?: string; maxDays?: number }) => Promise<PriceHistoryPoint[]>;
+  getPriceHistoryBatch: (payload?: { leagueId?: string; maxDays?: number }) => Promise<PriceHistoryByItem>;
   getMapEvents: () => Promise<MapEvent[]>;
   resetMapEvents: () => void;
   onInventoryUpdate: (callback: () => void) => void;

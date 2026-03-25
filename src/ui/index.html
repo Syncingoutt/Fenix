@@ -344,29 +344,66 @@
             
             <!-- Main Content -->
             <div class="prices-container">
-              <div class="prices-header">
-                <div class="prices-search-container">
-                  <input type="text" id="pricesSearchInput" class="prices-search-input" placeholder="Search by item...">
-                  <button id="pricesClearSearch" class="prices-clear-search" style="display: none;">✕</button>
+              <div id="pricesListView">
+                <div class="prices-header">
+                  <div class="prices-search-container">
+                    <input type="text" id="pricesSearchInput" class="prices-search-input" placeholder="Search by item...">
+                    <button id="pricesClearSearch" class="prices-clear-search" style="display: none;">✕</button>
+                  </div>
+                  <select id="pricesSeasonSelect" class="prices-season-select">
+                    <option value="s11-vorax">S11 Vorax</option>
+                  </select>
                 </div>
-                <select id="pricesSeasonSelect" class="prices-season-select">
-                  <option value="s11-vorax">S11 Vorax</option>
-                </select>
+                <div class="prices-table-wrapper">
+                  <table class="prices-table">
+                    <thead>
+                      <tr>
+                        <th class="prices-col-name" data-sort="name">Name</th>
+                        <th class="prices-col-updated">Updated at</th>
+                        <th class="prices-col-price" data-sort="price">Price</th>
+                        <th class="prices-col-sparkline" data-sort="trend">Last 7 days</th>
+                      </tr>
+                    </thead>
+                    <tbody id="pricesTableBody">
+                      <!-- Prices will be populated by JavaScript -->
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div class="prices-table-wrapper">
-                <table class="prices-table">
-                  <thead>
-                    <tr>
-                      <th class="prices-col-name" data-sort="name">Name</th>
-                      <th class="prices-col-updated">Updated at</th>
-                      <th class="prices-col-price" data-sort="price">Price</th>
-                      <th class="prices-col-sparkline" data-sort="trend">Last 7 days</th>
-                    </tr>
-                  </thead>
-                  <tbody id="pricesTableBody">
-                    <!-- Prices will be populated by JavaScript -->
-                  </tbody>
-                </table>
+
+              <div id="pricesDetailView" class="prices-detail-view" style="display: none;">
+                <div class="prices-detail-page-header">
+                  <button id="pricesDetailBackBtn" class="history-back-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Back to prices</span>
+                  </button>
+                </div>
+                <div class="prices-item-detail">
+                  <div class="prices-item-detail-header">
+                    <div class="prices-item-detail-title-wrap">
+                      <img id="pricesDetailIcon" src="" alt="" class="prices-item-detail-icon" style="display: none;">
+                      <div>
+                        <div id="pricesDetailName" class="prices-item-detail-title">Select an item</div>
+                        <div id="pricesDetailDescription" class="prices-item-detail-description">Placeholder: item description will go here.</div>
+                      </div>
+                    </div>
+                    <div class="prices-item-detail-meta">
+                      <span id="pricesDetailPrice">Price: -- FE</span>
+                      <span id="pricesDetailUpdated">Updated: --</span>
+                    </div>
+                  </div>
+                  <div class="prices-history-range-controls">
+                    <button class="prices-history-range-btn active" data-range="7">7 days</button>
+                    <button class="prices-history-range-btn" data-range="30">30 days</button>
+                    <button class="prices-history-range-btn" data-range="90">90 days</button>
+                  </div>
+                  <div class="prices-item-detail-chart-wrap">
+                    <canvas id="pricesDetailChart" class="prices-item-detail-chart"></canvas>
+                    <div id="pricesDetailEmpty" class="prices-item-detail-empty" style="display: none;">No history yet for this item.</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

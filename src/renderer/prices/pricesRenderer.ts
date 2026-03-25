@@ -1,6 +1,6 @@
 // Prices page renderer with sparklines
 
-import { ElectronAPI, PriceCache, ItemDatabase } from '../types.js';
+import { ElectronAPI, PriceCache, ItemDatabase, PriceHistoryPoint, PriceHistoryByItem } from '../types.js';
 
 // Re-export for convenience
 export type { PriceCache, PriceCacheEntry } from '../types.js';
@@ -9,7 +9,7 @@ import { getPriceAgeClass } from '../utils/formatting.js';
 
 declare const electronAPI: ElectronAPI;
 
-interface PriceHistoryPoint {
+interface SparklineHistoryPoint {
   date: string;
   price: number;
 }
@@ -23,7 +23,7 @@ interface PriceItem {
   trend: 'up' | 'down' | 'neutral';
   trendPercent: number;
   group?: string;
-  history?: PriceHistoryPoint[];
+  history?: SparklineHistoryPoint[];
 }
 
 let itemDatabase: ItemDatabase = {};
@@ -34,12 +34,30 @@ let sortColumn: string = 'price';
 let sortDirection: 'asc' | 'desc' = 'desc';
 let currentGroup: string = 'currency';
 let currentSearchTerm: string = '';
+let currentLeagueId = 's11-vorax';
+let selectedBaseId: string | null = null;
+let detailChart: any = null;
+const detailHistoryCache = new Map<string, PriceHistoryPoint[]>();
+let last7DayHistoryByItem: PriceHistoryByItem = {};
+let last90DayHistoryByItem: PriceHistoryByItem = {};
+let isDetailViewOpen = false;
+let selectedHistoryRangeDays: 7 | 30 | 90 = 7;
+let detailRequestVersion = 0;
+let listHistoryRequestVersion = 0;
+let last7HistoryLoadedAt = 0;
+let last7HistoryLeagueId = '';
+let last90HistoryLoadedAt = 0;
+let last90HistoryLeagueId = '';
+let last90HistoryFetchPromise: Promise<void> | null = null;
+const HISTORY_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+
+declare const Chart: any;
 
 /**
  * Calculate trend based on real price history when available.
  * Falls back to a simple timestamp-based heuristic if we only have a single point.
  */
-function calculateTrendFromHistory(history: PriceHistoryPoint[] | undefined, price: number, timestamp: number): { trend: 'up' | 'down' | 'neutral'; percent: number } {
+function calculateTrendFromHistory(history: SparklineHistoryPoint[] | undefined, price: number, timestamp: number): { trend: 'up' | 'down' | 'neutral'; percent: number } {
   if (history && history.length >= 2) {
     const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
     const first = sorted[0];
@@ -142,7 +160,7 @@ function renderSparkline(canvas: HTMLCanvasElement, prices: number[], trend: 'up
  * Build sparkline data from real price history.
  * If we don't have history, fall back to a flat line.
  */
-function generateSparklineData(history: PriceHistoryPoint[] | undefined, currentPrice: number): number[] {
+function generateSparklineData(history: SparklineHistoryPoint[] | undefined, currentPrice: number): number[] {
   if (history && history.length > 0) {
     const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
     return sorted.map(point => point.price);
@@ -181,7 +199,7 @@ function formatUpdatedAt(timestamp: number): string {
 /**
  * Render a single price row
  */
-function renderPriceRow(item: PriceItem, index: number): string {
+function renderPriceRow(item: PriceItem): string {
   const sparklineId = `sparkline-${item.baseId}`;
   const sparklineData = generateSparklineData(item.history, item.price);
   
@@ -290,7 +308,7 @@ export function renderPrices(): void {
   }
   
   // Render rows
-  tbody.innerHTML = sortedItems.map((item, index) => renderPriceRow(item, index)).join('');
+  tbody.innerHTML = sortedItems.map((item) => renderPriceRow(item)).join('');
   
   // Render sparklines after DOM is updated
   setTimeout(() => {
@@ -306,6 +324,249 @@ export function renderPrices(): void {
       }
     });
   }, 0);
+}
+
+function setDetailViewMode(open: boolean): void {
+  isDetailViewOpen = open;
+  const listView = document.getElementById('pricesListView');
+  const detailView = document.getElementById('pricesDetailView');
+  if (listView) listView.style.display = open ? 'none' : 'block';
+  if (detailView) detailView.style.display = open ? 'block' : 'none';
+}
+
+function formatDisplayDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 6) {
+    return `rgba(222, 92, 11, ${alpha})`;
+  }
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getPricesChartTheme(): { primary: string; text: string; border: string; bgShade: string } {
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    primary: styles.getPropertyValue('--primary').trim() || '#DE5C0B',
+    text: styles.getPropertyValue('--text').trim() || '#FAFAFA',
+    border: styles.getPropertyValue('--border').trim() || '#7E7E7E',
+    bgShade: styles.getPropertyValue('--bg-shade').trim() || '#272727'
+  };
+}
+
+function getRangeFilteredHistory(points: PriceHistoryPoint[], days: 7 | 30 | 90): PriceHistoryPoint[] {
+  if (points.length === 0) return points;
+  const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+  const filtered = points.filter(point => point.timestamp >= cutoffMs);
+  return filtered.length > 0 ? filtered : points.slice(-1);
+}
+
+function getDetailHistoryForItem(baseId: string): PriceHistoryPoint[] {
+  const history90 = last90DayHistoryByItem[baseId];
+  if (history90 && history90.length > 0) return history90;
+  const history7 = last7DayHistoryByItem[baseId];
+  if (history7 && history7.length > 0) return history7;
+  return [];
+}
+
+async function ensure90DayHistoryLoaded(): Promise<void> {
+  const now = Date.now();
+  const isFresh = last90HistoryLeagueId === currentLeagueId
+    && now - last90HistoryLoadedAt <= HISTORY_REFRESH_INTERVAL_MS
+    && Object.keys(last90DayHistoryByItem).length > 0;
+
+  if (isFresh) return;
+  if (last90HistoryFetchPromise) return last90HistoryFetchPromise;
+
+  const requestVersion = ++listHistoryRequestVersion;
+  last90HistoryFetchPromise = electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 90 })
+    .then(historyByItem => {
+      if (requestVersion !== listHistoryRequestVersion) return;
+      last90DayHistoryByItem = historyByItem ?? {};
+      last90HistoryLoadedAt = Date.now();
+      last90HistoryLeagueId = currentLeagueId;
+
+      if (selectedBaseId) {
+        const history = getDetailHistoryForItem(selectedBaseId);
+        detailHistoryCache.set(`${currentLeagueId}:${selectedBaseId}`, history);
+        renderDetailChart(getRangeFilteredHistory(history, selectedHistoryRangeDays));
+      }
+    })
+    .catch(error => {
+      if (requestVersion !== listHistoryRequestVersion) return;
+      console.error('Failed to fetch 90-day detail history:', error);
+    })
+    .finally(() => {
+      last90HistoryFetchPromise = null;
+    });
+
+  return last90HistoryFetchPromise;
+}
+
+function setHistoryRange(rangeDays: 7 | 30 | 90): void {
+  selectedHistoryRangeDays = rangeDays;
+  const ranges: Array<7 | 30 | 90> = [7, 30, 90];
+  ranges.forEach(days => {
+    const button = document.querySelector(`.prices-history-range-btn[data-range="${days}"]`) as HTMLButtonElement | null;
+    if (!button) return;
+    button.classList.toggle('active', days === rangeDays);
+  });
+
+  if (!selectedBaseId) return;
+  const cacheKey = `${currentLeagueId}:${selectedBaseId}`;
+  const history = detailHistoryCache.get(cacheKey) ?? getDetailHistoryForItem(selectedBaseId);
+  renderDetailChart(getRangeFilteredHistory(history, selectedHistoryRangeDays));
+
+  if (rangeDays > 7) {
+    void ensure90DayHistoryLoaded();
+  }
+}
+
+function renderDetailChart(points: PriceHistoryPoint[]): void {
+  const chartCanvas = document.getElementById('pricesDetailChart') as HTMLCanvasElement | null;
+  const emptyEl = document.getElementById('pricesDetailEmpty');
+  if (!chartCanvas || !emptyEl) return;
+  const theme = getPricesChartTheme();
+
+  if (detailChart) {
+    detailChart.destroy();
+    detailChart = null;
+  }
+
+  if (points.length === 0) {
+    emptyEl.textContent = 'No history yet for this item.';
+    emptyEl.style.display = 'flex';
+    return;
+  }
+
+  emptyEl.style.display = 'none';
+  const sorted = [...points].sort((a, b) => a.timestamp - b.timestamp);
+  const labels = sorted.map(point => formatDisplayDate(point.timestamp));
+  const values = sorted.map(point => point.price);
+  const tickLabels = labels.map((label, index) => {
+    if (index === 0 || index === labels.length - 1) return label;
+    return index % 2 === 0 ? label : '';
+  });
+
+  detailChart = new Chart(chartCanvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: tickLabels,
+      datasets: [{
+        label: 'Price (FE)',
+        data: values,
+        borderColor: theme.primary,
+        backgroundColor: hexToRgba(theme.primary, 0.10),
+        fill: true,
+        tension: 0.25,
+        pointRadius: 3,
+        pointHoverRadius: 4,
+        pointBackgroundColor: theme.primary,
+        pointBorderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: theme.bgShade,
+          borderColor: theme.border,
+          borderWidth: 1,
+          titleColor: theme.text,
+          bodyColor: theme.text,
+          displayColors: false
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: theme.text, maxRotation: 0, autoSkip: false },
+          border: { color: theme.border },
+          grid: { display: false }
+        },
+        y: {
+          ticks: { color: theme.text },
+          border: { color: theme.border },
+          grid: { display: false },
+          beginAtZero: false
+        }
+      }
+    }
+  });
+}
+
+async function showItemDetail(baseId: string): Promise<void> {
+  const selectedItem = allPriceItems.find(item => item.baseId === baseId);
+  if (!selectedItem) return;
+
+  selectedBaseId = baseId;
+  detailRequestVersion += 1;
+  const requestVersion = detailRequestVersion;
+  setDetailViewMode(true);
+
+  const detailName = document.getElementById('pricesDetailName');
+  const detailDescription = document.getElementById('pricesDetailDescription');
+  const detailPrice = document.getElementById('pricesDetailPrice');
+  const detailUpdated = document.getElementById('pricesDetailUpdated');
+  const detailIcon = document.getElementById('pricesDetailIcon') as HTMLImageElement | null;
+
+  if (detailName) detailName.textContent = selectedItem.name;
+  if (detailDescription) {
+    detailDescription.textContent = `Placeholder: ${selectedItem.name} description and usage details will be added here.`;
+  }
+  if (detailPrice) detailPrice.textContent = `Price: ${formatPrice(selectedItem.price)} FE`;
+  if (detailUpdated) detailUpdated.textContent = `Updated: ${formatUpdatedAt(selectedItem.timestamp)}`;
+  if (detailIcon) {
+    detailIcon.src = `../../assets/${selectedItem.baseId}.webp`;
+    detailIcon.alt = selectedItem.name;
+    detailIcon.style.display = 'block';
+    detailIcon.onerror = () => {
+      detailIcon.style.display = 'none';
+    };
+  }
+
+  const cacheKey = `${currentLeagueId}:${baseId}`;
+  const immediateHistory = getDetailHistoryForItem(baseId);
+  detailHistoryCache.set(cacheKey, immediateHistory);
+
+  if (requestVersion !== detailRequestVersion || selectedBaseId !== baseId) {
+    return;
+  }
+
+  renderDetailChart(getRangeFilteredHistory(immediateHistory, selectedHistoryRangeDays));
+
+  // Always warm 90-day history in background so range switches are instant.
+  void ensure90DayHistoryLoaded();
+}
+
+function applyCloud7DayHistoryToTable(): void {
+  allPriceItems = allPriceItems.map(item => {
+    const cloudHistory = last7DayHistoryByItem[item.baseId];
+    if (!cloudHistory || cloudHistory.length === 0) {
+      return item;
+    }
+
+    const history = cloudHistory.map(point => ({ date: point.date, price: point.price }));
+    const trendData = item.price > 0
+      ? calculateTrendFromHistory(history, item.price, item.timestamp)
+      : { trend: 'neutral' as const, percent: 0 };
+
+    return {
+      ...item,
+      history,
+      trend: trendData.trend,
+      trendPercent: trendData.percent
+    };
+  });
+
+  applyFilters();
+  renderPrices();
 }
 
 /**
@@ -341,7 +602,13 @@ export async function loadPrices(): Promise<void> {
         const price = cachedEntry?.price ?? 0;
         const timestamp = cachedEntry?.timestamp ?? Date.now();
         const listingCount = cachedEntry?.listingCount;
-        const history = cachedEntry?.history as PriceHistoryPoint[] | undefined;
+        const cloudHistory = last7DayHistoryByItem[baseId];
+        const historyFromCloud: SparklineHistoryPoint[] | undefined = cloudHistory?.map(point => ({
+          date: point.date,
+          price: point.price
+        }));
+        const historyFromLocal = cachedEntry?.history as SparklineHistoryPoint[] | undefined;
+        const history = historyFromCloud && historyFromCloud.length > 0 ? historyFromCloud : historyFromLocal;
 
         // Calculate trend using real history when available
         const trendData = price > 0
@@ -367,8 +634,47 @@ export async function loadPrices(): Promise<void> {
       .sort((a, b) => a.name.localeCompare(b.name));
     
     allPriceItems = allItems;
+    if (selectedBaseId && !allPriceItems.some(item => item.baseId === selectedBaseId)) {
+      selectedBaseId = null;
+      detailRequestVersion += 1;
+      setDetailViewMode(false);
+      if (detailChart) {
+        detailChart.destroy();
+        detailChart = null;
+      }
+    }
     applyFilters();
     renderPrices();
+
+    // Fetch cloud 7-day history in background (non-blocking) to keep page snappy.
+    const now = Date.now();
+    const shouldRefreshHistory = last7HistoryLeagueId !== currentLeagueId
+      || now - last7HistoryLoadedAt > HISTORY_REFRESH_INTERVAL_MS
+      || Object.keys(last7DayHistoryByItem).length === 0;
+
+    if (shouldRefreshHistory) {
+      const requestVersion = ++listHistoryRequestVersion;
+      void electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 7 })
+        .then(historyByItem => {
+          if (requestVersion !== listHistoryRequestVersion) return;
+          last7DayHistoryByItem = historyByItem ?? {};
+          last7HistoryLoadedAt = Date.now();
+          last7HistoryLeagueId = currentLeagueId;
+          applyCloud7DayHistoryToTable();
+
+          if (selectedBaseId) {
+            const history = getDetailHistoryForItem(selectedBaseId);
+            detailHistoryCache.set(`${currentLeagueId}:${selectedBaseId}`, history);
+            renderDetailChart(getRangeFilteredHistory(history, selectedHistoryRangeDays));
+          }
+        })
+        .catch(error => {
+          if (requestVersion !== listHistoryRequestVersion) return;
+          console.error('Failed to fetch 7-day table history:', error);
+        });
+    } else {
+      applyCloud7DayHistoryToTable();
+    }
   } catch (error) {
     console.error('Failed to load prices:', error);
   }
@@ -411,6 +717,10 @@ export function filterPrices(searchTerm: string): void {
  */
 export function filterByGroup(group: string): void {
   currentGroup = group;
+  if (isDetailViewOpen) {
+    detailRequestVersion += 1;
+    setDetailViewMode(false);
+  }
   
   // Update sidebar active state
   document.querySelectorAll('.prices-sidebar-item').forEach(item => {
@@ -453,6 +763,10 @@ export function initPrices(): void {
   const searchInput = document.getElementById('pricesSearchInput') as HTMLInputElement;
   const clearSearch = document.getElementById('pricesClearSearch') as HTMLButtonElement;
   const sortHeaders = document.querySelectorAll('.prices-table th[data-sort]');
+  const pricesBody = document.getElementById('pricesTableBody');
+  const seasonSelect = document.getElementById('pricesSeasonSelect') as HTMLSelectElement | null;
+  const detailBackBtn = document.getElementById('pricesDetailBackBtn');
+  const historyRangeButtons = document.querySelectorAll('.prices-history-range-btn');
   
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -480,6 +794,53 @@ export function initPrices(): void {
       const column = header.getAttribute('data-sort');
       if (column) {
         handleSort(column);
+      }
+    });
+  });
+
+  if (pricesBody) {
+    pricesBody.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      const row = target.closest('tr[data-base-id]') as HTMLElement | null;
+      const baseId = row?.getAttribute('data-base-id');
+      if (baseId) {
+        void showItemDetail(baseId);
+      }
+    });
+  }
+
+  if (seasonSelect) {
+    currentLeagueId = seasonSelect.value;
+    seasonSelect.addEventListener('change', () => {
+      currentLeagueId = seasonSelect.value;
+      detailHistoryCache.clear();
+      listHistoryRequestVersion += 1;
+      last7DayHistoryByItem = {};
+      last90DayHistoryByItem = {};
+      last7HistoryLoadedAt = 0;
+      last7HistoryLeagueId = '';
+      last90HistoryLoadedAt = 0;
+      last90HistoryLeagueId = '';
+      last90HistoryFetchPromise = null;
+      void loadPrices();
+      if (selectedBaseId) {
+        void showItemDetail(selectedBaseId);
+      }
+    });
+  }
+
+  if (detailBackBtn) {
+    detailBackBtn.addEventListener('click', () => {
+      detailRequestVersion += 1;
+      setDetailViewMode(false);
+    });
+  }
+
+  historyRangeButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const range = Number((button as HTMLElement).getAttribute('data-range'));
+      if (range === 7 || range === 30 || range === 90) {
+        setHistoryRange(range);
       }
     });
   });
@@ -515,6 +876,8 @@ export function initPrices(): void {
   
   // Initial load if page is already active
   if (pricesPage?.classList.contains('active')) {
+    setHistoryRange(7);
+    setDetailViewMode(false);
     loadPrices();
   }
   

@@ -825,6 +825,21 @@ ipcMain.handle('get-price-cache', () => {
   return inventoryManager.getPriceCacheAsObject();
 });
 
+ipcMain.handle('get-price-history', async (_event, payload: { baseId: string; leagueId?: string; maxDays?: number }) => {
+  if (!priceSyncService) return [];
+  const baseId = payload?.baseId ?? '';
+  const leagueId = (payload?.leagueId || currentLeagueId).trim() || currentLeagueId;
+  const maxDays = typeof payload?.maxDays === 'number' ? payload.maxDays : 120;
+  return priceSyncService.getPriceHistory({ baseId, leagueId, maxDays });
+});
+
+ipcMain.handle('get-price-history-batch', async (_event, payload?: { leagueId?: string; maxDays?: number }) => {
+  if (!priceSyncService) return {};
+  const leagueId = (payload?.leagueId || currentLeagueId).trim() || currentLeagueId;
+  const maxDays = typeof payload?.maxDays === 'number' ? payload.maxDays : 7;
+  return priceSyncService.getPriceHistoryBatch({ leagueId, maxDays });
+});
+
 ipcMain.handle('get-map-events', () => {
   return parseMapEvents();
 });
