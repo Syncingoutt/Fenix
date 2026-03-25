@@ -5,6 +5,71 @@ import { renderHourGraph } from '../graph/hourGraphRenderer.js';
 
 let renderInventory: () => void;
 let renderBreakdown: () => void;
+let exportButtonBound = false;
+
+interface ExportSessionItem {
+  itemName: string;
+  itemQuantity: number;
+}
+
+interface ExportSessionData {
+  duration: number;
+  items: ExportSessionItem[];
+}
+
+function parseItemsFromInventorySnapshot(inventorySnapshot: string): ExportSessionItem[] {
+  if (!inventorySnapshot) return [];
+
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = inventorySnapshot;
+
+  const rows = tempDiv.querySelectorAll('.item-row');
+  const aggregated = new Map<string, number>();
+
+  rows.forEach(row => {
+    const labelEl = row.querySelector('.item-label');
+    const quantityEl = row.querySelector('.item-quantity');
+    const itemName = labelEl?.textContent?.trim() || '';
+    const quantityText = quantityEl?.textContent?.replace(/,/g, '').trim() || '';
+    const itemQuantity = Number(quantityText);
+
+    if (!itemName || Number.isNaN(itemQuantity) || itemQuantity <= 0) return;
+
+    aggregated.set(itemName, (aggregated.get(itemName) || 0) + itemQuantity);
+  });
+
+  return Array.from(aggregated.entries())
+    .map(([itemName, itemQuantity]) => ({ itemName, itemQuantity }))
+    .sort((a, b) => b.itemQuantity - a.itemQuantity);
+}
+
+function buildExportSessionData(): ExportSessionData | null {
+  const hourlyBuckets = getHourlyBuckets();
+  if (!hourlyBuckets.length) return null;
+
+  const duration = hourlyBuckets.reduce((sum, bucket) => sum + (bucket.duration || 0), 0);
+  const lastBucket = hourlyBuckets[hourlyBuckets.length - 1];
+  const items = parseItemsFromInventorySnapshot(lastBucket.inventorySnapshot);
+
+  return { duration, items };
+}
+
+function exportHourlySessionJson(): void {
+  const exportData = buildExportSessionData();
+  if (!exportData) return;
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const fileName = `hourly-session-${timestamp}.json`;
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const downloadUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(downloadUrl);
+}
 
 export function initBreakdownModal(
   inventoryRenderer: () => void,
@@ -12,6 +77,11 @@ export function initBreakdownModal(
 ): void {
   renderInventory = inventoryRenderer;
   renderBreakdown = breakdownRenderer;
+
+  if (!exportButtonBound) {
+    document.getElementById('exportSessionJson')?.addEventListener('click', exportHourlySessionJson);
+    exportButtonBound = true;
+  }
 }
 
 /**

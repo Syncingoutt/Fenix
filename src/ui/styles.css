@@ -1806,8 +1806,32 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   border-top: calc(2px * var(--scale)) solid var(--border);
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: calc(12px * var(--scale));
   margin: calc(120px * var(--scale)) calc(-32px * var(--scale)) calc(-32px * var(--scale)) calc(-32px * var(--scale));
   border-radius: 0 0 calc(16px * var(--scale)) calc(16px * var(--scale));
+}
+
+.breakdown-export-btn {
+  padding: calc(12px * var(--scale)) calc(24px * var(--scale));
+  background: transparent;
+  color: var(--text);
+  border: calc(1px * var(--scale)) solid var(--border);
+  border-radius: calc(8px * var(--scale));
+  font-size: calc(var(--text-medium) * var(--text-scale));
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.breakdown-export-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(calc(-2px * var(--scale)));
+}
+
+.breakdown-export-btn:active {
+  transform: translateY(0);
 }
 
 .breakdown-close-btn {
