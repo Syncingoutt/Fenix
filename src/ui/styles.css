@@ -3900,7 +3900,10 @@ body.overlay-widget {
   justify-content: space-between;
   align-items: center;
   gap: calc(1rem * var(--scale));
-  padding: 0 calc(2rem * var(--scale));
+  max-width: calc(1440px * var(--scale));
+  margin: 0 calc(2rem * var(--scale));
+  padding: 0 calc(22px * var(--scale));
+  box-sizing: border-box;
 }
 
 .app-ideas-page-actions {
@@ -3915,7 +3918,7 @@ body.overlay-widget {
   border: calc(2px * var(--scale)) solid var(--border);
   border-radius: calc(8px * var(--scale));
   max-width: calc(1440px * var(--scale));
-  width: 100%;
+  width: auto;
   height: 800px;
   margin: 0 calc(2rem * var(--scale));
   overflow: auto;
