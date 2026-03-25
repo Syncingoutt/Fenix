@@ -35,6 +35,7 @@ import { initSetupModal } from './renderer/modals/setupModal.js';
 
 // Settings & Updates
 import { initSettingsManager } from './renderer/settings/settingsManager.js';
+import { initAppIdeasPage } from './renderer/appIdeas/appIdeasPage.js';
 
 // DOM & Events
 import { initUIState, wealthValueEl, wealthHourlyEl, timerEl, avgTimePerMapEl, hourlyTimerEl, startHourlyBtn, stopHourlyBtn, pauseHourlyBtn, resumeHourlyBtn } from './renderer/dom/domElements.js';
@@ -179,6 +180,7 @@ async function initialize(): Promise<void> {
   
   // Initialize settings manager and get settings menu state
   const settingsMenuState = initSettingsManager();
+  initAppIdeasPage(settingsMenuState);
   initSettingsModal(renderInventory, () => renderBreakdown(renderInventory), updateStats, settingsMenuState);
   
   // Initialize wealth trackers with DOM elements and callbacks

@@ -105,8 +105,8 @@ export function initUIEvents(
     const activePage = document.getElementById(`page-${pageId}`);
     if (activePage) activePage.classList.add('active');
 
-    // Hide header for history and settings pages using CSS class
-    if ((pageId === 'history' || pageId === 'settings') && header) {
+    // Hide header for full-page views opened outside top nav.
+    if ((pageId === 'history' || pageId === 'settings' || pageId === 'app-ideas') && header) {
       header.classList.add('hidden');
       if (pageId === 'history') {
         renderHistoryPage();
