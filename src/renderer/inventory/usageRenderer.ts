@@ -54,8 +54,12 @@ export function renderUsageSection(): void {
       const priceCacheEntry = priceCache[baseId];
       const price = priceCacheEntry?.price ?? 0;
 
-      // Get item name from inventory if available, otherwise from database
-      const itemName = item?.itemName ?? itemDatabase[baseId]?.name ?? `Unknown Item (${baseId})`;
+      const dbEntry = itemDatabase[baseId];
+      if (!dbEntry) {
+        continue;
+      }
+
+      const itemName = item?.itemName ?? dbEntry.name;
 
       usageItems.push({
         baseId,

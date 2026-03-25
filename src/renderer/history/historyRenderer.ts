@@ -690,16 +690,19 @@ function renderUsage(): void {
     // Render usage from snapshot data for this specific session
     const usageItems: Array<{ baseId: string; name: string; quantity: number; price: number; total: number }> = [];
 
+    const itemDatabase = getItemDatabase();
+
     for (const [baseId, usageData] of Object.entries(usageSnapshot)) {
       const used = usageData.used || 0;
       if (used <= 0) continue; // Skip items not used
 
+      const dbEntry = itemDatabase[baseId];
+      if (!dbEntry) continue;
+
       const price = priceCache[baseId]?.price || 0;
       const total = used * price;
 
-      // Get item name from item database
-      const itemDatabase = getItemDatabase();
-      const name = itemDatabase[baseId]?.name || `Unknown (${baseId})`;
+      const name = dbEntry.name;
 
       usageItems.push({
         baseId,
@@ -768,20 +771,21 @@ function renderUsage(): void {
     const usageSnapshot = bucket.usageSnapshot || {};
     const priceCache = bucket.pricesSnapshot || {};
 
+    const itemDatabase = getItemDatabase();
+
     for (const [baseId, usageData] of Object.entries(usageSnapshot)) {
       const used = usageData.used || 0;
       if (used <= 0) continue; // Skip items not used
+
+      const dbEntry = itemDatabase[baseId];
+      if (!dbEntry) continue;
 
       const price = priceCache[baseId]?.price || 0;
       const total = used * price;
 
       if (!aggregatedUsage[baseId]) {
-        // Get item name from item database
-        const itemDatabase = getItemDatabase();
-        const name = itemDatabase[baseId]?.name || `Unknown (${baseId})`;
-
         aggregatedUsage[baseId] = {
-          name,
+          name: dbEntry.name,
           quantity: 0,
           price,
           total: 0,
@@ -910,6 +914,7 @@ function aggregateBuckets(buckets: { inventorySnapshot: string }[]): { [baseId: 
 async function renderAggregatedInventory(items: { [baseId: string]: { name: string; quantity: number; price: number; total: number; iconPath?: string } }, selectedDate: string): Promise<string> {
   // Always load price cache to access price history
   const priceCache = await electronAPI.getPriceCache();
+  const itemDatabase = getItemDatabase();
 
   // Check if selected date is today (using local date, not UTC)
   const now = new Date();
@@ -917,7 +922,11 @@ async function renderAggregatedInventory(items: { [baseId: string]: { name: stri
   const isToday = selectedDate === today;
 
   // First, calculate all prices and totals for filtering
-  const itemsWithPrices = Object.entries(items).map(([baseId, item]) => {
+  const itemsWithPrices = Object.entries(items)
+    .filter(([baseId]) => itemDatabase[baseId] != null)
+    .map(([baseId, item]) => {
+    const displayName = itemDatabase[baseId].name;
+    const itemResolved = { ...item, name: displayName };
     let price: number;
     let total: number;
 
@@ -952,7 +961,7 @@ async function renderAggregatedInventory(items: { [baseId: string]: { name: stri
       total = item.total;
     }
 
-    return { baseId, item, price, total };
+    return { baseId, item: itemResolved, price, total };
   });
 
   // Filter by search query

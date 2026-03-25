@@ -24,7 +24,8 @@ import { passesPriceFilters } from '../utils/filters.js';
  * Get items to display based on current mode (realtime vs hourly)
  */
 export function getDisplayItems(): InventoryItem[] {
-  const currentItems = getCurrentItems();
+  const itemDatabase = getItemDatabase();
+  const currentItems = getCurrentItems().filter(item => itemDatabase[item.baseId] != null);
   const wealthMode = getWealthMode();
   const isHourlyActive = getIsHourlyActive();
   
@@ -126,7 +127,8 @@ export function getSortedAndFilteredItems(): InventoryItem[] {
  */
 export function getPageLabel(item: InventoryItem): string {
   if (item.pageId === null || item.slotId === null) return '';
-  const pagePrefix = item.pageId === 102 ? 'P1' : item.pageId === 103 ? 'P2' : `P${item.pageId}`;
+  const pagePrefix =
+    item.pageId === 100 ? 'P0' : item.pageId === 102 ? 'P1' : item.pageId === 103 ? 'P2' : `P${item.pageId}`;
   const slotNumber = item.slotId + 1;
   return `${pagePrefix}:${slotNumber}`;
 }

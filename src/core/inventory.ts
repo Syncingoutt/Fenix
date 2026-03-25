@@ -46,13 +46,18 @@ export class InventoryManager {
 
     for (const entry of instanceMap.values()) {
       const itemData = this.itemDatabase[entry.baseId];
-      
-      // Skip untradable items (default to tradable if not specified for backwards compatibility)
-      if (itemData && itemData.tradable === false) {
+
+      // Skip unknown baseIds (not in item database)
+      if (!itemData) {
         continue;
       }
-      
-      const itemName = itemData ? itemData.name : `Unknown Item (${entry.baseId})`;
+
+      // Skip untradable items (default to tradable if not specified for backwards compatibility)
+      if (itemData.tradable === false) {
+        continue;
+      }
+
+      const itemName = itemData.name;
 
       if (this.inventory.has(entry.baseId)) {
         const existing = this.inventory.get(entry.baseId)!;
@@ -129,9 +134,8 @@ export class InventoryManager {
   getInventory(): InventoryItem[] {
     return Array.from(this.inventory.values())
       .filter(item => {
-        // Filter out untradable items (default to tradable if not specified)
         const itemData = this.itemDatabase[item.baseId];
-        return !itemData || itemData.tradable !== false;
+        return itemData != null && itemData.tradable !== false;
       })
       .sort((a, b) => {
         const nameCompare = a.itemName.localeCompare(b.itemName);

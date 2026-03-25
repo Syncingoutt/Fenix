@@ -232,6 +232,11 @@ function extractBaseId(fullId: string): string {
   return fullId.split('_')[0];
 }
 
+/** Bag pages we read from the game log (100 = fates / arcana; 102–103 = main stash tabs). */
+function isTrackedBagPage(pageId: number | null): boolean {
+  return pageId === 100 || pageId === 102 || pageId === 103;
+}
+
 /**
  * Parse a BagMgr@:InitBagData line
  * Format: BagMgr@:InitBagData PageId = 102 SlotId = 1 ConfigBaseId = 100300 Num = 320
@@ -242,8 +247,7 @@ function parseInitBagDataLine(line: string): ParsedLogEntry | null {
   const pageMatch = line.match(/PageId\s*=\s*(\d+)/);
   const pageId = pageMatch ? parseInt(pageMatch[1]) : null;
   
-  // Only process PageId 102 and 103
-  if (pageId !== 102 && pageId !== 103) {
+  if (!isTrackedBagPage(pageId)) {
     return null;
   }
 
@@ -303,7 +307,7 @@ export function parseLogLine(line: string): ParsedLogEntry | null {
   const pageMatch = line.match(/in\s+PageId\s*=\s*(\d+)/) || line.match(/PageId\s*=\s*(\d+)/);
   const pageId = pageMatch ? parseInt(pageMatch[1]) : null;
   
-  if (pageId !== 102 && pageId !== 103) {
+  if (!isTrackedBagPage(pageId)) {
     return null;
   }
 
@@ -361,7 +365,7 @@ export function readLogFile(): ParsedLogEntry[] {
     }
   }
 
-  // If we found a ResetItemsLayout event, capture BagMgr@:InitBagData entries for both pages
+  // If we found a ResetItemsLayout event, capture BagMgr@:InitBagData entries for tracked pages
   // AND also capture any ItemChange entries (like PickItems) that come after
   if (lastResetItemsLayoutStart !== -1 && lastResetItemsLayoutEnd !== -1) {
     const entries: ParsedLogEntry[] = [];
@@ -369,8 +373,9 @@ export function readLogFile(): ParsedLogEntry[] {
     // Look for InitBagData entries after the ResetItemsLayout end
     // Search until we hit another ResetItemsLayout start, or reach end of file
     // Use a larger initial window (500 lines) to ensure we capture all InitBagData entries
-    // for pages 102 and 103, but continue searching if needed
+    // for pages 100, 102, and 103, but continue searching if needed
     const initialSearchEnd = Math.min(lastResetItemsLayoutEnd + 500, lines.length);
+    let foundInitBagData100 = false;
     let foundInitBagData102 = false;
     let foundInitBagData103 = false;
     
@@ -383,7 +388,7 @@ export function readLogFile(): ParsedLogEntry[] {
         break;
       }
       
-      // Parse InitBagData entries for PageId 102 and 103
+      // Parse InitBagData entries for PageId 100, 102, and 103
       const parsed = parseInitBagDataLine(line);
       if (parsed) {
         // Check if we already have this slot (avoid duplicates)
@@ -401,14 +406,15 @@ export function readLogFile(): ParsedLogEntry[] {
           entries.push(parsed);
         }
         
+        if (parsed.pageId === 100) foundInitBagData100 = true;
         if (parsed.pageId === 102) foundInitBagData102 = true;
         if (parsed.pageId === 103) foundInitBagData103 = true;
       }
     }
     
-    // If we didn't find InitBagData for both pages in initial window, continue searching
+    // If we didn't find InitBagData for every tracked page in initial window, continue searching
     // This handles cases where there are many items or other log entries between InitBagData lines
-    if (!foundInitBagData102 || !foundInitBagData103) {
+    if (!foundInitBagData100 || !foundInitBagData102 || !foundInitBagData103) {
       for (let i = initialSearchEnd; i < lines.length; i++) {
         const line = lines[i];
         
@@ -417,7 +423,7 @@ export function readLogFile(): ParsedLogEntry[] {
           break;
         }
         
-        // Parse InitBagData entries for PageId 102 and 103
+        // Parse InitBagData entries for PageId 100, 102, and 103
         const parsed = parseInitBagDataLine(line);
         if (parsed) {
           // Check if we already have this slot (avoid duplicates)
@@ -435,13 +441,14 @@ export function readLogFile(): ParsedLogEntry[] {
             entries.push(parsed);
           }
           
+          if (parsed.pageId === 100) foundInitBagData100 = true;
           if (parsed.pageId === 102) foundInitBagData102 = true;
           if (parsed.pageId === 103) foundInitBagData103 = true;
         }
         
-        // Stop if we've found InitBagData for both pages and no more relevant entries likely
-        // Continue a bit more to catch any stragglers (check 50 more lines after finding both)
-        if (foundInitBagData102 && foundInitBagData103) {
+        // Stop if we've found InitBagData for all tracked pages and no more relevant entries likely
+        // Continue a bit more to catch any stragglers (check 50 more lines after finding all)
+        if (foundInitBagData100 && foundInitBagData102 && foundInitBagData103) {
           let checkMore = false;
           for (let j = i + 1; j < Math.min(i + 50, lines.length); j++) {
             if (lines[j].includes('BagMgr@:InitBagData')) {
@@ -519,21 +526,26 @@ export function readLogFile(): ParsedLogEntry[] {
   }
 
   // Fall back to normal processing (find last reset for each page)
+  let lastReset100 = -1;
   let lastReset102 = -1;
   let lastReset103 = -1;
 
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
+    if (line.includes('ItemChange@ Reset PageId=100') && lastReset100 === -1) {
+      lastReset100 = i;
+    }
     if (line.includes('ItemChange@ Reset PageId=102') && lastReset102 === -1) {
       lastReset102 = i;
     }
     if (line.includes('ItemChange@ Reset PageId=103') && lastReset103 === -1) {
       lastReset103 = i;
     }
-    if (lastReset102 !== -1 && lastReset103 !== -1) break;
+    if (lastReset100 !== -1 && lastReset102 !== -1 && lastReset103 !== -1) break;
   }
 
   const startIndex = Math.min(
+    lastReset100 === -1 ? Infinity : lastReset100,
     lastReset102 === -1 ? Infinity : lastReset102,
     lastReset103 === -1 ? Infinity : lastReset103
   );
