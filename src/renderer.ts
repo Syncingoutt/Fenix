@@ -27,6 +27,7 @@ import { initStyle1GraphHeaderLayout } from './renderer/layout/style1GraphHeader
 // Modals
 import { showBreakdownModal, initBreakdownModal, closeBreakdownModal } from './renderer/modals/breakdownModal.js';
 import { initUpdatePanel } from './renderer/updates/updatePanel.js';
+import { initStrategiesCompendiumLink } from './renderer/strategies/strategiesPage.js';
 import { initSettingsModal, closeSettingsModal } from './renderer/modals/settingsModal.js';
 import { initSyncConsentModal } from './renderer/modals/syncConsentModal.js';
 import { initSyncDisableConfirmModal } from './renderer/modals/syncDisableConfirmModal.js';
@@ -171,6 +172,7 @@ async function initialize(): Promise<void> {
   // Initialize modals
   initBreakdownModal(renderInventory, () => renderBreakdown(renderInventory));
   initUpdatePanel();
+  initStrategiesCompendiumLink();
   initSetupModal(loadInventory);
   initSyncConsentModal();
   initSyncDisableConfirmModal();
