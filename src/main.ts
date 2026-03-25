@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { autoUpdater } from 'electron-updater';
 import { loadItemDatabase, loadPriceCache, savePriceCache, PriceCacheEntry } from './core/database';
-import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings, getLogPath, parseMapEvents, resetMapEventPosition, getWindowBounds, saveWindowBounds, getOverlayBounds, saveOverlayBounds, getOverlayOpacity, saveOverlayOpacity } from './core/logParser';
+import { readLogFile, parseLogLine, getLogSize, readLogFromPosition, setLogPath, isLogPathConfigured, initLogParser, getSettings, saveSettings, getLogPath, parseMapEvents, resetMapEventPosition, getWindowBounds, saveWindowBounds, getOverlayBounds, saveOverlayBounds, getOverlayOpacity, saveOverlayOpacity, hasCompletedOnboarding, markOnboardingCompleted } from './core/logParser';
 import { InventoryManager } from './core/inventory';
 import { processPriceCheckData } from './core/priceTracker';
 import { ensureLogSizeLimit } from './core/logParser';
@@ -656,8 +656,8 @@ app.whenReady().then(async () => {
     });
   }
   
-  // Check if log path is configured, if not, show setup dialog
-  if (!isLogPathConfigured()) {
+  // Show onboarding only once for first-time users
+  if (!hasCompletedOnboarding()) {
     if (mainWindow) {
       mainWindow.webContents.once('did-finish-load', () => {
         mainWindow?.webContents.send('show-log-path-setup');
@@ -1077,6 +1077,7 @@ ipcMain.handle('select-log-file', async () => {
   if (!result.canceled && result.filePaths.length > 0) {
     const selectedPath = result.filePaths[0];
     setLogPath(selectedPath);
+    markOnboardingCompleted();
     
     // Reload inventory with new path
     const logEntries = readLogFile();

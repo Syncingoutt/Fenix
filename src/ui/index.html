@@ -512,6 +512,7 @@
                             <div class="settings-path-text" id="logPathHelperText">Not set</div>
                           </div>
                           <button class="settings-action-btn settings-path-btn settings-inline-action-btn" id="changeLogPathBtn">Change File Path</button>
+                          <button class="settings-action-btn settings-path-btn settings-path-help-btn" id="logPathHelpBtn">Help</button>
                         </div>
                       </div>
                     </div>
@@ -768,26 +769,53 @@
       </div>
     </div>
 
-    <!-- Log Path Setup Modal (First Launch) -->
+    <!-- First-time Onboarding Modal -->
     <div class="setup-modal" id="setupModal">
       <div class="setup-modal-content">
+        <button class="setup-modal-close-btn" id="setupModalCloseBtn" aria-label="Close onboarding">×</button>
         <div class="setup-modal-header">
           <div class="setup-modal-title">Welcome to Fenix</div>
-          <div class="setup-modal-subtitle">Initial Setup Required</div>
+          <div class="setup-modal-subtitle">Quick setup before tracking starts</div>
         </div>
         
         <div class="setup-modal-body">
-          <div class="setup-modal-message">
-            Please select the <strong>UE_Game.log</strong> file from your Torchlight Infinite installation.
-            <br><br>
-            This file is typically located at:
-            <br>
-            <code>[Steam Library]\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_Game.log</code>
+          <div class="setup-modal-intro">
+            Follow these steps once to start tracking your inventory and FE.
           </div>
-        </div>
 
-        <div class="setup-modal-actions">
-          <button class="setup-btn setup-btn-primary" id="setupBtnSelect">Select Log File</button>
+          <div class="setup-steps">
+            <div class="setup-step">
+              <div class="setup-step-index">1</div>
+              <div class="setup-step-content">
+                <div class="setup-step-title">Select your <strong>UE_game.log</strong> file path</div>
+                <div class="setup-step-description">
+                  Default folder:
+                  <code>\\SteamLibrary\\steamapps\\common\\Torchlight Infinite\\UE_game\\TorchLight\\Saved\\Logs\\UE_game.log</code>
+                </div>
+                <button class="setup-btn setup-btn-primary" id="setupBtnSelect">Select Log File</button>
+              </div>
+            </div>
+
+            <div class="setup-step">
+              <div class="setup-step-index">2</div>
+              <div class="setup-step-content">
+                <div class="setup-step-title">Open Torchlight Infinite and enable logs</div>
+                <div class="setup-step-description">
+                  Go to <strong>Other</strong> and click <strong>Enable Log</strong>. You need to do this each time you launch the game.
+                </div>
+              </div>
+            </div>
+
+            <div class="setup-step">
+              <div class="setup-step-index">3</div>
+              <div class="setup-step-content">
+                <div class="setup-step-title">Sort any inventory page in-game</div>
+                <div class="setup-step-description">
+                  Make sure the page has at least 1 item, otherwise logs do not update.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

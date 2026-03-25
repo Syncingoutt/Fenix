@@ -6,6 +6,7 @@ import { formatKeybind } from '../utils/formatting.js';
 import { getCurrentItems } from '../state/inventoryState.js';
 import { resizeGraph } from '../graph/graphManager.js';
 import { showSyncDisableConfirmModal } from './syncDisableConfirmModal.js';
+import { showSetupModal } from './setupModal.js';
 import { updateUsernameDisplay } from '../settings/settingsManager.js';
 
 declare const electronAPI: ElectronAPI;
@@ -43,6 +44,7 @@ const usernameHelperText = document.getElementById('usernameHelperText') as HTML
 const cloudSyncCheckbox = document.getElementById('cloudSyncCheckbox') as HTMLInputElement | null;
 const cloudSyncHelperText = document.getElementById('cloudSyncHelperText') as HTMLElement | null;
 const changeLogPathBtn = document.getElementById('changeLogPathBtn') as HTMLButtonElement | null;
+const logPathHelpBtn = document.getElementById('logPathHelpBtn') as HTMLButtonElement | null;
 const logPathHelperText = document.getElementById('logPathHelperText') as HTMLElement | null;
 const layoutStyle1Radio = document.getElementById('layoutStyle1Radio') as HTMLInputElement | null;
 const layoutStyle2Radio = document.getElementById('layoutStyle2Radio') as HTMLInputElement | null;
@@ -504,6 +506,12 @@ export function initSettingsModal(
       if (selectedPath && logPathHelperText) {
         logPathHelperText.textContent = `${selectedPath}`;
       }
+    });
+  }
+
+  if (logPathHelpBtn) {
+    logPathHelpBtn.addEventListener('click', () => {
+      showSetupModal();
     });
   }
   

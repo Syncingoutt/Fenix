@@ -110,6 +110,27 @@ export function setLogPath(logPath: string): void {
 }
 
 /**
+ * Check if user has already completed onboarding.
+ * Migration-safe: if an existing user already has a saved log path, treat onboarding as complete.
+ */
+export function hasCompletedOnboarding(): boolean {
+  const config = loadConfig();
+  if (config.onboardingCompleted === true) {
+    return true;
+  }
+  return typeof config.logPath === 'string' && config.logPath.trim() !== '';
+}
+
+/**
+ * Mark onboarding flow as completed in config.
+ */
+export function markOnboardingCompleted(): void {
+  const config = loadConfig();
+  config.onboardingCompleted = true;
+  saveConfig(config);
+}
+
+/**
  * Check if log path is configured
  */
 export function isLogPathConfigured(): boolean {

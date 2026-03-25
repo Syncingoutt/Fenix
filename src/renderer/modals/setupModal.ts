@@ -6,6 +6,7 @@ declare const electronAPI: ElectronAPI;
 
 const setupModal = document.getElementById('setupModal')!;
 const setupBtnSelect = document.getElementById('setupBtnSelect') as HTMLButtonElement;
+const setupModalCloseBtn = document.getElementById('setupModalCloseBtn') as HTMLButtonElement | null;
 
 let loadInventory: () => Promise<void>;
 
@@ -28,6 +29,13 @@ export function hideSetupModal(): void {
  */
 export function initSetupModal(inventoryLoader: () => Promise<void>): void {
   loadInventory = inventoryLoader;
+
+  // Close onboarding modal
+  if (setupModalCloseBtn) {
+    setupModalCloseBtn.addEventListener('click', () => {
+      hideSetupModal();
+    });
+  }
 
   // Log file selection button
   setupBtnSelect.addEventListener('click', async () => {
