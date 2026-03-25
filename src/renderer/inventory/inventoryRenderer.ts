@@ -100,6 +100,8 @@ export function updateSortIndicators(): void {
     // Set content - include help icon for Price column
     if (sortType === 'priceUnit') {
       (el as HTMLElement).innerHTML = 'Price' + PRICE_HELP_ICON_HTML;
+    } else if (sortType === 'quantity') {
+      (el as HTMLElement).textContent = 'Quantity';
     } else {
       (el as HTMLElement).textContent = 'Total';
     }

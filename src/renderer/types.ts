@@ -115,7 +115,7 @@ export interface ItemDatabase {
 }
 
 export type WealthMode = 'realtime' | 'hourly';
-export type SortBy = 'priceUnit' | 'priceTotal';
+export type SortBy = 'priceUnit' | 'priceTotal' | 'quantity';
 export type SortOrder = 'asc' | 'desc';
 export type UpdateType = 'available' | 'downloaded';
 

@@ -26,7 +26,7 @@ let compareWithToday = false;
 let historySearchQuery: string = '';
 
 // Sort state
-let historySortBy: 'priceUnit' | 'priceTotal' = 'priceTotal';
+let historySortBy: 'priceUnit' | 'priceTotal' | 'quantity' = 'priceTotal';
 let historySortOrder: 'asc' | 'desc' = 'desc';
 
 // Track if event listeners have been initialized
@@ -158,8 +158,22 @@ function initializeEventListeners(): void {
   }
 
   // Sort header click handlers
+  const quantitySort = document.querySelector('.history-inventory-col-quantity[data-sort]') as HTMLElement;
   const priceSingleSort = document.querySelector('.history-inventory-price-single[data-sort]') as HTMLElement;
   const priceTotalSort = document.querySelector('.history-inventory-price-total[data-sort]') as HTMLElement;
+
+  if (quantitySort) {
+    quantitySort.addEventListener('click', () => {
+      if (historySortBy === 'quantity') {
+        historySortOrder = historySortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        historySortBy = 'quantity';
+        historySortOrder = 'desc';
+      }
+      renderInventory();
+      updateSortIndicators();
+    });
+  }
 
   if (priceSingleSort) {
     priceSingleSort.addEventListener('click', () => {
@@ -974,8 +988,18 @@ async function renderAggregatedInventory(items: { [baseId: string]: { name: stri
 
   // Sort items
   filteredItems.sort((a, b) => {
-    const aValue = historySortBy === 'priceUnit' ? a.price : a.total;
-    const bValue = historySortBy === 'priceUnit' ? b.price : b.total;
+    const aValue =
+      historySortBy === 'priceUnit'
+        ? a.price
+        : historySortBy === 'quantity'
+          ? a.item.quantity
+          : a.total;
+    const bValue =
+      historySortBy === 'priceUnit'
+        ? b.price
+        : historySortBy === 'quantity'
+          ? b.item.quantity
+          : b.total;
     const comparison = aValue - bValue;
     return historySortOrder === 'desc' ? -comparison : comparison;
   });
@@ -1072,8 +1096,17 @@ function formatInteger(num: number): string {
  * Update sort indicators in the UI
  */
 function updateSortIndicators(): void {
+  const quantitySort = document.querySelector('.history-inventory-col-quantity[data-sort]') as HTMLElement;
   const priceSingleSort = document.querySelector('.history-inventory-price-single[data-sort]') as HTMLElement;
   const priceTotalSort = document.querySelector('.history-inventory-price-total[data-sort]') as HTMLElement;
+
+  if (quantitySort) {
+    quantitySort.classList.remove('sort-active', 'sort-asc', 'sort-desc');
+    if (historySortBy === 'quantity') {
+      quantitySort.classList.add('sort-active');
+      quantitySort.classList.add(historySortOrder === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  }
 
   if (priceSingleSort) {
     priceSingleSort.classList.remove('sort-active', 'sort-asc', 'sort-desc');

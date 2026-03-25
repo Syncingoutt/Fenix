@@ -925,6 +925,10 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   text-align: center;
 }
 
+.item-quantity[data-sort] {
+  position: relative;
+}
+
 .item-price {
   display: contents;
 }
@@ -1000,7 +1004,8 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
 
 /* Only header items should be clickable for sorting */
 .item-single,
-.item-total {
+.item-total,
+.item-quantity[data-sort] {
   cursor: pointer;
 }
 
@@ -1090,7 +1095,8 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
 
 /* Sorting arrows */
 .item-single::after,
-.item-total::after {
+.item-total::after,
+.item-quantity[data-sort]::after {
   content: "";
   position: absolute;
   right: 0;
@@ -1107,23 +1113,27 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
 }
 
 .item-single[data-sort]::after,
-.item-total[data-sort]::after {
+.item-total[data-sort]::after,
+.item-quantity[data-sort]::after {
   opacity: 0.5;
 }
 
 .item-single.sort-active::after,
-.item-total.sort-active::after {
+.item-total.sort-active::after,
+.item-quantity.sort-active::after {
   opacity: 1;
 }
 
 /* Flip the arrow upside down for ascending sort */
 .item-single.sort-asc::after,
-.item-total.sort-asc::after {
+.item-total.sort-asc::after,
+.item-quantity.sort-asc::after {
   transform: translateY(-50%) rotate(180deg);
 }
 
 .item-single.sort-desc::after,
-.item-total.sort-desc::after {
+.item-total.sort-desc::after,
+.item-quantity.sort-desc::after {
   transform: translateY(-50%) rotate(0deg);
 }
 
@@ -4778,6 +4788,13 @@ body.overlay-widget {
   display: contents;
 }
 
+.history-inventory-col-quantity[data-sort] {
+  position: relative;
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
 .history-inventory-price-single,
 .history-inventory-price-total {
   position: relative;
@@ -4812,7 +4829,8 @@ body.overlay-widget {
 
 /* History sorting arrows */
 .history-inventory-price-single::after,
-.history-inventory-price-total::after {
+.history-inventory-price-total::after,
+.history-inventory-col-quantity[data-sort]::after {
   content: "";
   position: absolute;
   right: 0;
@@ -4829,28 +4847,33 @@ body.overlay-widget {
 }
 
 .history-inventory-price-single[data-sort]::after,
-.history-inventory-price-total[data-sort]::after {
+.history-inventory-price-total[data-sort]::after,
+.history-inventory-col-quantity[data-sort]::after {
   opacity: 0.5;
 }
 
 .history-inventory-price-single.sort-active::after,
-.history-inventory-price-total.sort-active::after {
+.history-inventory-price-total.sort-active::after,
+.history-inventory-col-quantity.sort-active::after {
   opacity: 1;
 }
 
 /* Flip arrow upside down for ascending sort */
 .history-inventory-price-single.sort-asc::after,
-.history-inventory-price-total.sort-asc::after {
+.history-inventory-price-total.sort-asc::after,
+.history-inventory-col-quantity.sort-asc::after {
   transform: translateY(-50%) rotate(180deg);
 }
 
 .history-inventory-price-single.sort-desc::after,
-.history-inventory-price-total.sort-desc::after {
+.history-inventory-price-total.sort-desc::after,
+.history-inventory-col-quantity.sort-desc::after {
   transform: translateY(-50%) rotate(0deg);
 }
 
 .history-inventory-price-single.sort-active,
-.history-inventory-price-total.sort-active {
+.history-inventory-price-total.sort-active,
+.history-inventory-col-quantity.sort-active {
   opacity: 1;
 }
 

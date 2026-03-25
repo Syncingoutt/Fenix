@@ -115,6 +115,8 @@ export function getSortedAndFilteredItems(): InventoryItem[] {
       const totalA = applyTax((a.price ?? 0) * a.totalQuantity, a.baseId);
       const totalB = applyTax((b.price ?? 0) * b.totalQuantity, b.baseId);
       comparison = totalA - totalB;
+    } else if (currentSortBy === 'quantity') {
+      comparison = a.totalQuantity - b.totalQuantity;
     }
     return currentSortOrder === 'asc' ? comparison : -comparison;
   });
