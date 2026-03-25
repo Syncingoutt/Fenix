@@ -825,7 +825,6 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
   grid-template-columns: 1fr auto;
   gap: calc(1rem * var(--scale));
   padding: calc(0.75rem * var(--scale));
-  margin-top: calc(0.5rem * var(--scale));
   border-top: 1px solid var(--border);
   background-color: var(--bg-shade);
   font-size: calc(var(--text-small) * var(--text-scale));
