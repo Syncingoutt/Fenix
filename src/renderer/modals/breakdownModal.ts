@@ -8,6 +8,7 @@ let renderBreakdown: () => void;
 let exportButtonBound = false;
 
 interface ExportSessionItem {
+  itemId: string;
   itemName: string;
   itemQuantity: number;
 }
@@ -24,22 +25,32 @@ function parseItemsFromInventorySnapshot(inventorySnapshot: string): ExportSessi
   tempDiv.innerHTML = inventorySnapshot;
 
   const rows = tempDiv.querySelectorAll('.item-row');
-  const aggregated = new Map<string, number>();
+  const aggregated = new Map<string, { itemId: string; itemName: string; itemQuantity: number }>();
 
   rows.forEach(row => {
     const labelEl = row.querySelector('.item-label');
     const quantityEl = row.querySelector('.item-quantity');
+    const iconEl = row.querySelector('.item-icon') as HTMLImageElement | null;
     const itemName = labelEl?.textContent?.trim() || '';
     const quantityText = quantityEl?.textContent?.replace(/,/g, '').trim() || '';
     const itemQuantity = Number(quantityText);
+    const iconPath = iconEl?.getAttribute('src') || '';
+    const baseIdMatch = iconPath.match(/assets\/(.+?)\.webp/);
+    const itemId = baseIdMatch?.[1] || '';
 
-    if (!itemName || Number.isNaN(itemQuantity) || itemQuantity <= 0) return;
+    if (!itemName || !itemId || Number.isNaN(itemQuantity) || itemQuantity <= 0) return;
 
-    aggregated.set(itemName, (aggregated.get(itemName) || 0) + itemQuantity);
+    const existing = aggregated.get(itemId);
+    if (!existing) {
+      aggregated.set(itemId, { itemId, itemName, itemQuantity });
+      return;
+    }
+
+    existing.itemQuantity += itemQuantity;
+    aggregated.set(itemId, existing);
   });
 
-  return Array.from(aggregated.entries())
-    .map(([itemName, itemQuantity]) => ({ itemName, itemQuantity }))
+  return Array.from(aggregated.values())
     .sort((a, b) => b.itemQuantity - a.itemQuantity);
 }
 
