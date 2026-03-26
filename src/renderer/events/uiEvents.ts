@@ -237,7 +237,7 @@ function onWheelRouteToInventory(e: WheelEvent): void {
     : Number.POSITIVE_INFINITY;
   const stopScrollY = Math.max(0, graphTopInDocument - STYLE1_SCROLL_STOP_FROM_GRAPH_TOP_OFFSET_PX);
   const beforeStopPoint = window.scrollY < stopScrollY;
-  const atHandoffPoint = !beforeStopPoint;
+  const maxPageScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
   const maxInventoryScroll = Math.max(0, invSection.scrollHeight - invSection.clientHeight);
   const inventoryCanScrollDown = invSection.scrollTop < maxInventoryScroll - 1;
   const inventoryCanScrollUp = invSection.scrollTop > 1;
@@ -252,15 +252,31 @@ function onWheelRouteToInventory(e: WheelEvent): void {
     let remainingDelta = deltaY;
     if (beforeStopPoint) {
       const remainingToStop = Math.max(0, stopScrollY - window.scrollY);
-      const pageDelta = Math.min(remainingDelta, remainingToStop);
+      const remainingPageScroll = Math.max(0, maxPageScrollY - window.scrollY);
+      const pageDelta = Math.min(remainingDelta, remainingToStop, remainingPageScroll);
       if (pageDelta > 0) {
         window.scrollBy({ top: pageDelta, left: 0, behavior: 'auto' });
       }
       remainingDelta -= pageDelta;
     }
 
-    if (remainingDelta > 0 && atHandoffPoint && inventoryCanScrollDown) {
-      invSection.scrollTop = Math.min(maxInventoryScroll, invSection.scrollTop + remainingDelta);
+    const reachedStopPoint = window.scrollY >= stopScrollY - 1;
+    const pageCannotScrollFurther = window.scrollY >= maxPageScrollY - 1;
+    const atHandoffPoint = reachedStopPoint || pageCannotScrollFurther;
+    if (remainingDelta > 0 && atHandoffPoint && maxInventoryScroll > 0) {
+      const previousInventoryScrollTop = invSection.scrollTop;
+      const nextInventoryScrollTop = Math.min(maxInventoryScroll, previousInventoryScrollTop + remainingDelta);
+      invSection.scrollTop = nextInventoryScrollTop;
+      remainingDelta -= Math.max(0, nextInventoryScrollTop - previousInventoryScrollTop);
+    }
+
+    // If inventory has reached its bottom, continue normal page scrolling.
+    if (remainingDelta > 0) {
+      const remainingPageScroll = Math.max(0, maxPageScrollY - window.scrollY);
+      const pageDelta = Math.min(remainingDelta, remainingPageScroll);
+      if (pageDelta > 0) {
+        window.scrollBy({ top: pageDelta, left: 0, behavior: 'auto' });
+      }
     }
     return;
   }
