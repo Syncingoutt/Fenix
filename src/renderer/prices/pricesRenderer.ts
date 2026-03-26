@@ -43,7 +43,8 @@ let last90DayHistoryByItem: PriceHistoryByItem = {};
 let isDetailViewOpen = false;
 let selectedHistoryRangeDays: 7 | 30 | 90 = 7;
 let detailRequestVersion = 0;
-let listHistoryRequestVersion = 0;
+let list7HistoryRequestVersion = 0;
+let detail90HistoryRequestVersion = 0;
 let last7HistoryLoadedAt = 0;
 let last7HistoryLeagueId = '';
 let last90HistoryLoadedAt = 0;
@@ -383,10 +384,10 @@ async function ensure90DayHistoryLoaded(): Promise<void> {
   if (isFresh) return;
   if (last90HistoryFetchPromise) return last90HistoryFetchPromise;
 
-  const requestVersion = ++listHistoryRequestVersion;
+  const requestVersion = ++detail90HistoryRequestVersion;
   last90HistoryFetchPromise = electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 90 })
     .then(historyByItem => {
-      if (requestVersion !== listHistoryRequestVersion) return;
+      if (requestVersion !== detail90HistoryRequestVersion) return;
       last90DayHistoryByItem = historyByItem ?? {};
       last90HistoryLoadedAt = Date.now();
       last90HistoryLeagueId = currentLeagueId;
@@ -398,7 +399,7 @@ async function ensure90DayHistoryLoaded(): Promise<void> {
       }
     })
     .catch(error => {
-      if (requestVersion !== listHistoryRequestVersion) return;
+      if (requestVersion !== detail90HistoryRequestVersion) return;
       console.error('Failed to fetch 90-day detail history:', error);
     })
     .finally(() => {
@@ -653,10 +654,10 @@ export async function loadPrices(): Promise<void> {
       || Object.keys(last7DayHistoryByItem).length === 0;
 
     if (shouldRefreshHistory) {
-      const requestVersion = ++listHistoryRequestVersion;
+      const requestVersion = ++list7HistoryRequestVersion;
       void electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 7 })
         .then(historyByItem => {
-          if (requestVersion !== listHistoryRequestVersion) return;
+          if (requestVersion !== list7HistoryRequestVersion) return;
           last7DayHistoryByItem = historyByItem ?? {};
           last7HistoryLoadedAt = Date.now();
           last7HistoryLeagueId = currentLeagueId;
@@ -669,7 +670,7 @@ export async function loadPrices(): Promise<void> {
           }
         })
         .catch(error => {
-          if (requestVersion !== listHistoryRequestVersion) return;
+          if (requestVersion !== list7HistoryRequestVersion) return;
           console.error('Failed to fetch 7-day table history:', error);
         });
     } else {
@@ -814,7 +815,8 @@ export function initPrices(): void {
     seasonSelect.addEventListener('change', () => {
       currentLeagueId = seasonSelect.value;
       detailHistoryCache.clear();
-      listHistoryRequestVersion += 1;
+      list7HistoryRequestVersion += 1;
+      detail90HistoryRequestVersion += 1;
       last7DayHistoryByItem = {};
       last90DayHistoryByItem = {};
       last7HistoryLoadedAt = 0;
@@ -873,13 +875,12 @@ export function initPrices(): void {
     
     observer.observe(pricesPage, { attributes: true });
   }
-  
-  // Initial load if page is already active
-  if (pricesPage?.classList.contains('active')) {
-    setHistoryRange(7);
-    setDetailViewMode(false);
-    loadPrices();
-  }
+
+  // Warm prices data/history from app start, even off-page.
+  setHistoryRange(7);
+  setDetailViewMode(false);
+  void loadPrices();
+  void ensure90DayHistoryLoaded();
   
   // Listen for inventory updates to refresh prices
   electronAPI.onInventoryUpdate(() => {
