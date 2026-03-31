@@ -56,7 +56,8 @@ declare const Chart: any;
 
 /**
  * Calculate trend based on real price history when available.
- * Falls back to a simple timestamp-based heuristic if we only have a single point.
+ * When history is missing/insufficient, default to neutral to avoid
+ * showing a misleading synthetic negative trend.
  */
 function calculateTrendFromHistory(history: SparklineHistoryPoint[] | undefined, price: number, timestamp: number): { trend: 'up' | 'down' | 'neutral'; percent: number } {
   if (history && history.length >= 2) {
@@ -76,15 +77,7 @@ function calculateTrendFromHistory(history: SparklineHistoryPoint[] | undefined,
       return { trend: 'neutral', percent: 0 };
     }
   }
-
-  // Fallback: simple timestamp-based heuristic
-  const hoursSinceUpdate = (Date.now() - timestamp) / (1000 * 60 * 60);
-
-  if (hoursSinceUpdate < 6) {
-    return { trend: 'neutral', percent: 0 };
-  }
-
-  return { trend: 'down', percent: -1.5 };
+  return { trend: 'neutral', percent: 0 };
 }
 
 /**
