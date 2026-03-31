@@ -4,8 +4,6 @@
 
 <p>This project is not affiliated with or endorsed by XD (XD inc.) in any way.</p>
 
-<p><b>This project does not use the Chinese FE tracker DB; Meaning that some items might be missing, such as organs from Vorax, but all other items have been added.</b></p>
-
 <i>Disclaimer: Portions of this repository were created or refined using AI-assisted development tools. Cursor was used extensively for script writing. UI/UX design was made by me without the use of AI.</i>
 
 <h2>Setting it up</h2>
