@@ -1049,7 +1049,8 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
 
 .price-help-tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
+  bottom: auto;
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg-shade);
@@ -1071,10 +1072,11 @@ img:not(.header-logo-pic):not(.stat-fe-icon) {
 .price-help-tooltip::after {
   content: "";
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
+  border-bottom-color: var(--border);
 }
 
 .price-help-tooltip strong {

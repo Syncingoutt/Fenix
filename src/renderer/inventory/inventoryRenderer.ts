@@ -7,6 +7,7 @@ import { getCurrentSortBy, getCurrentSortOrder, isItemCountEnabled } from '../st
 import { applyTax } from '../utils/tax.js';
 import { getPriceAgeClass } from '../utils/formatting.js';
 import { renderUsageSection } from './usageRenderer.js';
+import { FLAME_ELEMENTIUM_ID } from '../constants.js';
 
 const PRICE_HELP_ICON_HTML = `
 <span class="price-help-icon">
@@ -52,7 +53,7 @@ export function renderInventory(): void {
       // Apply tax to total value (but not to base price)
       const totalValueAfterTax = totalValue !== null ? applyTax(totalValue, item.baseId) : null;
 
-      const priceAgeClass = getPriceAgeClass(item.priceTimestamp);
+      const priceAgeClass = item.baseId === FLAME_ELEMENTIUM_ID ? '' : getPriceAgeClass(item.priceTimestamp);
       const counted = isItemCountEnabled(item.baseId);
 
       return `
