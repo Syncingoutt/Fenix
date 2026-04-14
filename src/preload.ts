@@ -4,8 +4,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getInventory: () => ipcRenderer.invoke('get-inventory'),
   getItemDatabase: () => ipcRenderer.invoke('get-item-database'),
   getPriceCache: () => ipcRenderer.invoke('get-price-cache'),
-  getPriceHistory: (payload: { baseId: string; leagueId?: string; maxDays?: number }) => ipcRenderer.invoke('get-price-history', payload),
-  getPriceHistoryBatch: (payload?: { leagueId?: string; maxDays?: number }) => ipcRenderer.invoke('get-price-history-batch', payload),
+  getPriceHistory: (payload: { baseId: string; leagueId?: string; maxDays?: number; maxSnapshotDocs?: number }) => ipcRenderer.invoke('get-price-history', payload),
+  getPriceHistoryBatch: (payload?: { leagueId?: string; maxDays?: number; maxSnapshotDocs?: number }) => ipcRenderer.invoke('get-price-history-batch', payload),
   getMapEvents: () => ipcRenderer.invoke('get-map-events'),
   resetMapEvents: () => ipcRenderer.send('reset-map-events'),
   onInventoryUpdate: (callback: () => void) => {

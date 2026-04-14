@@ -12,6 +12,7 @@ declare const electronAPI: ElectronAPI;
 interface SparklineHistoryPoint {
   date: string;
   price: number;
+  timestamp?: number;
 }
 
 interface PriceItem {
@@ -26,6 +27,12 @@ interface PriceItem {
   history?: SparklineHistoryPoint[];
 }
 
+interface RenderRowData {
+  item: PriceItem;
+  history: SparklineHistoryPoint[] | undefined;
+  trendData: { trend: 'up' | 'down' | 'neutral'; percent: number };
+}
+
 let itemDatabase: ItemDatabase = {};
 let priceCache: PriceCache = {};
 let allPriceItems: PriceItem[] = [];
@@ -38,19 +45,23 @@ let currentLeagueId = 's11-vorax';
 let selectedBaseId: string | null = null;
 let detailChart: any = null;
 const detailHistoryCache = new Map<string, PriceHistoryPoint[]>();
+const detailHistoryLoadedKeys = new Set<string>();
 let last7DayHistoryByItem: PriceHistoryByItem = {};
-let last90DayHistoryByItem: PriceHistoryByItem = {};
 let isDetailViewOpen = false;
-let selectedHistoryRangeDays: 7 | 30 | 90 = 7;
+let detailFullHistory: PriceHistoryPoint[] = [];
+let detailRangeStartIndex = 0;
+let detailRangeEndIndex = 0;
 let detailRequestVersion = 0;
 let list7HistoryRequestVersion = 0;
 let detail90HistoryRequestVersion = 0;
 let last7HistoryLoadedAt = 0;
 let last7HistoryLeagueId = '';
-let last90HistoryLoadedAt = 0;
-let last90HistoryLeagueId = '';
-let last90HistoryFetchPromise: Promise<void> | null = null;
 const HISTORY_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const SPARKLINES_PER_FRAME = 24;
+const TREND_MIN_PERCENT = 1;
+let sparklineRenderRequestVersion = 0;
+const cloudSparklineHistoryCache = new Map<string, SparklineHistoryPoint[]>();
+let lastDetailChartSignature = '';
 
 declare const Chart: any;
 
@@ -59,25 +70,50 @@ declare const Chart: any;
  * When history is missing/insufficient, default to neutral to avoid
  * showing a misleading synthetic negative trend.
  */
-function calculateTrendFromHistory(history: SparklineHistoryPoint[] | undefined, price: number, timestamp: number): { trend: 'up' | 'down' | 'neutral'; percent: number } {
+function calculateTrendFromHistory(history: SparklineHistoryPoint[] | undefined): { trend: 'up' | 'down' | 'neutral'; percent: number } {
   if (history && history.length >= 2) {
-    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
-    const first = sorted[0];
-    const last = sorted[sorted.length - 1];
+    let first = history[0];
+    let last = history[0];
+    let firstOrder = getHistoryPointOrder(first, 0);
+    let lastOrder = firstOrder;
+
+    history.forEach((point, index) => {
+      const order = getHistoryPointOrder(point, index);
+      if (order < firstOrder) {
+        first = point;
+        firstOrder = order;
+      }
+      if (order > lastOrder || (order === lastOrder && index > 0)) {
+        last = point;
+        lastOrder = order;
+      }
+    });
 
     if (first.price > 0) {
       const diff = last.price - first.price;
       const percent = (diff / first.price) * 100;
 
-      if (percent > 0.01) {
+      if (percent >= TREND_MIN_PERCENT) {
         return { trend: 'up', percent };
-      } else if (percent < -0.01) {
+      } else if (percent <= -TREND_MIN_PERCENT) {
         return { trend: 'down', percent };
       }
       return { trend: 'neutral', percent: 0 };
     }
   }
   return { trend: 'neutral', percent: 0 };
+}
+
+function getHistoryPointOrder(point: SparklineHistoryPoint, index: number): number {
+  if (typeof point.timestamp === 'number' && Number.isFinite(point.timestamp)) {
+    return point.timestamp;
+  }
+  const parsedDate = Date.parse(point.date);
+  if (Number.isFinite(parsedDate)) {
+    // Keep stable order for points that share the same day string.
+    return parsedDate + index / 1000;
+  }
+  return index;
 }
 
 /**
@@ -92,6 +128,18 @@ function renderSparkline(canvas: HTMLCanvasElement, prices: number[], trend: 'up
   const padding = 2;
 
   ctx.clearRect(0, 0, width, height);
+
+  // Neutral trend should always render as a flat line.
+  if (trend === 'neutral') {
+    const y = height / 2;
+    ctx.strokeStyle = '#7E7E7E';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(padding, y);
+    ctx.lineTo(width - padding, y);
+    ctx.stroke();
+    return;
+  }
 
   // If we only have one price point, draw a flat line
   if (prices.length === 1) {
@@ -119,10 +167,14 @@ function renderSparkline(canvas: HTMLCanvasElement, prices: number[], trend: 'up
     dataPoints = prices;
   }
 
-  // Set color based on trend
-  const isPositive = trend === 'up' || (trend === 'neutral' && dataPoints[dataPoints.length - 1] >= dataPoints[0]);
-  ctx.strokeStyle = isPositive ? '#4CAF50' : '#F44336';
-  ctx.fillStyle = isPositive ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)';
+  // Set color based on trend (neutral already returned above).
+  if (trend === 'up') {
+    ctx.strokeStyle = '#4CAF50';
+    ctx.fillStyle = 'rgba(76, 175, 80, 0.1)';
+  } else {
+    ctx.strokeStyle = '#F44336';
+    ctx.fillStyle = 'rgba(244, 67, 54, 0.1)';
+  }
   ctx.lineWidth = 1.5;
 
   // Draw the line
@@ -156,8 +208,10 @@ function renderSparkline(canvas: HTMLCanvasElement, prices: number[], trend: 'up
  */
 function generateSparklineData(history: SparklineHistoryPoint[] | undefined, currentPrice: number): number[] {
   if (history && history.length > 0) {
-    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
-    return sorted.map(point => point.price);
+    return [...history]
+      .map((point, index) => ({ point, index }))
+      .sort((a, b) => getHistoryPointOrder(a.point, a.index) - getHistoryPointOrder(b.point, b.index))
+      .map(({ point }) => point.price);
   }
 
   // No history yet – show a flat line at current price (or 0 if no price)
@@ -195,19 +249,26 @@ function formatUpdatedAt(timestamp: number): string {
  */
 function renderPriceRow(item: PriceItem): string {
   const sparklineId = `sparkline-${item.baseId}`;
-  const sparklineData = generateSparklineData(item.history, item.price);
+  const displayHistory = getDisplayHistory(item);
+  const trendData = item.price > 0
+    ? calculateTrendFromHistory(displayHistory)
+    : { trend: 'neutral' as const, percent: 0 };
   
   // Get item icon - images are in assets folder with format {baseId}.webp
   const iconPath = `../../assets/${item.baseId}.webp`;
   
-  const trendClass = `trend-${item.trend}`;
+  const trendClass = `trend-${trendData.trend}`;
   const priceFormatted = formatPrice(item.price);
   const hasPrice = item.price > 0;
   
   // Apply price age class based on timestamp (same logic as inventory)
   const priceAgeClass = hasPrice ? getPriceAgeClass(item.timestamp) : '';
   const priceClass = hasPrice ? priceAgeClass : 'no-price';
-  const trendText = hasPrice ? `${item.trendPercent > 0 ? '+' : ''}${item.trendPercent.toFixed(0)}%` : '';
+  const trendText = hasPrice
+    ? (trendData.trend === 'neutral'
+      ? '0%'
+      : `${trendData.percent > 0 ? '+' : ''}${Math.round(trendData.percent)}%`)
+    : '';
   
   return `
     <tr class="prices-row" data-base-id="${item.baseId}">
@@ -226,8 +287,7 @@ function renderPriceRow(item: PriceItem): string {
       <td class="prices-col-sparkline">
         <div class="prices-sparkline-cell">
           <canvas id="${sparklineId}" class="prices-sparkline" width="80" height="28" 
-                  data-prices="${sparklineData.join(',')}" 
-                  data-trend="${item.trend}"></canvas>
+                  ></canvas>
           <span class="prices-trend ${trendClass}">${trendText}</span>
         </div>
       </td>
@@ -262,8 +322,8 @@ function sortPriceItems(items: PriceItem[], column: string, direction: 'asc' | '
         bVal = b.price;
         break;
       case 'trend':
-        aVal = a.trendPercent;
-        bVal = b.trendPercent;
+        aVal = getTrendPercentForSort(a);
+        bVal = getTrendPercentForSort(b);
         break;
       default:
         return 0;
@@ -303,21 +363,16 @@ export function renderPrices(): void {
   
   // Render rows
   tbody.innerHTML = sortedItems.map((item) => renderPriceRow(item)).join('');
-  
-  // Render sparklines after DOM is updated
-  setTimeout(() => {
-    sortedItems.forEach(item => {
-      const canvas = document.getElementById(`sparkline-${item.baseId}`) as HTMLCanvasElement;
-      if (canvas) {
-        const pricesStr = canvas.getAttribute('data-prices');
-        const trend = canvas.getAttribute('data-trend') as 'up' | 'down' | 'neutral';
-        if (pricesStr) {
-          const prices = pricesStr.split(',').map(p => parseFloat(p));
-          renderSparkline(canvas, prices, trend);
-        }
-      }
-    });
-  }, 0);
+
+  const renderData: RenderRowData[] = sortedItems.map(item => {
+    const history = getDisplayHistory(item);
+    const trendData = item.price > 0
+      ? calculateTrendFromHistory(history)
+      : { trend: 'neutral' as const, percent: 0 };
+    return { item, history, trendData };
+  });
+
+  scheduleSparklineRender(renderData);
 }
 
 function setDetailViewMode(open: boolean): void {
@@ -353,71 +408,131 @@ function getPricesChartTheme(): { primary: string; text: string; border: string;
   };
 }
 
-function getRangeFilteredHistory(points: PriceHistoryPoint[], days: 7 | 30 | 90): PriceHistoryPoint[] {
-  if (points.length === 0) return points;
-  const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
-  const filtered = points.filter(point => point.timestamp >= cutoffMs);
-  return filtered.length > 0 ? filtered : points.slice(-1);
-}
-
 function getDetailHistoryForItem(baseId: string): PriceHistoryPoint[] {
-  const history90 = last90DayHistoryByItem[baseId];
-  if (history90 && history90.length > 0) return history90;
+  const detailCache = detailHistoryCache.get(`${currentLeagueId}:${baseId}`);
+  if (detailCache && detailCache.length > 0) return detailCache;
   const history7 = last7DayHistoryByItem[baseId];
   if (history7 && history7.length > 0) return history7;
   return [];
 }
 
-async function ensure90DayHistoryLoaded(): Promise<void> {
-  const now = Date.now();
-  const isFresh = last90HistoryLeagueId === currentLeagueId
-    && now - last90HistoryLoadedAt <= HISTORY_REFRESH_INTERVAL_MS
-    && Object.keys(last90DayHistoryByItem).length > 0;
-
-  if (isFresh) return;
-  if (last90HistoryFetchPromise) return last90HistoryFetchPromise;
-
-  const requestVersion = ++detail90HistoryRequestVersion;
-  last90HistoryFetchPromise = electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 90 })
-    .then(historyByItem => {
-      if (requestVersion !== detail90HistoryRequestVersion) return;
-      last90DayHistoryByItem = historyByItem ?? {};
-      last90HistoryLoadedAt = Date.now();
-      last90HistoryLeagueId = currentLeagueId;
-
-      if (selectedBaseId) {
-        const history = getDetailHistoryForItem(selectedBaseId);
-        detailHistoryCache.set(`${currentLeagueId}:${selectedBaseId}`, history);
-        renderDetailChart(getRangeFilteredHistory(history, selectedHistoryRangeDays));
-      }
-    })
-    .catch(error => {
-      if (requestVersion !== detail90HistoryRequestVersion) return;
-      console.error('Failed to fetch 90-day detail history:', error);
-    })
-    .finally(() => {
-      last90HistoryFetchPromise = null;
-    });
-
-  return last90HistoryFetchPromise;
+function getDefaultRangeStartIndex(points: PriceHistoryPoint[]): number {
+  if (points.length === 0) return 0;
+  const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const start = points.findIndex(point => point.timestamp >= cutoffMs);
+  if (start >= 0) return start;
+  return Math.max(0, points.length - 1);
 }
 
-function setHistoryRange(rangeDays: 7 | 30 | 90): void {
-  selectedHistoryRangeDays = rangeDays;
-  const ranges: Array<7 | 30 | 90> = [7, 30, 90];
-  ranges.forEach(days => {
-    const button = document.querySelector(`.prices-history-range-btn[data-range="${days}"]`) as HTMLButtonElement | null;
-    if (!button) return;
-    button.classList.toggle('active', days === rangeDays);
-  });
+function getSelectedDetailPoints(): PriceHistoryPoint[] {
+  if (detailFullHistory.length === 0) return [];
+  const start = Math.max(0, Math.min(detailRangeStartIndex, detailFullHistory.length - 1));
+  const end = Math.max(start, Math.min(detailRangeEndIndex, detailFullHistory.length - 1));
+  return detailFullHistory.slice(start, end + 1);
+}
 
-  if (!selectedBaseId) return;
-  const cacheKey = `${currentLeagueId}:${selectedBaseId}`;
-  const history = detailHistoryCache.get(cacheKey) ?? getDetailHistoryForItem(selectedBaseId);
-  renderDetailChart(getRangeFilteredHistory(history, selectedHistoryRangeDays));
+function updateRangeControlsUi(): void {
+  const startInput = document.getElementById('pricesRangeStart') as HTMLInputElement | null;
+  const endInput = document.getElementById('pricesRangeEnd') as HTMLInputElement | null;
+  const label = document.getElementById('pricesRangeLabel');
+  const sliderShell = document.querySelector('.prices-range-slider-shell') as HTMLElement | null;
+  const total = detailFullHistory.length;
 
-  if (rangeDays > 7) {
-    void ensure90DayHistoryLoaded();
+  if (!startInput || !endInput || !label || !sliderShell) return;
+
+  if (total === 0) {
+    startInput.min = '0';
+    startInput.max = '0';
+    startInput.value = '0';
+    startInput.disabled = true;
+    endInput.min = '0';
+    endInput.max = '0';
+    endInput.value = '0';
+    endInput.disabled = true;
+    label.textContent = 'No data available';
+    sliderShell.style.setProperty('--prices-range-start', '0%');
+    sliderShell.style.setProperty('--prices-range-end', '100%');
+    return;
+  }
+
+  const maxIndex = total - 1;
+  startInput.disabled = false;
+  endInput.disabled = false;
+  startInput.min = '0';
+  startInput.max = String(maxIndex);
+  endInput.min = '0';
+  endInput.max = String(maxIndex);
+  startInput.value = String(detailRangeStartIndex);
+  endInput.value = String(detailRangeEndIndex);
+
+  const startPoint = detailFullHistory[detailRangeStartIndex];
+  const endPoint = detailFullHistory[detailRangeEndIndex];
+  label.textContent = `${formatDisplayDate(startPoint.timestamp)} - ${formatDisplayDate(endPoint.timestamp)} (${detailRangeEndIndex - detailRangeStartIndex + 1} checks)`;
+
+  const startPct = maxIndex === 0 ? 0 : (detailRangeStartIndex / maxIndex) * 100;
+  const endPct = maxIndex === 0 ? 100 : (detailRangeEndIndex / maxIndex) * 100;
+  sliderShell.style.setProperty('--prices-range-start', `${startPct}%`);
+  sliderShell.style.setProperty('--prices-range-end', `${endPct}%`);
+}
+
+function setActiveRangeHandle(handle: 'start' | 'end'): void {
+  const startInput = document.getElementById('pricesRangeStart') as HTMLInputElement | null;
+  const endInput = document.getElementById('pricesRangeEnd') as HTMLInputElement | null;
+  if (!startInput || !endInput) return;
+
+  if (handle === 'start') {
+    startInput.classList.add('prices-range-slider-active');
+    endInput.classList.remove('prices-range-slider-active');
+  } else {
+    endInput.classList.add('prices-range-slider-active');
+    startInput.classList.remove('prices-range-slider-active');
+  }
+}
+
+function applyDetailHistory(points: PriceHistoryPoint[], resetToDefaultRange: boolean): void {
+  detailFullHistory = [...points].sort((a, b) => a.timestamp - b.timestamp);
+  if (detailFullHistory.length === 0) {
+    detailRangeStartIndex = 0;
+    detailRangeEndIndex = 0;
+    updateRangeControlsUi();
+    renderDetailChart([]);
+    return;
+  }
+
+  if (resetToDefaultRange) {
+    detailRangeStartIndex = getDefaultRangeStartIndex(detailFullHistory);
+    detailRangeEndIndex = detailFullHistory.length - 1;
+  } else {
+    detailRangeEndIndex = Math.min(detailRangeEndIndex, detailFullHistory.length - 1);
+    detailRangeStartIndex = Math.min(detailRangeStartIndex, detailRangeEndIndex);
+  }
+
+  updateRangeControlsUi();
+  renderDetailChart(getSelectedDetailPoints());
+}
+
+async function ensureDetailHistoryLoaded(baseId: string): Promise<void> {
+  const cacheKey = `${currentLeagueId}:${baseId}`;
+  if (detailHistoryLoadedKeys.has(cacheKey)) return;
+
+  const requestVersion = ++detail90HistoryRequestVersion;
+
+  try {
+    const history = await electronAPI.getPriceHistory({
+      baseId,
+      leagueId: currentLeagueId,
+      maxDays: 90
+    });
+    if (requestVersion !== detail90HistoryRequestVersion) return;
+    detailHistoryCache.set(cacheKey, history ?? []);
+    detailHistoryLoadedKeys.add(cacheKey);
+
+    if (selectedBaseId === baseId) {
+      applyDetailHistory(history ?? [], true);
+    }
+  } catch (error) {
+    if (requestVersion !== detail90HistoryRequestVersion) return;
+    console.error('Failed to fetch item detail history:', error);
   }
 }
 
@@ -427,12 +542,12 @@ function renderDetailChart(points: PriceHistoryPoint[]): void {
   if (!chartCanvas || !emptyEl) return;
   const theme = getPricesChartTheme();
 
-  if (detailChart) {
-    detailChart.destroy();
-    detailChart = null;
-  }
-
   if (points.length === 0) {
+    if (detailChart) {
+      detailChart.destroy();
+      detailChart = null;
+    }
+    lastDetailChartSignature = '';
     emptyEl.textContent = 'No history yet for this item.';
     emptyEl.style.display = 'flex';
     return;
@@ -440,17 +555,32 @@ function renderDetailChart(points: PriceHistoryPoint[]): void {
 
   emptyEl.style.display = 'none';
   const sorted = [...points].sort((a, b) => a.timestamp - b.timestamp);
-  const labels = sorted.map(point => formatDisplayDate(point.timestamp));
+  const chartSignature = sorted.map(point => `${point.timestamp}:${point.price}`).join('|');
+  if (detailChart && chartSignature === lastDetailChartSignature) {
+    return;
+  }
+  lastDetailChartSignature = chartSignature;
+  const labels = sorted.map(point => point.timestamp);
   const values = sorted.map(point => point.price);
-  const tickLabels = labels.map((label, index) => {
-    if (index === 0 || index === labels.length - 1) return label;
-    return index % 2 === 0 ? label : '';
-  });
+  const pointRadius = sorted.length > 120 ? 0 : 3;
+
+  if (detailChart) {
+    detailChart.data.labels = labels;
+    const dataset = detailChart.data.datasets[0];
+    dataset.data = values;
+    dataset.borderColor = theme.primary;
+    dataset.backgroundColor = hexToRgba(theme.primary, 0.10);
+    dataset.pointRadius = pointRadius;
+    dataset.pointHoverRadius = pointRadius === 0 ? 3 : 4;
+    dataset.pointBackgroundColor = theme.primary;
+    detailChart.update('none');
+    return;
+  }
 
   detailChart = new Chart(chartCanvas.getContext('2d'), {
     type: 'line',
     data: {
-      labels: tickLabels,
+      labels,
       datasets: [{
         label: 'Price (FE)',
         data: values,
@@ -458,8 +588,8 @@ function renderDetailChart(points: PriceHistoryPoint[]): void {
         backgroundColor: hexToRgba(theme.primary, 0.10),
         fill: true,
         tension: 0.25,
-        pointRadius: 3,
-        pointHoverRadius: 4,
+        pointRadius,
+        pointHoverRadius: pointRadius === 0 ? 3 : 4,
         pointBackgroundColor: theme.primary,
         pointBorderWidth: 0
       }]
@@ -475,19 +605,55 @@ function renderDetailChart(points: PriceHistoryPoint[]): void {
           borderWidth: 1,
           titleColor: theme.text,
           bodyColor: theme.text,
-          displayColors: false
+          displayColors: false,
+          callbacks: {
+            title: (items: Array<{ label?: string | number }>) => {
+              const raw = items[0]?.label;
+              const timestamp = Number(raw);
+              if (!Number.isFinite(timestamp)) return String(raw ?? '');
+              return new Date(timestamp).toLocaleString();
+            }
+          }
         }
       },
       scales: {
         x: {
-          ticks: { color: theme.text, maxRotation: 0, autoSkip: false },
+          ticks: {
+            color: theme.text,
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: 10,
+            callback: function (this: { getLabelForValue: (value: number) => string }, value: number | string): string {
+              const tickIndex = arguments[1] as number;
+              if (tickIndex % 3 !== 0) {
+                return '';
+              }
+              const numericValue = typeof value === 'number' ? value : Number(value);
+              const label = this.getLabelForValue(numericValue);
+              const timestamp = Number(label);
+              if (!Number.isFinite(timestamp)) return '';
+              const date = new Date(timestamp);
+              if (date.getDate() === 1) {
+                return date.toLocaleDateString(undefined, { month: 'short' });
+              }
+              return String(date.getDate());
+            }
+          },
           border: { color: theme.border },
-          grid: { display: false }
+          grid: {
+            display: true,
+            color: 'rgba(126, 126, 126, 0.25)',
+            drawTicks: false
+          }
         },
         y: {
           ticks: { color: theme.text },
           border: { color: theme.border },
-          grid: { display: false },
+          grid: {
+            display: true,
+            color: 'rgba(126, 126, 126, 0.25)',
+            drawTicks: false
+          },
           beginAtZero: false
         }
       }
@@ -505,12 +671,15 @@ async function showItemDetail(baseId: string): Promise<void> {
   setDetailViewMode(true);
 
   const detailName = document.getElementById('pricesDetailName');
+  const pairDetailName = document.getElementById('pricesPairDetailName');
   const detailDescription = document.getElementById('pricesDetailDescription');
   const detailPrice = document.getElementById('pricesDetailPrice');
   const detailUpdated = document.getElementById('pricesDetailUpdated');
   const detailIcon = document.getElementById('pricesDetailIcon') as HTMLImageElement | null;
+  const pairDetailIcon = document.getElementById('pricesPairDetailIcon') as HTMLImageElement | null;
 
   if (detailName) detailName.textContent = selectedItem.name;
+  if (pairDetailName) pairDetailName.textContent = selectedItem.name;
   if (detailDescription) {
     detailDescription.textContent = `Placeholder: ${selectedItem.name} description and usage details will be added here.`;
   }
@@ -524,6 +693,14 @@ async function showItemDetail(baseId: string): Promise<void> {
       detailIcon.style.display = 'none';
     };
   }
+  if (pairDetailIcon) {
+    pairDetailIcon.src = `../../assets/${selectedItem.baseId}.webp`;
+    pairDetailIcon.alt = selectedItem.name;
+    pairDetailIcon.style.display = 'block';
+    pairDetailIcon.onerror = () => {
+      pairDetailIcon.style.display = 'none';
+    };
+  }
 
   const cacheKey = `${currentLeagueId}:${baseId}`;
   const immediateHistory = getDetailHistoryForItem(baseId);
@@ -533,34 +710,61 @@ async function showItemDetail(baseId: string): Promise<void> {
     return;
   }
 
-  renderDetailChart(getRangeFilteredHistory(immediateHistory, selectedHistoryRangeDays));
+  applyDetailHistory(immediateHistory, true);
 
-  // Always warm 90-day history in background so range switches are instant.
-  void ensure90DayHistoryLoaded();
+  // Load full point-level detail history in background.
+  void ensureDetailHistoryLoaded(baseId);
 }
 
 function applyCloud7DayHistoryToTable(): void {
-  allPriceItems = allPriceItems.map(item => {
-    const cloudHistory = last7DayHistoryByItem[item.baseId];
-    if (!cloudHistory || cloudHistory.length === 0) {
-      return item;
-    }
-
-    const history = cloudHistory.map(point => ({ date: point.date, price: point.price }));
-    const trendData = item.price > 0
-      ? calculateTrendFromHistory(history, item.price, item.timestamp)
-      : { trend: 'neutral' as const, percent: 0 };
-
-    return {
-      ...item,
-      history,
-      trend: trendData.trend,
-      trendPercent: trendData.percent
-    };
-  });
-
+  cloudSparklineHistoryCache.clear();
   applyFilters();
   renderPrices();
+}
+
+function getDisplayHistory(item: PriceItem): SparklineHistoryPoint[] | undefined {
+  const cloudHistory = last7DayHistoryByItem[item.baseId];
+  if (cloudHistory && cloudHistory.length > 0) {
+    const cached = cloudSparklineHistoryCache.get(item.baseId);
+    if (cached) return cached;
+
+    const mapped = cloudHistory.map(point => ({ date: point.date, price: point.price, timestamp: point.timestamp }));
+    cloudSparklineHistoryCache.set(item.baseId, mapped);
+    return mapped;
+  }
+
+  return item.history;
+}
+
+function getTrendPercentForSort(item: PriceItem): number {
+  if (item.price <= 0) return 0;
+  const history = getDisplayHistory(item);
+  return calculateTrendFromHistory(history).percent;
+}
+
+function scheduleSparklineRender(renderData: RenderRowData[]): void {
+  const requestVersion = ++sparklineRenderRequestVersion;
+  let index = 0;
+
+  const renderChunk = () => {
+    if (requestVersion !== sparklineRenderRequestVersion) return;
+
+    const chunkEnd = Math.min(index + SPARKLINES_PER_FRAME, renderData.length);
+    for (; index < chunkEnd; index += 1) {
+      const rowData = renderData[index];
+      const canvas = document.getElementById(`sparkline-${rowData.item.baseId}`) as HTMLCanvasElement | null;
+      if (!canvas) continue;
+
+      const prices = generateSparklineData(rowData.history, rowData.item.price);
+      renderSparkline(canvas, prices, rowData.trendData.trend);
+    }
+
+    if (index < renderData.length) {
+      requestAnimationFrame(renderChunk);
+    }
+  };
+
+  requestAnimationFrame(renderChunk);
 }
 
 /**
@@ -596,17 +800,12 @@ export async function loadPrices(): Promise<void> {
         const price = cachedEntry?.price ?? 0;
         const timestamp = cachedEntry?.timestamp ?? Date.now();
         const listingCount = cachedEntry?.listingCount;
-        const cloudHistory = last7DayHistoryByItem[baseId];
-        const historyFromCloud: SparklineHistoryPoint[] | undefined = cloudHistory?.map(point => ({
-          date: point.date,
-          price: point.price
-        }));
         const historyFromLocal = cachedEntry?.history as SparklineHistoryPoint[] | undefined;
-        const history = historyFromCloud && historyFromCloud.length > 0 ? historyFromCloud : historyFromLocal;
+        const history = historyFromLocal;
 
         // Calculate trend using real history when available
         const trendData = price > 0
-          ? calculateTrendFromHistory(history, price, timestamp)
+          ? calculateTrendFromHistory(history)
           : { trend: 'neutral' as const, percent: 0 };
         
         return {
@@ -648,7 +847,7 @@ export async function loadPrices(): Promise<void> {
 
     if (shouldRefreshHistory) {
       const requestVersion = ++list7HistoryRequestVersion;
-      void electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 7 })
+      void electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 7, maxSnapshotDocs: 160 })
         .then(historyByItem => {
           if (requestVersion !== list7HistoryRequestVersion) return;
           last7DayHistoryByItem = historyByItem ?? {};
@@ -658,8 +857,7 @@ export async function loadPrices(): Promise<void> {
 
           if (selectedBaseId) {
             const history = getDetailHistoryForItem(selectedBaseId);
-            detailHistoryCache.set(`${currentLeagueId}:${selectedBaseId}`, history);
-            renderDetailChart(getRangeFilteredHistory(history, selectedHistoryRangeDays));
+            applyDetailHistory(history, false);
           }
         })
         .catch(error => {
@@ -760,7 +958,8 @@ export function initPrices(): void {
   const pricesBody = document.getElementById('pricesTableBody');
   const seasonSelect = document.getElementById('pricesSeasonSelect') as HTMLSelectElement | null;
   const detailBackBtn = document.getElementById('pricesDetailBackBtn');
-  const historyRangeButtons = document.querySelectorAll('.prices-history-range-btn');
+  const rangeStartInput = document.getElementById('pricesRangeStart') as HTMLInputElement | null;
+  const rangeEndInput = document.getElementById('pricesRangeEnd') as HTMLInputElement | null;
   
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -808,15 +1007,17 @@ export function initPrices(): void {
     seasonSelect.addEventListener('change', () => {
       currentLeagueId = seasonSelect.value;
       detailHistoryCache.clear();
+      detailHistoryLoadedKeys.clear();
+      detailFullHistory = [];
+      detailRangeStartIndex = 0;
+      detailRangeEndIndex = 0;
+      updateRangeControlsUi();
       list7HistoryRequestVersion += 1;
       detail90HistoryRequestVersion += 1;
       last7DayHistoryByItem = {};
-      last90DayHistoryByItem = {};
+      cloudSparklineHistoryCache.clear();
       last7HistoryLoadedAt = 0;
       last7HistoryLeagueId = '';
-      last90HistoryLoadedAt = 0;
-      last90HistoryLeagueId = '';
-      last90HistoryFetchPromise = null;
       void loadPrices();
       if (selectedBaseId) {
         void showItemDetail(selectedBaseId);
@@ -831,14 +1032,31 @@ export function initPrices(): void {
     });
   }
 
-  historyRangeButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      const range = Number((button as HTMLElement).getAttribute('data-range'));
-      if (range === 7 || range === 30 || range === 90) {
-        setHistoryRange(range);
-      }
+  if (rangeStartInput) {
+    rangeStartInput.addEventListener('pointerdown', () => setActiveRangeHandle('start'));
+    rangeStartInput.addEventListener('focus', () => setActiveRangeHandle('start'));
+    rangeStartInput.addEventListener('input', () => {
+      if (detailFullHistory.length === 0) return;
+      const nextStart = Number(rangeStartInput.value);
+      if (!Number.isFinite(nextStart)) return;
+      detailRangeStartIndex = Math.max(0, Math.min(nextStart, detailRangeEndIndex));
+      updateRangeControlsUi();
+      renderDetailChart(getSelectedDetailPoints());
     });
-  });
+  }
+
+  if (rangeEndInput) {
+    rangeEndInput.addEventListener('pointerdown', () => setActiveRangeHandle('end'));
+    rangeEndInput.addEventListener('focus', () => setActiveRangeHandle('end'));
+    rangeEndInput.addEventListener('input', () => {
+      if (detailFullHistory.length === 0) return;
+      const nextEnd = Number(rangeEndInput.value);
+      if (!Number.isFinite(nextEnd)) return;
+      detailRangeEndIndex = Math.min(detailFullHistory.length - 1, Math.max(nextEnd, detailRangeStartIndex));
+      updateRangeControlsUi();
+      renderDetailChart(getSelectedDetailPoints());
+    });
+  }
   
   // Sidebar group filter handlers
   const sidebarItems = document.querySelectorAll('.prices-sidebar-item');
@@ -869,11 +1087,10 @@ export function initPrices(): void {
     observer.observe(pricesPage, { attributes: true });
   }
 
-  // Warm prices data/history from app start, even off-page.
-  setHistoryRange(7);
+  // Keep startup fast by lazy-loading prices only when the page is opened.
+  setActiveRangeHandle('end');
+  updateRangeControlsUi();
   setDetailViewMode(false);
-  void loadPrices();
-  void ensure90DayHistoryLoaded();
   
   // Listen for inventory updates to refresh prices
   electronAPI.onInventoryUpdate(() => {

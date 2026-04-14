@@ -825,19 +825,21 @@ ipcMain.handle('get-price-cache', () => {
   return inventoryManager.getPriceCacheAsObject();
 });
 
-ipcMain.handle('get-price-history', async (_event, payload: { baseId: string; leagueId?: string; maxDays?: number }) => {
+ipcMain.handle('get-price-history', async (_event, payload: { baseId: string; leagueId?: string; maxDays?: number; maxSnapshotDocs?: number }) => {
   if (!priceSyncService) return [];
   const baseId = payload?.baseId ?? '';
   const leagueId = (payload?.leagueId || currentLeagueId).trim() || currentLeagueId;
   const maxDays = typeof payload?.maxDays === 'number' ? payload.maxDays : 120;
-  return priceSyncService.getPriceHistory({ baseId, leagueId, maxDays });
+  const maxSnapshotDocs = typeof payload?.maxSnapshotDocs === 'number' ? payload.maxSnapshotDocs : undefined;
+  return priceSyncService.getPriceHistory({ baseId, leagueId, maxDays, maxSnapshotDocs });
 });
 
-ipcMain.handle('get-price-history-batch', async (_event, payload?: { leagueId?: string; maxDays?: number }) => {
+ipcMain.handle('get-price-history-batch', async (_event, payload?: { leagueId?: string; maxDays?: number; maxSnapshotDocs?: number }) => {
   if (!priceSyncService) return {};
   const leagueId = (payload?.leagueId || currentLeagueId).trim() || currentLeagueId;
   const maxDays = typeof payload?.maxDays === 'number' ? payload.maxDays : 7;
-  return priceSyncService.getPriceHistoryBatch({ leagueId, maxDays });
+  const maxSnapshotDocs = typeof payload?.maxSnapshotDocs === 'number' ? payload.maxSnapshotDocs : undefined;
+  return priceSyncService.getPriceHistoryBatch({ leagueId, maxDays, maxSnapshotDocs });
 });
 
 ipcMain.handle('get-map-events', () => {

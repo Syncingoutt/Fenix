@@ -3,7 +3,7 @@ import * as path from 'path';
 import { app } from 'electron';
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { initializeAuth, signInAnonymously, Auth } from 'firebase/auth';
-import { getFirestore, Firestore, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, query, where, documentId } from 'firebase/firestore';
+import { getFirestore, Firestore, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { PriceCache, PriceCacheEntry } from './database';
 
 export interface PriceUpdateEntry {
@@ -80,7 +80,6 @@ const QUEUE_INTERVAL_MS = 500; // 2 updates/sec -> 120/min
 const MAX_RETRIES = 3;
 const SYNC_CACHE_TTL_MS = 5000;
 const USERNAME_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-const HISTORY_SNAPSHOT_CACHE_TTL_MS = 5 * 60 * 1000;
 
 type PersistenceValue = Record<string, unknown> | string;
 type StorageListener = (value: PersistenceValue | null) => void;
@@ -93,17 +92,6 @@ interface FilePersistenceInternal {
   _remove(key: string): Promise<void>;
   _addListener(key: string, listener: StorageListener): void;
   _removeListener(key: string, listener: StorageListener): void;
-}
-
-interface HistorySnapshotDoc {
-  id: string;
-  idAsMillis: number | null;
-  payload: Record<string, unknown>;
-}
-
-interface HistorySnapshotCacheEntry {
-  loadedAt: number;
-  docs: HistorySnapshotDoc[];
 }
 
 const AUTH_PERSISTENCE_FILE = 'firebase_auth.json';
@@ -312,7 +300,6 @@ export class PriceSyncService {
   private configErrorLogged = false;
   private lastSyncCursorMs: number | null = null;
   private currentConsent: SyncConsent = 'pending';
-  private historySnapshotCache = new Map<string, HistorySnapshotCacheEntry>();
 
   getConfigPath(): string {
     return getConfigPath();
@@ -574,52 +561,44 @@ export class PriceSyncService {
     }
 
     const leagueId = (options.leagueId || 's11-vorax').trim() || 's11-vorax';
-    const maxSnapshotDocs = Number.isFinite(options.maxSnapshotDocs) ? Math.max(50, Math.min(2000, Math.floor(options.maxSnapshotDocs!))) : 1000;
     const maxDays = Number.isFinite(options.maxDays) ? Math.max(1, Math.min(180, Math.floor(options.maxDays!))) : 120;
     const cutoffMs = Date.now() - maxDays * 24 * 60 * 60 * 1000;
+    const maxEventDocs = Number.isFinite(options.maxSnapshotDocs)
+      ? Math.max(100, Math.min(20000, Math.floor(options.maxSnapshotDocs!)))
+      : null;
 
     try {
-      const snapshotDocs = await this.getHistorySnapshotDocs(leagueId, cutoffMs);
-      const latestByDay = new Map<string, PriceHistoryPoint>();
-
-      for (let i = 0; i < snapshotDocs.length && i < maxSnapshotDocs; i += 1) {
-        const snapshotDoc = snapshotDocs[i];
-        if (snapshotDoc.idAsMillis !== null && snapshotDoc.idAsMillis < cutoffMs) {
-          break;
-        }
-
-        const payload = snapshotDoc.payload;
-        const data = payload.data;
-        if (!data || typeof data !== 'object') {
-          continue;
-        }
-
-        const itemEntry = (data as Record<string, Record<string, unknown>>)[baseId];
-        if (!itemEntry || typeof itemEntry !== 'object') {
-          continue;
-        }
-
-        const price = typeof itemEntry.price === 'number' ? itemEntry.price : null;
-        const timestamp = typeof itemEntry.timestamp === 'number' ? itemEntry.timestamp : null;
-        if (price === null || timestamp === null || timestamp < cutoffMs) {
-          continue;
-        }
-
-        const dayKey = new Date(timestamp).toISOString().slice(0, 10);
-        const listingCount = typeof itemEntry.listingCount === 'number' ? itemEntry.listingCount : undefined;
-        const existing = latestByDay.get(dayKey);
-
-        if (!existing || timestamp > existing.timestamp) {
-          latestByDay.set(dayKey, {
-            date: dayKey,
+      const eventsRef = collection(this.db!, 'priceChecks', leagueId, 'items', baseId, 'events');
+      const eventsQuery = maxEventDocs !== null
+        ? query(
+            eventsRef,
+            where('timestamp', '>=', cutoffMs),
+            orderBy('timestamp', 'asc'),
+            limit(maxEventDocs)
+          )
+        : query(
+            eventsRef,
+            where('timestamp', '>=', cutoffMs),
+            orderBy('timestamp', 'asc')
+          );
+      const snapshot = await getDocs(eventsQuery);
+      const points: PriceHistoryPoint[] = snapshot.docs
+        .map(docSnap => {
+          const data = docSnap.data() as Record<string, unknown>;
+          const price = typeof data.price === 'number' ? data.price : null;
+          const timestamp = typeof data.timestamp === 'number' ? data.timestamp : null;
+          if (price === null || timestamp === null) return null;
+          const listingCount = typeof data.listingCount === 'number' ? data.listingCount : undefined;
+          return {
+            date: new Date(timestamp).toISOString().slice(0, 10),
             timestamp,
             price,
             ...(listingCount !== undefined ? { listingCount } : {})
-          });
-        }
-      }
+          } as PriceHistoryPoint;
+        })
+        .filter((point): point is PriceHistoryPoint => point !== null);
 
-      return Array.from(latestByDay.values()).sort((a, b) => a.timestamp - b.timestamp);
+      return points;
     } catch (error) {
       console.error('Failed to fetch price history:', error);
       return [];
@@ -633,105 +612,51 @@ export class PriceSyncService {
     }
 
     const leagueId = (options?.leagueId || 's11-vorax').trim() || 's11-vorax';
-    const maxSnapshotDocs = Number.isFinite(options?.maxSnapshotDocs) ? Math.max(50, Math.min(2000, Math.floor(options!.maxSnapshotDocs!))) : 1000;
-    const maxDays = Number.isFinite(options?.maxDays) ? Math.max(1, Math.min(180, Math.floor(options!.maxDays!))) : 7;
-    const cutoffMs = Date.now() - maxDays * 24 * 60 * 60 * 1000;
 
     try {
-      const snapshotDocs = await this.getHistorySnapshotDocs(leagueId, cutoffMs);
-      const latestByItemAndDay = new Map<string, Map<string, PriceHistoryPoint>>();
+      const result: PriceHistoryByItem = {};
+      const itemsRef = collection(this.db!, 'prices7d', leagueId, 'items');
+      const snapshot = await getDocs(itemsRef);
+      snapshot.docs.forEach(docSnap => {
+        const baseId = docSnap.id;
+        if (!/^\d+$/.test(baseId)) return;
 
-      for (let i = 0; i < snapshotDocs.length && i < maxSnapshotDocs; i += 1) {
-        const snapshotDoc = snapshotDocs[i];
-        if (snapshotDoc.idAsMillis !== null && snapshotDoc.idAsMillis < cutoffMs) {
-          break;
-        }
-
-        const payload = snapshotDoc.payload;
-        const data = payload.data;
-        if (!data || typeof data !== 'object') {
-          continue;
-        }
-
-        Object.entries(data as Record<string, Record<string, unknown>>).forEach(([baseId, itemEntry]) => {
-          if (!itemEntry || typeof itemEntry !== 'object') return;
-          if (!/^\d+$/.test(baseId)) return;
-
-          const price = typeof itemEntry.price === 'number' ? itemEntry.price : null;
-          const timestamp = typeof itemEntry.timestamp === 'number' ? itemEntry.timestamp : null;
-          if (price === null || timestamp === null || timestamp < cutoffMs) return;
-
-          const dayKey = new Date(timestamp).toISOString().slice(0, 10);
-          const listingCount = typeof itemEntry.listingCount === 'number' ? itemEntry.listingCount : undefined;
-
-          if (!latestByItemAndDay.has(baseId)) {
-            latestByItemAndDay.set(baseId, new Map<string, PriceHistoryPoint>());
-          }
-
-          const dayMap = latestByItemAndDay.get(baseId)!;
-          const existing = dayMap.get(dayKey);
-          if (!existing || timestamp > existing.timestamp) {
-            dayMap.set(dayKey, {
-              date: dayKey,
+        const data = docSnap.data() as Record<string, unknown>;
+        const historyRaw = Array.isArray(data.history7d) ? data.history7d : [];
+        const points: PriceHistoryPoint[] = historyRaw
+          .map(entry => {
+            if (!entry || typeof entry !== 'object') return null;
+            const record = entry as Record<string, unknown>;
+            const timestamp = typeof record.t === 'number'
+              ? record.t
+              : (typeof record.timestamp === 'number' ? record.timestamp : null);
+            const price = typeof record.p === 'number'
+              ? record.p
+              : (typeof record.price === 'number' ? record.price : null);
+            if (timestamp === null || price === null) return null;
+            const listingCount = typeof record.l === 'number'
+              ? record.l
+              : (typeof record.listingCount === 'number' ? record.listingCount : undefined);
+            return {
+              date: new Date(timestamp).toISOString().slice(0, 10),
               timestamp,
               price,
               ...(listingCount !== undefined ? { listingCount } : {})
-            });
-          }
-        });
-      }
+            } as PriceHistoryPoint;
+          })
+          .filter((point): point is PriceHistoryPoint => point !== null)
+          .sort((a, b) => a.timestamp - b.timestamp);
 
-      const result: PriceHistoryByItem = {};
-      latestByItemAndDay.forEach((dayMap, baseId) => {
-        result[baseId] = Array.from(dayMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+        if (points.length > 0) {
+          result[baseId] = points;
+        }
       });
+
       return result;
     } catch (error) {
       console.error('Failed to fetch batch price history:', error);
       return {};
     }
-  }
-
-  private async getHistorySnapshotDocs(leagueId: string, cutoffMs: number): Promise<HistorySnapshotDoc[]> {
-    const cacheKey = `${leagueId.trim().toLowerCase()}:${Math.floor(cutoffMs / (6 * 60 * 60 * 1000))}`;
-    const cached = this.historySnapshotCache.get(cacheKey);
-    const now = Date.now();
-
-    if (cached && now - cached.loadedAt < HISTORY_SNAPSHOT_CACHE_TTL_MS) {
-      return cached.docs;
-    }
-
-    const historyRef = collection(this.db!, 'prices', 'history', leagueId);
-    let snapshot;
-    try {
-      // Prefer server-side ID range filtering to avoid downloading old snapshots.
-      const q = query(historyRef, where(documentId(), '>=', String(cutoffMs)));
-      snapshot = await getDocs(q);
-    } catch (error) {
-      // Fallback for environments/rules that reject documentId range queries.
-      snapshot = await getDocs(historyRef);
-    }
-
-    const docs: HistorySnapshotDoc[] = snapshot.docs.map(docSnap => {
-      const idAsNumber = Number(docSnap.id);
-      return {
-        id: docSnap.id,
-        idAsMillis: Number.isFinite(idAsNumber) ? idAsNumber : null,
-        payload: docSnap.data() as Record<string, unknown>
-      };
-    }).sort((a, b) => {
-      if (a.idAsMillis !== null && b.idAsMillis !== null) {
-        return b.idAsMillis - a.idAsMillis;
-      }
-      return b.id.localeCompare(a.id);
-    });
-
-    this.historySnapshotCache.set(cacheKey, {
-      loadedAt: now,
-      docs
-    });
-
-    return docs;
   }
 
   queuePriceWrite(baseId: string, entry: PriceUpdateEntry): void {
@@ -832,12 +757,13 @@ export class PriceSyncService {
     
     // Write directly - price checks are always fresh, no need to read first
     // Firestore rules will handle conflict resolution
-      await setDoc(priceRef, {
-        price: item.entry.price,
-        timestamp: item.entry.timestamp,
-        listingCount: item.entry.listingCount ?? null,
-        userId: this.userId,
-        updatedAt: serverTimestamp()
-      }, { merge: false });
+    await setDoc(priceRef, {
+      price: item.entry.price,
+      timestamp: item.entry.timestamp,
+      listingCount: item.entry.listingCount ?? null,
+      userId: this.userId,
+      updatedAt: serverTimestamp()
+    }, { merge: false });
+
   }
 }
