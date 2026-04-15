@@ -56,12 +56,18 @@ let list7HistoryRequestVersion = 0;
 let detail90HistoryRequestVersion = 0;
 let last7HistoryLoadedAt = 0;
 let last7HistoryLeagueId = '';
+let isCloudSyncEnabledForPrices = true;
 const HISTORY_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const SPARKLINES_PER_FRAME = 24;
 const TREND_MIN_PERCENT = 1;
 let sparklineRenderRequestVersion = 0;
 const cloudSparklineHistoryCache = new Map<string, SparklineHistoryPoint[]>();
 let lastDetailChartSignature = '';
+let isRangeSelectionDragging = false;
+let rangeSelectionDragSource: 'main' | 'nav' | null = null;
+let rangeSelectionDragStartClientX = 0;
+let rangeSelectionDragStartIndex = 0;
+let rangeSelectionDragEndIndex = 0;
 
 declare const Chart: any;
 
@@ -234,14 +240,185 @@ function formatPrice(price: number): string {
   return price.toFixed(2);
 }
 
-/**
- * Format updated timestamp for display
- */
+function formatTooltipPriceFe(price: number): string {
+  if (!Number.isFinite(price) || price <= 0) return '0';
+  if (price >= 1000000) {
+    const value = price / 1000000;
+    const precision = value >= 10 ? 0 : 1;
+    return `${value.toFixed(precision)}m`;
+  }
+  if (price >= 1000) {
+    const value = price / 1000;
+    const precision = value >= 10 ? 0 : 1;
+    return `${value.toFixed(precision)}k`;
+  }
+  return price.toFixed(0);
+}
+
+function formatDetailTooltipDate(timestamp: number): string {
+  if (!Number.isFinite(timestamp)) return '--';
+  return new Date(timestamp).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+function getSelectedDetailItem(): PriceItem | null {
+  if (!selectedBaseId) return null;
+  return allPriceItems.find(item => item.baseId === selectedBaseId) ?? null;
+}
+
+function ensureDetailChartTooltip(chart: any): HTMLDivElement | null {
+  const chartWrap = chart?.canvas?.parentElement as HTMLElement | null;
+  if (!chartWrap) return null;
+  let tooltipEl = chartWrap.querySelector('#pricesDetailChartTooltip') as HTMLDivElement | null;
+  if (tooltipEl) return tooltipEl;
+
+  tooltipEl = document.createElement('div');
+  tooltipEl.id = 'pricesDetailChartTooltip';
+  tooltipEl.className = 'prices-detail-chart-tooltip';
+  tooltipEl.style.opacity = '0';
+  chartWrap.appendChild(tooltipEl);
+  return tooltipEl;
+}
+
+function renderDetailChartTooltip(context: { chart: any; tooltip: any }): void {
+  const { chart, tooltip } = context;
+  const tooltipEl = ensureDetailChartTooltip(chart);
+  if (!tooltipEl) return;
+
+  if (!tooltip || tooltip.opacity === 0 || !Array.isArray(tooltip.dataPoints) || tooltip.dataPoints.length === 0) {
+    tooltipEl.style.opacity = '0';
+    return;
+  }
+
+  const firstPoint = tooltip.dataPoints[0];
+  const dataIndex = Number(firstPoint?.dataIndex ?? 0);
+  const rawTimestamp = chart?.data?.labels?.[dataIndex];
+  const timestamp = Number(rawTimestamp);
+  const price = Number(firstPoint?.raw ?? firstPoint?.parsed?.y ?? 0);
+  const selectedItem = getSelectedDetailItem();
+  const itemIconPath = selectedItem ? `../../assets/${selectedItem.baseId}.webp` : '';
+  const itemName = selectedItem?.name ?? 'Item';
+  const safeItemName = escapeHtml(itemName);
+
+  tooltipEl.innerHTML = `
+    <div class="prices-detail-chart-tooltip-date">${formatDetailTooltipDate(timestamp)}</div>
+    <div class="prices-detail-chart-tooltip-row">
+      <span class="prices-detail-chart-tooltip-fe">${formatTooltipPriceFe(price)}</span>
+      <img src="../../assets/100300.webp" alt="FE" class="prices-detail-chart-tooltip-icon prices-detail-chart-tooltip-fe-icon" onerror="this.style.display='none'">
+      <span class="prices-detail-chart-tooltip-arrow" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3 4 7l4 4"></path>
+          <path d="M4 7h16"></path>
+          <path d="m16 21 4-4-4-4"></path>
+          <path d="M20 17H4"></path>
+        </svg>
+      </span>
+      <span class="prices-detail-chart-tooltip-qty">1.0</span>
+      ${itemIconPath
+        ? `<img src="${itemIconPath}" alt="${safeItemName}" class="prices-detail-chart-tooltip-icon prices-detail-chart-tooltip-item-icon" onerror="this.style.display='none'">`
+        : ''}
+    </div>
+  `;
+
+  const canvasWidth = Number(chart?.width ?? 0);
+  const canvasHeight = Number(chart?.height ?? 0);
+  const caretX = Number(tooltip.caretX ?? 0);
+  const caretY = Number(tooltip.caretY ?? 0);
+  const offset = 18;
+
+  const tooltipWidth = tooltipEl.offsetWidth;
+  const tooltipHeight = tooltipEl.offsetHeight;
+  const canPlaceRight = caretX + offset + tooltipWidth <= canvasWidth - 4;
+  const nextLeft = canPlaceRight ? caretX + offset : Math.max(4, caretX - tooltipWidth - offset);
+  const nextTop = caretY + offset + tooltipHeight <= canvasHeight - 4
+    ? caretY + offset
+    : Math.max(4, caretY - tooltipHeight - offset);
+
+  tooltipEl.style.left = `${nextLeft}px`;
+  tooltipEl.style.top = `${nextTop}px`;
+  tooltipEl.style.opacity = '1';
+}
+
 function formatUpdatedAt(timestamp: number): string {
   if (!timestamp || Number.isNaN(timestamp)) {
     return '--';
   }
   return new Date(timestamp).toLocaleString();
+}
+
+function buildTliDbItemUrl(itemName: string): string {
+  const slug = itemName
+    .trim()
+    .replace(/['’]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return `https://tlidb.com/en/${slug || 'Unknown_Item'}`;
+}
+
+function calculateSevenDayAveragePrice(baseId: string, fallbackPoints: PriceHistoryPoint[]): number | null {
+  const cloudHistory = last7DayHistoryByItem[baseId];
+  let points = cloudHistory && cloudHistory.length > 0 ? cloudHistory : fallbackPoints;
+  if (points.length === 0) {
+    return null;
+  }
+
+  if (!cloudHistory || cloudHistory.length === 0) {
+    const latestTimestamp = Math.max(...points.map(point => point.timestamp || 0));
+    if (Number.isFinite(latestTimestamp) && latestTimestamp > 0) {
+      const cutoff = latestTimestamp - 7 * 24 * 60 * 60 * 1000;
+      const recentPoints = points.filter(point => point.timestamp >= cutoff);
+      if (recentPoints.length > 0) {
+        points = recentPoints;
+      }
+    }
+  }
+
+  const validPrices = points
+    .map(point => point.price)
+    .filter(price => Number.isFinite(price) && price >= 0);
+  if (validPrices.length === 0) {
+    return null;
+  }
+
+  const sum = validPrices.reduce((acc, price) => acc + price, 0);
+  return sum / validPrices.length;
+}
+
+function updateDetailPriceStats(baseId: string, currentPrice: number, fallbackPoints: PriceHistoryPoint[]): void {
+  const detailPriceValue = document.getElementById('pricesDetailPriceValue');
+  const detailAveragePriceValue = document.getElementById('pricesDetailAveragePriceValue');
+  if (detailPriceValue) {
+    detailPriceValue.textContent = formatPrice(currentPrice);
+  }
+  if (detailAveragePriceValue) {
+    const avgPrice = calculateSevenDayAveragePrice(baseId, fallbackPoints);
+    detailAveragePriceValue.textContent = avgPrice === null ? '--' : formatPrice(avgPrice);
+  }
+}
+
+function toPriceHistoryPoints(history: SparklineHistoryPoint[] | undefined): PriceHistoryPoint[] {
+  if (!history || history.length === 0) {
+    return [];
+  }
+
+  const fallbackNow = Date.now();
+  return history
+    .map((point, index) => {
+      const parsedDate = Date.parse(point.date);
+      const resolvedTimestamp = typeof point.timestamp === 'number' && Number.isFinite(point.timestamp)
+        ? point.timestamp
+        : (Number.isFinite(parsedDate) ? parsedDate : fallbackNow + index);
+      return {
+        date: point.date,
+        timestamp: resolvedTimestamp,
+        price: point.price
+      } satisfies PriceHistoryPoint;
+    })
+    .sort((a, b) => a.timestamp - b.timestamp);
 }
 
 /**
@@ -413,6 +590,8 @@ function getDetailHistoryForItem(baseId: string): PriceHistoryPoint[] {
   if (detailCache && detailCache.length > 0) return detailCache;
   const history7 = last7DayHistoryByItem[baseId];
   if (history7 && history7.length > 0) return history7;
+  const item = allPriceItems.find(priceItem => priceItem.baseId === baseId);
+  if (item?.history && item.history.length > 0) return toPriceHistoryPoints(item.history);
   return [];
 }
 
@@ -434,11 +613,17 @@ function getSelectedDetailPoints(): PriceHistoryPoint[] {
 function updateRangeControlsUi(): void {
   const startInput = document.getElementById('pricesRangeStart') as HTMLInputElement | null;
   const endInput = document.getElementById('pricesRangeEnd') as HTMLInputElement | null;
+  const navStartInput = document.getElementById('pricesRangeNavigatorStart') as HTMLInputElement | null;
+  const navEndInput = document.getElementById('pricesRangeNavigatorEnd') as HTMLInputElement | null;
   const label = document.getElementById('pricesRangeLabel');
-  const sliderShell = document.querySelector('.prices-range-slider-shell') as HTMLElement | null;
+  const hoverStartLabel = document.getElementById('pricesRangeHoverStart');
+  const hoverEndLabel = document.getElementById('pricesRangeHoverEnd');
+  const hoverLabels = hoverStartLabel?.parentElement as HTMLElement | null;
+  const sliderShell = document.getElementById('pricesRangeSliderShell') as HTMLElement | null;
+  const navShell = document.getElementById('pricesRangeNavigatorShell') as HTMLElement | null;
   const total = detailFullHistory.length;
 
-  if (!startInput || !endInput || !label || !sliderShell) return;
+  if (!startInput || !endInput || !navStartInput || !navEndInput || !label || !sliderShell || !navShell || !hoverStartLabel || !hoverEndLabel) return;
 
   if (total === 0) {
     startInput.min = '0';
@@ -449,44 +634,178 @@ function updateRangeControlsUi(): void {
     endInput.max = '0';
     endInput.value = '0';
     endInput.disabled = true;
+    navStartInput.min = '0';
+    navStartInput.max = '0';
+    navStartInput.value = '0';
+    navStartInput.disabled = true;
+    navEndInput.min = '0';
+    navEndInput.max = '0';
+    navEndInput.value = '0';
+    navEndInput.disabled = true;
     label.textContent = 'No data available';
+    hoverStartLabel.textContent = '--';
+    hoverEndLabel.textContent = '--';
     sliderShell.style.setProperty('--prices-range-start', '0%');
     sliderShell.style.setProperty('--prices-range-end', '100%');
+    navShell.style.setProperty('--prices-range-start', '0%');
+    navShell.style.setProperty('--prices-range-end', '100%');
+    hoverLabels?.style.setProperty('--prices-range-start', '0%');
+    hoverLabels?.style.setProperty('--prices-range-end', '100%');
     return;
   }
 
   const maxIndex = total - 1;
   startInput.disabled = false;
   endInput.disabled = false;
+  navStartInput.disabled = false;
+  navEndInput.disabled = false;
   startInput.min = '0';
   startInput.max = String(maxIndex);
   endInput.min = '0';
   endInput.max = String(maxIndex);
+  navStartInput.min = '0';
+  navStartInput.max = String(maxIndex);
+  navEndInput.min = '0';
+  navEndInput.max = String(maxIndex);
   startInput.value = String(detailRangeStartIndex);
   endInput.value = String(detailRangeEndIndex);
+  navStartInput.value = String(detailRangeStartIndex);
+  navEndInput.value = String(detailRangeEndIndex);
 
   const startPoint = detailFullHistory[detailRangeStartIndex];
   const endPoint = detailFullHistory[detailRangeEndIndex];
-  label.textContent = `${formatDisplayDate(startPoint.timestamp)} - ${formatDisplayDate(endPoint.timestamp)} (${detailRangeEndIndex - detailRangeStartIndex + 1} checks)`;
+  label.textContent = `${detailRangeEndIndex - detailRangeStartIndex + 1} checks`;
+  hoverStartLabel.textContent = formatDisplayDate(startPoint.timestamp);
+  hoverEndLabel.textContent = formatDisplayDate(endPoint.timestamp);
 
   const startPct = maxIndex === 0 ? 0 : (detailRangeStartIndex / maxIndex) * 100;
   const endPct = maxIndex === 0 ? 100 : (detailRangeEndIndex / maxIndex) * 100;
   sliderShell.style.setProperty('--prices-range-start', `${startPct}%`);
   sliderShell.style.setProperty('--prices-range-end', `${endPct}%`);
+  navShell.style.setProperty('--prices-range-start', `${startPct}%`);
+  navShell.style.setProperty('--prices-range-end', `${endPct}%`);
+  hoverLabels?.style.setProperty('--prices-range-start', `${startPct}%`);
+  hoverLabels?.style.setProperty('--prices-range-end', `${endPct}%`);
 }
 
 function setActiveRangeHandle(handle: 'start' | 'end'): void {
   const startInput = document.getElementById('pricesRangeStart') as HTMLInputElement | null;
   const endInput = document.getElementById('pricesRangeEnd') as HTMLInputElement | null;
+  const navStartInput = document.getElementById('pricesRangeNavigatorStart') as HTMLInputElement | null;
+  const navEndInput = document.getElementById('pricesRangeNavigatorEnd') as HTMLInputElement | null;
   if (!startInput || !endInput) return;
 
   if (handle === 'start') {
     startInput.classList.add('prices-range-slider-active');
     endInput.classList.remove('prices-range-slider-active');
+    navStartInput?.classList.add('prices-range-slider-active');
+    navEndInput?.classList.remove('prices-range-slider-active');
   } else {
     endInput.classList.add('prices-range-slider-active');
     startInput.classList.remove('prices-range-slider-active');
+    navEndInput?.classList.add('prices-range-slider-active');
+    navStartInput?.classList.remove('prices-range-slider-active');
   }
+}
+
+function clampRangeToBounds(start: number, end: number): { start: number; end: number } {
+  const maxIndex = Math.max(0, detailFullHistory.length - 1);
+  const nextStart = Math.max(0, Math.min(start, maxIndex));
+  const nextEnd = Math.max(nextStart, Math.min(end, maxIndex));
+  return { start: nextStart, end: nextEnd };
+}
+
+function setDetailRange(start: number, end: number): void {
+  if (detailFullHistory.length === 0) return;
+  const clamped = clampRangeToBounds(start, end);
+  detailRangeStartIndex = clamped.start;
+  detailRangeEndIndex = clamped.end;
+  updateRangeControlsUi();
+  renderDetailChart(getSelectedDetailPoints());
+}
+
+function shiftDetailRangeWindow(delta: number): void {
+  if (detailFullHistory.length === 0) return;
+  const maxIndex = detailFullHistory.length - 1;
+  const width = Math.max(0, detailRangeEndIndex - detailRangeStartIndex);
+  let nextStart = detailRangeStartIndex + delta;
+  nextStart = Math.max(0, Math.min(nextStart, maxIndex - width));
+  const nextEnd = Math.min(maxIndex, nextStart + width);
+  setDetailRange(nextStart, nextEnd);
+}
+
+function getRangeIndexFromClientX(clientX: number, shell: HTMLElement): number {
+  const rect = shell.getBoundingClientRect();
+  if (rect.width <= 0 || detailFullHistory.length === 0) return 0;
+  const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  return Math.round(ratio * (detailFullHistory.length - 1));
+}
+
+function onRangeShellPointerDown(event: PointerEvent, source: 'main' | 'nav'): void {
+  if (detailFullHistory.length === 0) return;
+  const target = event.target as HTMLElement;
+  if (target.closest('input.prices-range-slider') || target.closest('.prices-range-selection')) {
+    return;
+  }
+
+  const shell = source === 'main'
+    ? document.getElementById('pricesRangeSliderShell')
+    : document.getElementById('pricesRangeNavigatorShell');
+  if (!shell) return;
+
+  const clickedIndex = getRangeIndexFromClientX(event.clientX, shell);
+  const rangeWidth = Math.max(0, detailRangeEndIndex - detailRangeStartIndex);
+  const centerOffset = Math.floor(rangeWidth / 2);
+  const nextStart = clickedIndex - centerOffset;
+  setDetailRange(nextStart, nextStart + rangeWidth);
+}
+
+function startRangeSelectionDrag(event: PointerEvent, source: 'main' | 'nav'): void {
+  if (detailFullHistory.length === 0) return;
+  const target = event.target as HTMLElement;
+  const selection = target.closest('.prices-range-selection') as HTMLElement | null;
+  if (!selection) return;
+
+  isRangeSelectionDragging = true;
+  rangeSelectionDragSource = source;
+  rangeSelectionDragStartClientX = event.clientX;
+  rangeSelectionDragStartIndex = detailRangeStartIndex;
+  rangeSelectionDragEndIndex = detailRangeEndIndex;
+  selection.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function onRangeSelectionPointerMove(event: PointerEvent): void {
+  if (!isRangeSelectionDragging || !rangeSelectionDragSource || detailFullHistory.length === 0) return;
+  const shell = rangeSelectionDragSource === 'main'
+    ? document.getElementById('pricesRangeSliderShell')
+    : document.getElementById('pricesRangeNavigatorShell');
+  if (!shell) return;
+  const rect = shell.getBoundingClientRect();
+  if (rect.width <= 0) return;
+
+  const deltaRatio = (event.clientX - rangeSelectionDragStartClientX) / rect.width;
+  const maxIndex = detailFullHistory.length - 1;
+  const deltaIndex = Math.round(deltaRatio * maxIndex);
+  const width = rangeSelectionDragEndIndex - rangeSelectionDragStartIndex;
+  let nextStart = rangeSelectionDragStartIndex + deltaIndex;
+  nextStart = Math.max(0, Math.min(nextStart, maxIndex - width));
+  const nextEnd = Math.min(maxIndex, nextStart + width);
+  setDetailRange(nextStart, nextEnd);
+}
+
+function stopRangeSelectionDrag(event?: PointerEvent): void {
+  if (!isRangeSelectionDragging) return;
+  if (event) {
+    const target = event.target as HTMLElement | null;
+    try {
+      target?.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore pointer release failures.
+    }
+  }
+  isRangeSelectionDragging = false;
+  rangeSelectionDragSource = null;
 }
 
 function applyDetailHistory(points: PriceHistoryPoint[], resetToDefaultRange: boolean): void {
@@ -512,6 +831,7 @@ function applyDetailHistory(points: PriceHistoryPoint[], resetToDefaultRange: bo
 }
 
 async function ensureDetailHistoryLoaded(baseId: string): Promise<void> {
+  if (!isCloudSyncEnabledForPrices) return;
   const cacheKey = `${currentLeagueId}:${baseId}`;
   if (detailHistoryLoadedKeys.has(cacheKey)) return;
 
@@ -529,6 +849,10 @@ async function ensureDetailHistoryLoaded(baseId: string): Promise<void> {
 
     if (selectedBaseId === baseId) {
       applyDetailHistory(history ?? [], true);
+      const selectedItem = allPriceItems.find(item => item.baseId === baseId);
+      if (selectedItem) {
+        updateDetailPriceStats(baseId, selectedItem.price, history ?? []);
+      }
     }
   } catch (error) {
     if (requestVersion !== detail90HistoryRequestVersion) return;
@@ -544,6 +868,10 @@ function renderDetailChart(points: PriceHistoryPoint[]): void {
 
   if (points.length === 0) {
     if (detailChart) {
+      const existingTooltip = document.getElementById('pricesDetailChartTooltip');
+      if (existingTooltip) {
+        existingTooltip.remove();
+      }
       detailChart.destroy();
       detailChart = null;
     }
@@ -600,20 +928,14 @@ function renderDetailChart(points: PriceHistoryPoint[]): void {
       plugins: {
         legend: { display: false },
         tooltip: {
+          enabled: false,
+          external: renderDetailChartTooltip,
           backgroundColor: theme.bgShade,
           borderColor: theme.border,
           borderWidth: 1,
           titleColor: theme.text,
           bodyColor: theme.text,
-          displayColors: false,
-          callbacks: {
-            title: (items: Array<{ label?: string | number }>) => {
-              const raw = items[0]?.label;
-              const timestamp = Number(raw);
-              if (!Number.isFinite(timestamp)) return String(raw ?? '');
-              return new Date(timestamp).toLocaleString();
-            }
-          }
+          displayColors: false
         }
       },
       scales: {
@@ -670,21 +992,14 @@ async function showItemDetail(baseId: string): Promise<void> {
   const requestVersion = detailRequestVersion;
   setDetailViewMode(true);
 
-  const detailName = document.getElementById('pricesDetailName');
-  const pairDetailName = document.getElementById('pricesPairDetailName');
-  const detailDescription = document.getElementById('pricesDetailDescription');
-  const detailPrice = document.getElementById('pricesDetailPrice');
-  const detailUpdated = document.getElementById('pricesDetailUpdated');
+  const detailName = document.getElementById('pricesDetailName') as HTMLButtonElement | null;
   const detailIcon = document.getElementById('pricesDetailIcon') as HTMLImageElement | null;
-  const pairDetailIcon = document.getElementById('pricesPairDetailIcon') as HTMLImageElement | null;
 
-  if (detailName) detailName.textContent = selectedItem.name;
-  if (pairDetailName) pairDetailName.textContent = selectedItem.name;
-  if (detailDescription) {
-    detailDescription.textContent = `Placeholder: ${selectedItem.name} description and usage details will be added here.`;
+  if (detailName) {
+    detailName.textContent = selectedItem.name;
+    detailName.dataset.tlidbUrl = buildTliDbItemUrl(selectedItem.name);
+    detailName.disabled = false;
   }
-  if (detailPrice) detailPrice.textContent = `Price: ${formatPrice(selectedItem.price)} FE`;
-  if (detailUpdated) detailUpdated.textContent = `Updated: ${formatUpdatedAt(selectedItem.timestamp)}`;
   if (detailIcon) {
     detailIcon.src = `../../assets/${selectedItem.baseId}.webp`;
     detailIcon.alt = selectedItem.name;
@@ -693,18 +1008,11 @@ async function showItemDetail(baseId: string): Promise<void> {
       detailIcon.style.display = 'none';
     };
   }
-  if (pairDetailIcon) {
-    pairDetailIcon.src = `../../assets/${selectedItem.baseId}.webp`;
-    pairDetailIcon.alt = selectedItem.name;
-    pairDetailIcon.style.display = 'block';
-    pairDetailIcon.onerror = () => {
-      pairDetailIcon.style.display = 'none';
-    };
-  }
 
   const cacheKey = `${currentLeagueId}:${baseId}`;
   const immediateHistory = getDetailHistoryForItem(baseId);
   detailHistoryCache.set(cacheKey, immediateHistory);
+  updateDetailPriceStats(baseId, selectedItem.price, immediateHistory);
 
   if (requestVersion !== detailRequestVersion || selectedBaseId !== baseId) {
     return;
@@ -712,8 +1020,10 @@ async function showItemDetail(baseId: string): Promise<void> {
 
   applyDetailHistory(immediateHistory, true);
 
-  // Load full point-level detail history in background.
-  void ensureDetailHistoryLoaded(baseId);
+  if (isCloudSyncEnabledForPrices) {
+    // Load full point-level detail history in background.
+    void ensureDetailHistoryLoaded(baseId);
+  }
 }
 
 function applyCloud7DayHistoryToTable(): void {
@@ -772,43 +1082,45 @@ function scheduleSparklineRender(renderData: RenderRowData[]): void {
  */
 export async function loadPrices(): Promise<void> {
   try {
-    const [cache, db] = await Promise.all([
-      electronAPI.getPriceCache(),
-      electronAPI.getItemDatabase()
+    const [db, cloudSyncStatus] = await Promise.all([
+      electronAPI.getItemDatabase(),
+      electronAPI.getCloudSyncStatus()
     ]);
-    
-    itemDatabase = db;
-    priceCache = cache;
-    
-    // Get all items from database, not just ones with prices
-    const allItemsWithNulls: (PriceItem | null)[] = Object.entries(itemDatabase)
-      .map(([baseId, itemData]) => {
-        // Skip Flame Elementium (it's the currency)
-        if (baseId === FLAME_ELEMENTIUM_ID) {
-          return null;
-        }
-        
-        // Skip untradable items
-        if (itemData.tradable === false) {
-          return null;
-        }
-        
-        const name = itemData.name || `Unknown Item (${baseId})`;
-        const cachedEntry = priceCache[baseId];
-        
-        // Use cached price if available, otherwise default to 0
-        const price = cachedEntry?.price ?? 0;
-        const timestamp = cachedEntry?.timestamp ?? Date.now();
-        const listingCount = cachedEntry?.listingCount;
-        const historyFromLocal = cachedEntry?.history as SparklineHistoryPoint[] | undefined;
-        const history = historyFromLocal;
 
-        // Calculate trend using real history when available
+    itemDatabase = db;
+    isCloudSyncEnabledForPrices = !!cloudSyncStatus?.enabled;
+    let allItems: PriceItem[] = [];
+
+    if (isCloudSyncEnabledForPrices) {
+      // Cloud-enabled mode: avoid showing stale local cache values while cloud history loads.
+      const historyByItem = await electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 7, maxSnapshotDocs: 160 });
+      last7DayHistoryByItem = historyByItem ?? {};
+      cloudSparklineHistoryCache.clear();
+      last7HistoryLoadedAt = Date.now();
+      last7HistoryLeagueId = currentLeagueId;
+      priceCache = {};
+      const cloudItems: PriceItem[] = [];
+      Object.entries(itemDatabase).forEach(([baseId, itemData]) => {
+        if (baseId === FLAME_ELEMENTIUM_ID) {
+          return;
+        }
+        if (itemData.tradable === false) {
+          return;
+        }
+
+        const name = itemData.name || `Unknown Item (${baseId})`;
+        const cloudHistoryRaw = last7DayHistoryByItem[baseId] ?? [];
+        const cloudHistory = [...cloudHistoryRaw].sort((a, b) => a.timestamp - b.timestamp);
+        const latestPoint = cloudHistory.length > 0 ? cloudHistory[cloudHistory.length - 1] : null;
+        const history = cloudHistory.map(point => ({ date: point.date, price: point.price, timestamp: point.timestamp }));
+        const price = latestPoint?.price ?? 0;
+        const timestamp = latestPoint?.timestamp ?? 0;
+        const listingCount = latestPoint?.listingCount;
         const trendData = price > 0
           ? calculateTrendFromHistory(history)
           : { trend: 'neutral' as const, percent: 0 };
-        
-        return {
+
+        cloudItems.push({
           baseId,
           name,
           price,
@@ -818,13 +1130,50 @@ export async function loadPrices(): Promise<void> {
           trendPercent: trendData.percent,
           group: itemData.group,
           history
-        };
+        });
       });
-    
-    // Filter out nulls and sort
-    const allItems: PriceItem[] = allItemsWithNulls
-      .filter((item): item is PriceItem => item !== null)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      allItems = cloudItems.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      // Cloud-disabled mode: rely only on local cache, no cloud DB reads.
+      const cache = await electronAPI.getPriceCache();
+      priceCache = cache;
+      last7DayHistoryByItem = {};
+      cloudSparklineHistoryCache.clear();
+      last7HistoryLoadedAt = 0;
+      last7HistoryLeagueId = '';
+      const localItems: PriceItem[] = [];
+      Object.entries(itemDatabase).forEach(([baseId, itemData]) => {
+        if (baseId === FLAME_ELEMENTIUM_ID) {
+          return;
+        }
+        if (itemData.tradable === false) {
+          return;
+        }
+
+        const name = itemData.name || `Unknown Item (${baseId})`;
+        const cachedEntry = priceCache[baseId];
+        const price = cachedEntry?.price ?? 0;
+        const timestamp = cachedEntry?.timestamp ?? 0;
+        const listingCount = cachedEntry?.listingCount;
+        const history = cachedEntry?.history as SparklineHistoryPoint[] | undefined;
+        const trendData = price > 0
+          ? calculateTrendFromHistory(history)
+          : { trend: 'neutral' as const, percent: 0 };
+
+        localItems.push({
+          baseId,
+          name,
+          price,
+          timestamp,
+          listingCount,
+          trend: trendData.trend,
+          trendPercent: trendData.percent,
+          group: itemData.group,
+          history
+        });
+      });
+      allItems = localItems.sort((a, b) => a.name.localeCompare(b.name));
+    }
     
     allPriceItems = allItems;
     if (selectedBaseId && !allPriceItems.some(item => item.baseId === selectedBaseId)) {
@@ -832,6 +1181,10 @@ export async function loadPrices(): Promise<void> {
       detailRequestVersion += 1;
       setDetailViewMode(false);
       if (detailChart) {
+        const existingTooltip = document.getElementById('pricesDetailChartTooltip');
+        if (existingTooltip) {
+          existingTooltip.remove();
+        }
         detailChart.destroy();
         detailChart = null;
       }
@@ -839,33 +1192,13 @@ export async function loadPrices(): Promise<void> {
     applyFilters();
     renderPrices();
 
-    // Fetch cloud 7-day history in background (non-blocking) to keep page snappy.
-    const now = Date.now();
-    const shouldRefreshHistory = last7HistoryLeagueId !== currentLeagueId
-      || now - last7HistoryLoadedAt > HISTORY_REFRESH_INTERVAL_MS
-      || Object.keys(last7DayHistoryByItem).length === 0;
-
-    if (shouldRefreshHistory) {
-      const requestVersion = ++list7HistoryRequestVersion;
-      void electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 7, maxSnapshotDocs: 160 })
-        .then(historyByItem => {
-          if (requestVersion !== list7HistoryRequestVersion) return;
-          last7DayHistoryByItem = historyByItem ?? {};
-          last7HistoryLoadedAt = Date.now();
-          last7HistoryLeagueId = currentLeagueId;
-          applyCloud7DayHistoryToTable();
-
-          if (selectedBaseId) {
-            const history = getDetailHistoryForItem(selectedBaseId);
-            applyDetailHistory(history, false);
-          }
-        })
-        .catch(error => {
-          if (requestVersion !== list7HistoryRequestVersion) return;
-          console.error('Failed to fetch 7-day table history:', error);
-        });
-    } else {
-      applyCloud7DayHistoryToTable();
+    if (selectedBaseId) {
+      const history = getDetailHistoryForItem(selectedBaseId);
+      applyDetailHistory(history, false);
+      const selectedItem = allPriceItems.find(item => item.baseId === selectedBaseId);
+      if (selectedItem) {
+        updateDetailPriceStats(selectedBaseId, selectedItem.price, history);
+      }
     }
   } catch (error) {
     console.error('Failed to load prices:', error);
@@ -958,8 +1291,15 @@ export function initPrices(): void {
   const pricesBody = document.getElementById('pricesTableBody');
   const seasonSelect = document.getElementById('pricesSeasonSelect') as HTMLSelectElement | null;
   const detailBackBtn = document.getElementById('pricesDetailBackBtn');
+  const detailNameBtn = document.getElementById('pricesDetailName') as HTMLButtonElement | null;
+  const rangeSliderShell = document.getElementById('pricesRangeSliderShell') as HTMLElement | null;
+  const rangeNavShell = document.getElementById('pricesRangeNavigatorShell') as HTMLElement | null;
+  const rangeMainSelection = document.getElementById('pricesRangeMainSelection') as HTMLElement | null;
+  const rangeNavSelection = document.getElementById('pricesRangeNavigatorSelection') as HTMLElement | null;
   const rangeStartInput = document.getElementById('pricesRangeStart') as HTMLInputElement | null;
   const rangeEndInput = document.getElementById('pricesRangeEnd') as HTMLInputElement | null;
+  const navStartInput = document.getElementById('pricesRangeNavigatorStart') as HTMLInputElement | null;
+  const navEndInput = document.getElementById('pricesRangeNavigatorEnd') as HTMLInputElement | null;
   
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -1019,7 +1359,7 @@ export function initPrices(): void {
       last7HistoryLoadedAt = 0;
       last7HistoryLeagueId = '';
       void loadPrices();
-      if (selectedBaseId) {
+      if (isDetailViewOpen && selectedBaseId) {
         void showItemDetail(selectedBaseId);
       }
     });
@@ -1032,6 +1372,15 @@ export function initPrices(): void {
     });
   }
 
+  if (detailNameBtn) {
+    detailNameBtn.addEventListener('click', () => {
+      const url = detailNameBtn.dataset.tlidbUrl;
+      if (url) {
+        electronAPI.openExternal(url);
+      }
+    });
+  }
+
   if (rangeStartInput) {
     rangeStartInput.addEventListener('pointerdown', () => setActiveRangeHandle('start'));
     rangeStartInput.addEventListener('focus', () => setActiveRangeHandle('start'));
@@ -1039,9 +1388,7 @@ export function initPrices(): void {
       if (detailFullHistory.length === 0) return;
       const nextStart = Number(rangeStartInput.value);
       if (!Number.isFinite(nextStart)) return;
-      detailRangeStartIndex = Math.max(0, Math.min(nextStart, detailRangeEndIndex));
-      updateRangeControlsUi();
-      renderDetailChart(getSelectedDetailPoints());
+      setDetailRange(nextStart, detailRangeEndIndex);
     });
   }
 
@@ -1052,11 +1399,47 @@ export function initPrices(): void {
       if (detailFullHistory.length === 0) return;
       const nextEnd = Number(rangeEndInput.value);
       if (!Number.isFinite(nextEnd)) return;
-      detailRangeEndIndex = Math.min(detailFullHistory.length - 1, Math.max(nextEnd, detailRangeStartIndex));
-      updateRangeControlsUi();
-      renderDetailChart(getSelectedDetailPoints());
+      setDetailRange(detailRangeStartIndex, nextEnd);
     });
   }
+
+  if (navStartInput) {
+    navStartInput.addEventListener('pointerdown', () => setActiveRangeHandle('start'));
+    navStartInput.addEventListener('focus', () => setActiveRangeHandle('start'));
+    navStartInput.addEventListener('input', () => {
+      if (detailFullHistory.length === 0) return;
+      const nextStart = Number(navStartInput.value);
+      if (!Number.isFinite(nextStart)) return;
+      setDetailRange(nextStart, detailRangeEndIndex);
+    });
+  }
+
+  if (navEndInput) {
+    navEndInput.addEventListener('pointerdown', () => setActiveRangeHandle('end'));
+    navEndInput.addEventListener('focus', () => setActiveRangeHandle('end'));
+    navEndInput.addEventListener('input', () => {
+      if (detailFullHistory.length === 0) return;
+      const nextEnd = Number(navEndInput.value);
+      if (!Number.isFinite(nextEnd)) return;
+      setDetailRange(detailRangeStartIndex, nextEnd);
+    });
+  }
+
+  if (rangeSliderShell) {
+    rangeSliderShell.addEventListener('pointerdown', event => onRangeShellPointerDown(event, 'main'));
+  }
+  if (rangeNavShell) {
+    rangeNavShell.addEventListener('pointerdown', event => onRangeShellPointerDown(event, 'nav'));
+  }
+  if (rangeMainSelection) {
+    rangeMainSelection.addEventListener('pointerdown', event => startRangeSelectionDrag(event, 'main'));
+  }
+  if (rangeNavSelection) {
+    rangeNavSelection.addEventListener('pointerdown', event => startRangeSelectionDrag(event, 'nav'));
+  }
+  document.addEventListener('pointermove', onRangeSelectionPointerMove);
+  document.addEventListener('pointerup', event => stopRangeSelectionDrag(event));
+  document.addEventListener('pointercancel', event => stopRangeSelectionDrag(event));
   
   // Sidebar group filter handlers
   const sidebarItems = document.querySelectorAll('.prices-sidebar-item');

@@ -386,24 +386,28 @@
                     <div class="prices-item-detail-title-wrap">
                       <img id="pricesDetailIcon" src="" alt="" class="prices-item-detail-icon" style="display: none;">
                       <div>
-                        <div id="pricesDetailName" class="prices-item-detail-title">Select an item</div>
-                        <div id="pricesDetailDescription" class="prices-item-detail-description">Placeholder: item description will go here.</div>
+                        <button id="pricesDetailName" class="prices-item-detail-title prices-item-detail-title-link" type="button" disabled>Select an item</button>
                       </div>
-                    </div>
-                    <div class="prices-item-detail-meta">
-                      <span id="pricesDetailPrice">Price: -- FE</span>
-                      <span id="pricesDetailUpdated">Updated: --</span>
                     </div>
                   </div>
                   
                   <div class="prices-item-detail-header prices-item-detail-header-simple">
                     <div class="prices-item-detail-title">Price history</div>
-                    <div class="prices-item-history-pair">
-                      <img src="../../assets/100300.webp" alt="Flame Elementium" class="prices-item-history-icon">
-                      <span class="prices-item-history-name">Flame Elementium</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="prices-item-history-swap" aria-hidden="true"><path d="M8 3 4 7l4 4"></path><path d="M4 7h16"></path><path d="m16 21 4-4-4-4"></path><path d="M20 17H4"></path></svg>
-                      <img id="pricesPairDetailIcon" src="" alt="" class="prices-item-history-icon" style="display: none;">
-                      <span id="pricesPairDetailName" class="prices-item-history-name">Select an item</span>
+                    <div class="prices-item-detail-stats">
+                      <div class="prices-item-detail-stat-row">
+                        <span class="prices-item-detail-stat-label">Current Price:</span>
+                        <span class="prices-item-detail-stat-value">
+                          <img src="../../assets/100300.webp" alt="FE" class="stat-fe-icon prices-item-detail-fe-icon">
+                          <span id="pricesDetailPriceValue">--</span>
+                        </span>
+                      </div>
+                      <div class="prices-item-detail-stat-row">
+                        <span class="prices-item-detail-stat-label">7-Day Average Price:</span>
+                        <span class="prices-item-detail-stat-value">
+                          <img src="../../assets/100300.webp" alt="FE" class="stat-fe-icon prices-item-detail-fe-icon">
+                          <span id="pricesDetailAveragePriceValue">--</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div class="prices-item-detail-chart-wrap">
@@ -412,9 +416,19 @@
                   </div>
                   <div class="prices-history-range-controls">
                     <div id="pricesRangeLabel" class="prices-range-label">Showing last 7 days</div>
-                    <div class="prices-range-slider-shell">
+                    <div id="pricesRangeNavigatorShell" class="prices-range-slider-shell prices-range-slider-shell-nav">
+                      <div id="pricesRangeNavigatorSelection" class="prices-range-selection" aria-hidden="true"></div>
+                      <input id="pricesRangeNavigatorStart" class="prices-range-slider prices-range-slider-start" type="range" min="0" max="0" step="1" value="0">
+                      <input id="pricesRangeNavigatorEnd" class="prices-range-slider prices-range-slider-end" type="range" min="0" max="0" step="1" value="0">
+                    </div>
+                    <div id="pricesRangeSliderShell" class="prices-range-slider-shell prices-range-slider-shell-main">
+                      <div id="pricesRangeMainSelection" class="prices-range-selection" aria-hidden="true"></div>
                       <input id="pricesRangeStart" class="prices-range-slider prices-range-slider-start" type="range" min="0" max="0" step="1" value="0">
                       <input id="pricesRangeEnd" class="prices-range-slider prices-range-slider-end" type="range" min="0" max="0" step="1" value="0">
+                    </div>
+                    <div class="prices-range-hover-labels" aria-hidden="true">
+                      <span id="pricesRangeHoverStart" class="prices-range-hover-label">--</span>
+                      <span id="pricesRangeHoverEnd" class="prices-range-hover-label">--</span>
                     </div>
                   </div>
                 </div>

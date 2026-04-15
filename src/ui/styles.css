@@ -127,7 +127,7 @@ body::-webkit-scrollbar {
   display: none;
 }
 
-img:not(.header-logo-pic):not(.stat-fe-icon) {
+img:not(.header-logo-pic):not(.stat-fe-icon):not(.prices-detail-chart-tooltip-fe-icon):not(.prices-detail-chart-tooltip-item-icon) {
   width: calc(38px * var(--scale));
   height: calc(38px * var(--scale));
   min-width: calc(38px * var(--scale));
@@ -4193,7 +4193,8 @@ body.overlay-widget {
 
 .prices-item-detail-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  align-items: center;
   gap: calc(16px * var(--scale));
   padding: calc(16px * var(--scale));
   border-bottom: 1px solid var(--border-shade);
@@ -4228,52 +4229,72 @@ body.overlay-widget {
   font-size: calc(var(--text-body) * var(--text-scale));
 }
 
-.prices-item-detail-description {
-  color: var(--border);
-  font-size: calc(var(--text-small) * var(--text-scale));
-  margin-top: calc(4px * var(--scale));
+.prices-item-detail-title-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
 }
 
-.prices-item-detail-meta {
+.prices-item-detail-title-link:hover {
+  color: var(--primary);
+}
+
+.prices-item-detail-title-link:disabled {
+  cursor: default;
+}
+
+.prices-item-detail-title-link:disabled:hover {
+  color: var(--text);
+}
+
+.prices-item-detail-title-link:focus-visible {
+  outline: 1px solid var(--primary);
+  outline-offset: calc(3px * var(--scale));
+  border-radius: calc(4px * var(--scale));
+}
+
+.prices-item-detail-stats {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  gap: calc(4px * var(--scale));
-  color: var(--text);
-  font-size: calc(var(--text-small) * var(--text-scale));
-  font-weight: 600;
+  gap: calc(10px * var(--scale));
 }
 
-.prices-item-history-pair {
+.prices-item-detail-stat-row {
   display: flex;
   align-items: center;
-  gap: calc(8px * var(--scale));
-  color: var(--text);
+  gap: calc(12px * var(--scale));
 }
 
-.prices-item-history-icon {
-  width: calc(28px * var(--scale));
-  height: calc(28px * var(--scale));
-  object-fit: contain;
-}
-
-.prices-item-history-name {
-  font-size: calc(var(--text-body) * var(--text-scale));
+.prices-item-detail-stat-label {
+  color: var(--border);
+  font-size: calc(var(--text-small) * var(--text-scale));
   font-weight: 600;
-  color: var(--text);
+  min-width: calc(150px * var(--scale));
 }
 
-.prices-item-history-swap {
-  width: calc(16px * var(--scale));
-  height: calc(16px * var(--scale));
-  color: #10b981;
-  margin: 0 calc(4px * var(--scale));
+.prices-item-detail-stat-value {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(6px * var(--scale));
+  color: var(--text);
+  font-size: calc(var(--text-medium) * var(--text-scale));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.prices-item-detail-fe-icon {
+  width: calc(18px * var(--scale));
+  height: calc(18px * var(--scale));
 }
 
 .prices-history-range-controls {
   display: flex;
   flex-direction: column;
+  --prices-range-handle-width: calc(8px * var(--scale));
+  --prices-range-handle-half: calc(var(--prices-range-handle-width) / 2);
   gap: calc(10px * var(--scale));
   padding: calc(12px * var(--scale)) calc(16px * var(--scale));
   border-top: 1px solid var(--border-shade);
@@ -4287,19 +4308,26 @@ body.overlay-widget {
 
 .prices-range-slider-shell {
   position: relative;
-  height: calc(28px * var(--scale));
+  height: calc(32px * var(--scale));
+  border-radius: 0;
+  overflow: hidden;
 }
 
 .prices-range-slider-shell::before {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: calc(4px * var(--scale));
-  transform: translateY(-50%);
-  background: var(--border-shade);
-  border-radius: calc(999px * var(--scale));
+  left: var(--prices-range-handle-half);
+  right: var(--prices-range-handle-half);
+  top: 0;
+  height: 100%;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--bg) 65%, var(--border-shade) 35%);
+  border: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.prices-range-slider-shell-nav {
+  display: none;
 }
 
 .prices-range-slider {
@@ -4312,40 +4340,45 @@ body.overlay-widget {
 }
 
 .prices-range-slider::-webkit-slider-runnable-track {
-  height: calc(4px * var(--scale));
+  height: calc(14px * var(--scale));
   background: transparent;
 }
 
 .prices-range-slider::-webkit-slider-thumb {
   appearance: none;
-  width: calc(12px * var(--scale));
-  height: calc(22px * var(--scale));
-  border-radius: calc(3px * var(--scale));
-  border: 1px solid var(--border);
-  background: var(--bg);
+  width: var(--prices-range-handle-width);
+  height: calc(18px * var(--scale));
+  box-sizing: border-box;
+  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--text) 20%);
+  background: color-mix(in srgb, var(--bg) 88%, var(--text) 12%);
   cursor: ew-resize;
   pointer-events: auto;
-  margin-top: calc(-9px * var(--scale));
-  transition: border-color 0.15s ease;
+  margin-top: calc(-2px * var(--scale));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bg) 55%, var(--text) 45%);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .prices-range-slider::-webkit-slider-thumb:hover {
-  border-color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border) 55%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 28%, var(--text) 72%);
 }
 
 .prices-range-slider::-moz-range-track {
-  height: calc(4px * var(--scale));
+  height: calc(14px * var(--scale));
   background: transparent;
 }
 
 .prices-range-slider::-moz-range-thumb {
-  width: calc(12px * var(--scale));
-  height: calc(22px * var(--scale));
-  border-radius: calc(3px * var(--scale));
-  border: 1px solid var(--border);
-  background: var(--bg);
+  width: var(--prices-range-handle-width);
+  height: calc(18px * var(--scale));
+  box-sizing: border-box;
+  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--text) 20%);
+  background: color-mix(in srgb, var(--bg) 88%, var(--text) 12%);
   cursor: ew-resize;
   pointer-events: auto;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bg) 55%, var(--text) 45%);
 }
 
 .prices-range-slider:disabled {
@@ -4364,16 +4397,65 @@ body.overlay-widget {
   z-index: 4;
 }
 
-.prices-range-slider-shell::after {
-  content: '';
+.prices-range-selection {
   position: absolute;
-  left: var(--prices-range-start, 0%);
-  right: calc(100% - var(--prices-range-end, 100%));
+  left: calc(var(--prices-range-start, 0%) + var(--prices-range-handle-half));
+  width: max(calc(var(--prices-range-end, 100%) - var(--prices-range-start, 0%) - calc(var(--prices-range-handle-half) * 2)), 0px);
   top: 50%;
-  height: calc(4px * var(--scale));
+  height: calc(32px * var(--scale));
   transform: translateY(-50%);
   background: var(--primary);
-  border-radius: calc(999px * var(--scale));
+  opacity: 0.2;
+  border-radius: 0;
+  pointer-events: auto;
+  cursor: grab;
+  z-index: 1;
+  transition: left 0.12s ease-out, width 0.12s ease-out;
+}
+
+.prices-range-selection:active {
+  cursor: grabbing;
+}
+
+.prices-range-slider-shell-nav .prices-range-selection {
+  height: calc(14px * var(--scale));
+}
+
+.prices-range-slider-shell-main .prices-range-selection {
+  box-shadow: 0 0 0 calc(1px * var(--scale)) color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.prices-range-hover-labels {
+  position: relative;
+  height: calc(14px * var(--scale));
+  margin-top: calc(2px * var(--scale));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.prices-range-slider-shell:hover + .prices-range-hover-labels,
+.prices-range-slider-shell:focus-within + .prices-range-hover-labels {
+  opacity: 1;
+}
+
+.prices-range-hover-label {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  color: var(--border);
+  font-size: calc(var(--text-xsmall) * var(--text-scale));
+  font-weight: 500;
+  transition: left 0.12s ease-out;
+}
+
+#pricesRangeHoverStart {
+  left: calc(var(--prices-range-start, 0%) + var(--prices-range-handle-half));
+}
+
+#pricesRangeHoverEnd {
+  left: calc(var(--prices-range-end, 100%) + var(--prices-range-handle-half));
 }
 
 .prices-history-range-btn {
@@ -4418,6 +4500,67 @@ body.overlay-widget {
   font-size: calc(var(--text-small) * var(--text-scale));
   background: rgba(0, 0, 0, 0.2);
   border: 1px dashed var(--border);
+}
+
+.prices-detail-chart-tooltip {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  min-width: calc(158px * var(--scale));
+  padding: calc(8px * var(--scale)) calc(10px * var(--scale));
+  border: 1px solid var(--border);
+  background: var(--bg-shade);
+  color: var(--text);
+  border-radius: 0;
+  box-shadow: 0 calc(4px * var(--scale)) calc(12px * var(--scale)) rgba(0, 0, 0, 0.35);
+}
+
+.prices-detail-chart-tooltip-date {
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: calc(4px * var(--scale));
+}
+
+.prices-detail-chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: calc(6px * var(--scale));
+  font-size: calc(var(--text-small) * var(--text-scale));
+  line-height: 1.2;
+}
+
+.prices-detail-chart-tooltip-fe {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.prices-detail-chart-tooltip-qty {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.prices-detail-chart-tooltip-arrow {
+  display: inline-flex;
+  width: calc(14px * var(--scale));
+  height: calc(14px * var(--scale));
+  color: var(--primary-color, var(--primary));
+}
+
+.prices-detail-chart-tooltip-arrow svg {
+  width: 100%;
+  height: 100%;
+}
+
+.prices-detail-chart-tooltip-icon {
+  object-fit: contain;
+}
+
+.prices-detail-chart-tooltip-fe-icon,
+.prices-detail-chart-tooltip-item-icon {
+  width: calc(28px * var(--scale));
+  height: calc(28px * var(--scale));
 }
 
 .prices-search-container {
