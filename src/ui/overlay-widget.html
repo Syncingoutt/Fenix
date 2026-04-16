@@ -44,10 +44,38 @@
             <svg class="widget-icon widget-edit-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.42-.32-.88-.58-1.37-.78l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.49.2-.95.47-1.37.78l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.42.32.88.58 1.37.78l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.49-.2.95-.47 1.37-.78l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
             <span class="widget-edit-done">Done</span>
           </button>
-          <button class="widget-close-btn" id="closeBtn" title="Close" aria-label="Close">×</button>
+          <button class="widget-close-btn" id="closeBtn" title="Close" aria-label="Close">
+            <svg class="widget-icon widget-close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 6L18 18"/>
+              <path d="M18 6L6 18"/>
+            </svg>
+          </button>
         </div>
       </div>
       <div class="widget-separator"></div>
+      <div class="widget-simplified-layout" id="simplifiedLayout">
+        <div class="widget-simplified-stats">
+          <span>Time: <span id="simplifiedTimeValue">0m 0s</span></span>
+          <span class="widget-simplified-dot">•</span>
+          <span>FE/hr: <span id="simplifiedHourlyValue">0.00</span></span>
+          <span class="widget-simplified-dot">•</span>
+          <span>Total: <span id="simplifiedTotalValue">0.00</span></span>
+        </div>
+        <div class="widget-simplified-controls">
+          <button class="widget-simplified-btn widget-simplified-settings" id="simpleSettingsBtn" title="Overlay settings" aria-label="Overlay settings">
+            <svg class="widget-icon widget-edit-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.42-.32-.88-.58-1.37-.78l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.49.2-.95.47-1.37.78l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.42.32.88.58 1.37.78l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.49-.2.95-.47 1.37-.78l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          </button>
+          <button class="widget-simplified-btn widget-simplified-close" id="simpleCloseBtn" title="Close" aria-label="Close">
+            <svg class="widget-icon widget-close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 6L18 18"/>
+              <path d="M18 6L6 18"/>
+            </svg>
+          </button>
+          <button class="widget-simplified-btn widget-simplified-lock" id="simpleLockBtn" title="Lock overlay" aria-label="Lock overlay">
+            <svg class="widget-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8h-1V6a4 4 0 1 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2zm-7-2a2 2 0 1 1 4 0v2h-4V6zm7 13H7v-9h10v9z"/></svg>
+          </button>
+        </div>
+      </div>
       <div class="widget-stats">
         <div class="stat-row" data-stat-id="time">
           <div class="stat-cell">
@@ -106,6 +134,10 @@
         <input type="range" class="widget-opacity-slider" id="opacitySlider" min="30" max="100" value="100" title="Overlay opacity" />
         <span class="widget-opacity-value" id="opacityValue">100%</span>
       </div>
+      <div class="widget-toggle-row" id="simplifiedModeRow">
+        <label class="widget-opacity-label" for="simplifiedModeCheckbox">Simplified mode</label>
+        <input type="checkbox" class="widget-toggle-checkbox" id="simplifiedModeCheckbox" title="Use simplified overlay layout" />
+      </div>
       <div class="widget-opacity-row" id="transparencyRow">
         <label class="widget-opacity-label" for="transparencySlider">Transparency</label>
         <input type="range" class="widget-opacity-slider" id="transparencySlider" min="10" max="100" value="80" title="Background transparency" />
@@ -118,6 +150,10 @@
       const { ipcRenderer } = require('electron');
 
       const widgetEl = document.getElementById('widget');
+      const simplifiedLayoutEl = document.getElementById('simplifiedLayout');
+      const simplifiedTimeValueEl = document.getElementById('simplifiedTimeValue');
+      const simplifiedHourlyValueEl = document.getElementById('simplifiedHourlyValue');
+      const simplifiedTotalValueEl = document.getElementById('simplifiedTotalValue');
       const durationEl = document.getElementById('duration');
       const timePerMapEl = document.getElementById('timePerMap');
       const hourlyEl = document.getElementById('hourly');
@@ -125,8 +161,11 @@
       const lastMapProfitEl = document.getElementById('lastMapProfit');
       const totalMapsEl = document.getElementById('totalMaps');
       const closeBtn = document.getElementById('closeBtn');
+      const simpleSettingsBtn = document.getElementById('simpleSettingsBtn');
+      const simpleCloseBtn = document.getElementById('simpleCloseBtn');
       const editBtn = document.getElementById('editBtn');
       const lockBtn = document.getElementById('lockBtn');
+      const simpleLockBtn = document.getElementById('simpleLockBtn');
       const startBtn = document.getElementById('startHourlyBtn');
       const pauseBtn = document.getElementById('pauseHourly');
       const resumeBtn = document.getElementById('resumeHourly');
@@ -141,6 +180,7 @@
       const DEFAULT_TRANSPARENCY = 80;
       const opacitySlider = document.getElementById('opacitySlider');
       const opacityValueEl = document.getElementById('opacityValue');
+      const simplifiedModeCheckbox = document.getElementById('simplifiedModeCheckbox');
       const transparencySlider = document.getElementById('transparencySlider');
       const transparencyValueEl = document.getElementById('transparencyValue');
       const defaultVisibility = {
@@ -156,6 +196,7 @@
       let statOrder = [...defaultStatOrder];
       let isEditMode = false;
       let isLocked = false;
+      let isSimplifiedMode = false;
       let isClickThrough = false;
       let lastMouseX = -1;
       let lastMouseY = -1;
@@ -174,6 +215,17 @@
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+
+      function formatSimpleTime(seconds) {
+        const safeSeconds = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
+        const hrs = Math.floor(safeSeconds / 3600);
+        const mins = Math.floor((safeSeconds % 3600) / 60);
+        const secs = safeSeconds % 60;
+        if (hrs > 0) {
+          return `${hrs}h ${mins}m ${secs}s`;
+        }
+        return `${mins}m ${secs}s`;
       }
 
       function formatValue(value) {
@@ -286,6 +338,7 @@
         }
         isEditMode = enabled;
         widgetEl.classList.toggle('edit-mode', enabled);
+        widgetEl.classList.toggle('simplified-settings-open', isSimplifiedMode && enabled);
         const icon = editBtn.querySelector('.widget-edit-icon');
         const doneText = editBtn.querySelector('.widget-edit-done');
         if (icon) icon.style.display = enabled ? 'none' : '';
@@ -605,7 +658,8 @@
       }
 
       function isPointOverLockButton(x, y) {
-        const rect = lockBtn.getBoundingClientRect();
+        const activeLockBtn = isSimplifiedMode ? simpleLockBtn : lockBtn;
+        const rect = activeLockBtn.getBoundingClientRect();
         return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
       }
 
@@ -625,14 +679,59 @@
         isLocked = enabled;
         widgetEl.classList.toggle('locked', enabled);
         lockBtn.classList.toggle('active', enabled);
+        simpleLockBtn.classList.toggle('active', enabled);
         lockBtn.title = enabled ? 'Unlock overlay' : 'Lock overlay';
+        simpleLockBtn.title = enabled ? 'Unlock overlay' : 'Lock overlay';
         if (enabled) {
-          const rect = lockBtn.getBoundingClientRect();
+          const activeLockBtn = isSimplifiedMode ? simpleLockBtn : lockBtn;
+          const rect = activeLockBtn.getBoundingClientRect();
           ipcRenderer.send('overlay-lock-button-bounds', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
         } else {
           ipcRenderer.send('overlay-unlocked');
           setOverlayClickThrough(false);
         }
+      }
+
+      function setSimplifiedOverlayMode(enabled) {
+        const wasSimplifiedMode = isSimplifiedMode;
+        isSimplifiedMode = enabled;
+        widgetEl.classList.toggle('simplified-mode', enabled);
+        if (enabled && !wasSimplifiedMode && isEditMode) {
+          setEditMode(false);
+        }
+        if (!enabled) {
+          widgetEl.classList.remove('simplified-settings-open');
+        }
+        if (simplifiedModeCheckbox) {
+          simplifiedModeCheckbox.checked = enabled;
+        }
+        if (enabled) {
+          ensureSimplifiedOverlayWidth();
+        }
+        if (isLocked) {
+          const activeLockBtn = isSimplifiedMode ? simpleLockBtn : lockBtn;
+          const rect = activeLockBtn.getBoundingClientRect();
+          ipcRenderer.send('overlay-lock-button-bounds', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+        }
+      }
+
+      function ensureSimplifiedOverlayWidth() {
+        if (!isSimplifiedMode || !simplifiedLayoutEl) return;
+        requestAnimationFrame(() => {
+          const neededContentWidth = Math.ceil(simplifiedLayoutEl.scrollWidth + 12);
+          const minTargetWidth = 360;
+          const targetWidth = Math.max(minTargetWidth, neededContentWidth);
+          ipcRenderer.invoke('get-overlay-bounds').then((bounds) => {
+            if (!bounds) return;
+            if (bounds.width >= targetWidth) return;
+            ipcRenderer.send('set-overlay-bounds', {
+              x: bounds.x,
+              y: bounds.y,
+              width: targetWidth,
+              height: bounds.height
+            });
+          });
+        });
       }
 
       visibleStats = loadVisibilitySettings();
@@ -711,18 +810,30 @@
 
       // Listen for updates from main process
       ipcRenderer.on('widget-update', (event, data) => {
+        if (typeof data.simplifiedOverlay === 'boolean') {
+          setSimplifiedOverlayMode(data.simplifiedOverlay);
+          if (simplifiedModeCheckbox) {
+            simplifiedModeCheckbox.checked = data.simplifiedOverlay;
+          }
+        }
         if (data.duration !== undefined) {
           durationEl.textContent = formatTime(data.duration);
+          simplifiedTimeValueEl.textContent = formatSimpleTime(data.duration);
         }
         if (data.avgTimePerMap !== undefined) {
           timePerMapEl.textContent = formatTimeShort(data.avgTimePerMap);
         }
         if (data.hourly !== undefined) {
           hourlyEl.textContent = formatValue(data.hourly);
+          simplifiedHourlyValueEl.textContent = formatValue(data.hourly);
         }
         if (data.total !== undefined) {
           totalEl.textContent = formatValue(data.total);
           totalEl.classList.toggle('negative', data.total < 0);
+          simplifiedTotalValueEl.textContent = formatValue(data.total);
+        }
+        if (isSimplifiedMode) {
+          ensureSimplifiedOverlayWidth();
         }
         if (data.lastMapProfit !== undefined) {
           lastMapProfitEl.textContent = formatValue(data.lastMapProfit);
@@ -745,15 +856,32 @@
         e.currentTarget.blur();
         ipcRenderer.send('close-overlay-widget');
       });
+      simpleCloseBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
+        ipcRenderer.send('close-overlay-widget');
+      });
 
       editBtn.addEventListener('click', (e) => {
         e.currentTarget.blur();
         setEditMode(!isEditMode);
       });
+      simpleSettingsBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
+        setEditMode(true);
+      });
 
       lockBtn.addEventListener('click', (e) => {
         e.currentTarget.blur();
         setLockedState(!isLocked);
+      });
+      simpleLockBtn.addEventListener('click', (e) => {
+        e.currentTarget.blur();
+        setLockedState(!isLocked);
+      });
+      simplifiedModeCheckbox?.addEventListener('change', async () => {
+        try {
+          await ipcRenderer.invoke('save-settings', { simplifiedOverlay: simplifiedModeCheckbox.checked });
+        } catch (_error) {}
       });
 
       statCheckboxes.forEach((checkbox) => {

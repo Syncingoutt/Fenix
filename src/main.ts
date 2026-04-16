@@ -46,6 +46,7 @@ let lastSentInventoryUpdate = 0; // Prevent duplicate inventory-updated events
 const WATCH_INTERVAL = 500;
 let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
 let fullscreenMode: boolean = false; // Default to windowed mode
+let simplifiedOverlayMode: boolean = false;
 /** League/season ID for price snapshots. Change this in code when a new season starts. */
 const LEAGUE_ID = 's12-lunaria';
 let currentLeagueId: string = LEAGUE_ID;
@@ -510,8 +511,11 @@ function createOverlayWidget() {
 
 function updateOverlayWidget() {
   if (overlayWidget && !overlayWidget.isDestroyed()) {
-    // Just pass through the display values from renderer
-    overlayWidget.webContents.send('widget-update', overlayDisplayData);
+    // Just pass through the display values from renderer plus overlay prefs
+    overlayWidget.webContents.send('widget-update', {
+      ...overlayDisplayData,
+      simplifiedOverlay: simplifiedOverlayMode
+    });
   }
 }
 
@@ -748,6 +752,9 @@ app.whenReady().then(async () => {
   }
   if (typeof settings.fullscreenMode === 'boolean') {
     fullscreenMode = settings.fullscreenMode;
+  }
+  if (typeof settings.simplifiedOverlay === 'boolean') {
+    simplifiedOverlayMode = settings.simplifiedOverlay;
   }
   if (settings.leagueId && settings.leagueId.trim() !== '') {
     currentLeagueId = settings.leagueId.trim();
@@ -1161,9 +1168,13 @@ ipcMain.handle('set-username', async (event, username: string) => {
   }
 });
 
-ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 }) => {
+ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2; simplifiedOverlay?: boolean }) => {
   try {
     saveSettings(settings);
+    if (typeof settings.simplifiedOverlay === 'boolean') {
+      simplifiedOverlayMode = settings.simplifiedOverlay;
+      updateOverlayWidget();
+    }
     
     // Update keybind if it changed
     if (settings.keybind && settings.keybind !== currentKeybind) {

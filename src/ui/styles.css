@@ -3434,6 +3434,116 @@ body.overlay-widget {
   flex-shrink: 0;
 }
 
+.widget-simplified-layout {
+  display: none;
+}
+
+.widget.simplified-mode {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 4px 6px;
+  min-width: 0;
+}
+
+.widget.simplified-mode .widget-header,
+.widget.simplified-mode .widget-separator,
+.widget.simplified-mode .widget-stats,
+.widget.simplified-mode .widget-opacity-row,
+.widget.simplified-mode .widget-toggle-row,
+.widget.simplified-mode .resize-handle {
+  display: none !important;
+}
+
+.widget.simplified-mode.simplified-settings-open .widget-simplified-layout {
+  display: none !important;
+}
+
+.widget.simplified-mode.simplified-settings-open .widget-opacity-row,
+.widget.simplified-mode.simplified-settings-open .widget-toggle-row {
+  display: flex !important;
+}
+
+.widget.simplified-mode .widget-simplified-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.widget.simplified-mode .widget-simplified-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.widget.simplified-mode .widget-simplified-btn {
+  border: none;
+  background: transparent;
+  color: #fafafa;
+  opacity: 0.62;
+  text-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.95),
+    0 0 2px rgba(0, 0, 0, 0.9),
+    0 0 4px rgba(0, 0, 0, 0.65);
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity 0.18s ease;
+}
+
+.widget.simplified-mode .widget-simplified-btn:hover {
+  opacity: 0.9;
+}
+
+.widget.simplified-mode .widget-simplified-btn:active {
+  opacity: 1;
+}
+
+.widget.simplified-mode .widget-simplified-lock.active {
+  color: var(--primary);
+}
+
+.widget.simplified-mode .widget-simplified-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.2;
+  font-size: 13px;
+  white-space: nowrap;
+  text-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.95),
+    0 0 2px rgba(0, 0, 0, 0.9),
+    0 0 4px rgba(0, 0, 0, 0.65);
+}
+
+.widget.simplified-mode .widget-simplified-dot {
+  opacity: 0.7;
+}
+
+.widget.simplified-mode .widget-simplified-lock .widget-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.widget.simplified-mode .widget-simplified-close .widget-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.widget.simplified-mode .widget-simplified-settings .widget-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.widget.simplified-mode.locked .widget-simplified-close {
+  display: none;
+}
+
 .widget-stats {
   --visible-stat-count: 6;
   display: grid;
@@ -3605,8 +3715,6 @@ body.overlay-widget {
   background: transparent;
   border: none;
   color: #fafafa;
-  font-size: 18px;
-  line-height: 1;
   cursor: pointer;
   -webkit-app-region: no-drag;
   display: flex;
@@ -3615,6 +3723,11 @@ body.overlay-widget {
   border-radius: 4px;
   transition: opacity 0.2s, background 0.2s;
   padding: 0;
+}
+
+.widget-close-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .widget-edit-btn {
@@ -3728,6 +3841,29 @@ body.overlay-widget {
 }
 .widget.edit-mode .widget-opacity-row {
   display: flex;
+}
+
+.widget-toggle-row {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  border: 1px solid var(--border-shade);
+  border-radius: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.widget.edit-mode .widget-toggle-row {
+  display: flex;
+}
+
+.widget-toggle-checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--primary);
+  cursor: pointer;
 }
 .widget-opacity-label {
   flex-shrink: 0;

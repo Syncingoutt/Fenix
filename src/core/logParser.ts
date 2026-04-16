@@ -141,7 +141,7 @@ export function isLogPathConfigured(): boolean {
 /**
  * Get settings from config file
  */
-export function getSettings(): { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 } {
+export function getSettings(): { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2; simplifiedOverlay?: boolean } {
   const config = loadConfig();
   const settings = config.settings || {};
   if (!settings.leagueId || String(settings.leagueId).trim() === '') {
@@ -153,7 +153,7 @@ export function getSettings(): { keybind?: string; fullscreenMode?: boolean; inc
 /**
  * Save settings to config file (preserves log path)
  */
-export function saveSettings(settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 }): void {
+export function saveSettings(settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2; simplifiedOverlay?: boolean }): void {
   const config = loadConfig();
   config.settings = { ...config.settings, ...settings };
   saveConfig(config);

@@ -12,7 +12,7 @@ import { updateUsernameDisplay } from '../settings/settingsManager.js';
 declare const electronAPI: ElectronAPI;
 
 let isRecordingKeybind = false;
-let currentSettings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 } = {};
+let currentSettings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2; simplifiedOverlay?: boolean } = {};
 let currentUsernameInfo: { username?: string; tag?: string; displayName?: string; nextChangeAt?: number; canChange: boolean } | null = null;
 let pendingKeybind: string | null = null;
 let pendingFullscreenMode: boolean | null = null;
@@ -80,7 +80,6 @@ async function saveSettingsNow(): Promise<void> {
 
     const layoutStyleValue = layoutStyle2Radio?.checked ? 2 : (pendingLayoutStyle ?? 1);
     settingsToSave.layoutStyle = layoutStyleValue;
-
     if (pendingCloudSyncEnabled !== null && currentCloudSyncEnabled !== null) {
       if (pendingCloudSyncEnabled !== currentCloudSyncEnabled) {
         if (!pendingCloudSyncEnabled) {
@@ -133,7 +132,6 @@ async function saveSettingsNow(): Promise<void> {
       if (settingsToSave.fullscreenMode !== undefined) {
         pendingFullscreenMode = settingsToSave.fullscreenMode;
       }
-
       setIncludeTax(currentTaxValue);
       pendingIncludeTax = currentTaxValue;
 
@@ -238,7 +236,6 @@ export function initSettingsModal(
         layoutStyle1Radio.checked = (pendingLayoutStyle ?? 1) === 1;
         layoutStyle2Radio.checked = (pendingLayoutStyle ?? 1) === 2;
       }
-
       // Set username input, tag (inline suffix), and next-change tip (only when can't change)
       if (usernameInput && usernameTagDisplay && usernameHelperText && currentUsernameInfo) {
         usernameInput.value = pendingUsername || '';

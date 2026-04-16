@@ -62,8 +62,8 @@ export interface ElectronAPI {
   getLogPath: () => Promise<string>;
   selectLogFile: () => Promise<string | null>;
   onShowLogPathSetup: (callback: () => void) => void;
-  getSettings: () => Promise<{ keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 }>;
-  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2 }) => Promise<{ success: boolean; error?: string }>;
+  getSettings: () => Promise<{ keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2; simplifiedOverlay?: boolean }>;
+  saveSettings: (settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2; simplifiedOverlay?: boolean }) => Promise<{ success: boolean; error?: string }>;
   getUsernameInfo: () => Promise<{ username?: string; tag?: string; displayName?: string; nextChangeAt?: number; canChange: boolean }>;
   setUsername: (username: string) => Promise<{ success: boolean; error?: string; nextChangeAt?: number }>;
   getCloudSyncStatus: () => Promise<{ enabled: boolean; consent: 'pending' | 'granted' | 'denied' }>;
