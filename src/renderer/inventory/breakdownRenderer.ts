@@ -6,6 +6,13 @@ import { applyTax } from '../utils/tax.js';
 import { passesPriceFilters } from '../utils/filters.js';
 import { formatGroupName } from '../utils/formatting.js';
 
+function formatBreakdownTotal(total: number): string {
+  if (total > 10000) {
+    return `${(total / 1000).toFixed(1)}k`;
+  }
+  return total.toFixed(0);
+}
+
 /**
  * Render the breakdown section showing group totals
  */
@@ -56,12 +63,13 @@ export function renderBreakdown(renderInventoryFn: () => void): void {
   breakdownEl.innerHTML = groups.map(({ group, total }) => {
     const formattedGroupName = formatGroupName(group);
     const isSelected = selectedGroupFilter === group;
+    const formattedTotal = formatBreakdownTotal(total);
     return `
       <div class="breakdown-group ${isSelected ? 'selected' : ''}" data-group="${group}" title="${formattedGroupName}">
         <div class="breakdown-icon-box">
           <img src="../../assets/${group}.webp" alt="${formattedGroupName}" class="breakdown-icon" title="${formattedGroupName}" onerror="this.style.display='none'">
         </div>
-        <span class="breakdown-group-value" title="${formattedGroupName}">${total.toFixed(0)}</span>
+        <span class="breakdown-group-value" title="${formattedGroupName}: ${total.toFixed(0)}">${formattedTotal}</span>
       </div>
     `;
   }).join('');
