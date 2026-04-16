@@ -145,7 +145,7 @@ export function getSettings(): { keybind?: string; fullscreenMode?: boolean; inc
   const config = loadConfig();
   const settings = config.settings || {};
   if (!settings.leagueId || String(settings.leagueId).trim() === '') {
-    settings.leagueId = 's11-vorax';
+    settings.leagueId = 's12-lunaria';
   }
   return settings;
 }

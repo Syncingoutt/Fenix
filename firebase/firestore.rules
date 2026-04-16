@@ -9,7 +9,7 @@ service cloud.firestore {
       allow create, update: if request.auth != null
         // Only allow expected fields
         && request.resource.data.keys().hasOnly([
-          'price', 'timestamp', 'userId', 'listingCount', 'updatedAt'
+          'price', 'timestamp', 'leagueId', 'userId', 'listingCount', 'updatedAt'
         ])
         // Validate price is a number in valid range
         && request.resource.data.price is number
@@ -23,6 +23,9 @@ service cloud.firestore {
         && request.resource.data.timestamp >= request.time.toMillis() - 604800000
         // Validate userId matches authenticated user
         && request.resource.data.userId == request.auth.uid
+        // Validate leagueId is a non-empty season identifier
+        && request.resource.data.leagueId is string
+        && request.resource.data.leagueId.size() > 0
         // listingCount is optional but must be valid if provided
         && (!(request.resource.data.listingCount is number)
             || request.resource.data.listingCount >= 0)

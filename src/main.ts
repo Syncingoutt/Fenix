@@ -47,7 +47,7 @@ const WATCH_INTERVAL = 500;
 let currentKeybind: string = 'CommandOrControl+`'; // Default keybind
 let fullscreenMode: boolean = false; // Default to windowed mode
 /** League/season ID for price snapshots. Change this in code when a new season starts. */
-const LEAGUE_ID = 's11-vorax';
+const LEAGUE_ID = 's12-lunaria';
 let currentLeagueId: string = LEAGUE_ID;
 const PRICE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -1401,7 +1401,7 @@ function watchLogFile() {
                   price: priceResult.avgPrice,
                   timestamp,
                   listingCount: priceResult.listingCount
-                });
+                }, { leagueId: currentLeagueId });
               }
               debouncedSavePriceCache();
               // Try to get item name from database if not in inventory

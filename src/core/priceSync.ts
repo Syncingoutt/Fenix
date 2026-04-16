@@ -51,6 +51,7 @@ interface CloudSyncConfig {
 
 interface QueueItem {
   baseId: string;
+  leagueId: string;
   entry: PriceUpdateEntry;
   attempts: number;
   enqueuedAt: number;
@@ -511,7 +512,7 @@ export class PriceSyncService {
 
     try {
       const cache: PriceCache = {};
-      const leagueId = (options?.leagueId || 's11-vorax').trim() || 's11-vorax';
+      const leagueId = (options?.leagueId || 's12-lunaria').trim() || 's12-lunaria';
       // Use pricesSnapshots collection (not prices/snapshot) to avoid 3-segment path issue
       const snapshotRef = doc(this.db, 'pricesSnapshots', leagueId);
       const snapshot = await getDoc(snapshotRef);
@@ -560,7 +561,7 @@ export class PriceSyncService {
       return [];
     }
 
-    const leagueId = (options.leagueId || 's11-vorax').trim() || 's11-vorax';
+    const leagueId = (options.leagueId || 's12-lunaria').trim() || 's12-lunaria';
     const maxDays = Number.isFinite(options.maxDays) ? Math.max(1, Math.min(180, Math.floor(options.maxDays!))) : 120;
     const cutoffMs = Date.now() - maxDays * 24 * 60 * 60 * 1000;
     const maxEventDocs = Number.isFinite(options.maxSnapshotDocs)
@@ -611,7 +612,7 @@ export class PriceSyncService {
       return {};
     }
 
-    const leagueId = (options?.leagueId || 's11-vorax').trim() || 's11-vorax';
+    const leagueId = (options?.leagueId || 's12-lunaria').trim() || 's12-lunaria';
 
     try {
       const result: PriceHistoryByItem = {};
@@ -659,7 +660,7 @@ export class PriceSyncService {
     }
   }
 
-  queuePriceWrite(baseId: string, entry: PriceUpdateEntry): void {
+  queuePriceWrite(baseId: string, entry: PriceUpdateEntry, options?: { leagueId?: string }): void {
     if (!/^\d+$/.test(baseId)) {
       return;
     }
@@ -679,10 +680,13 @@ export class PriceSyncService {
       console.error('Failed to initialize cloud sync:', error);
     });
 
-    this.queue = this.queue.filter(item => !(item.baseId === baseId && item.entry.timestamp <= entry.timestamp));
+    const leagueId = (options?.leagueId || 's12-lunaria').trim() || 's12-lunaria';
+
+    this.queue = this.queue.filter(item => !(item.baseId === baseId && item.leagueId === leagueId && item.entry.timestamp <= entry.timestamp));
 
     this.queue.push({
       baseId,
+      leagueId,
       entry,
       attempts: 0,
       enqueuedAt: Date.now()
@@ -761,6 +765,7 @@ export class PriceSyncService {
       price: item.entry.price,
       timestamp: item.entry.timestamp,
       listingCount: item.entry.listingCount ?? null,
+      leagueId: item.leagueId,
       userId: this.userId,
       updatedAt: serverTimestamp()
     }, { merge: false });
