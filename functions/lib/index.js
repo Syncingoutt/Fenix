@@ -41,8 +41,6 @@ const scheduler_1 = require("firebase-functions/v2/scheduler");
 const crypto_1 = require("crypto");
 admin.initializeApp();
 const DEFAULT_LEAGUE_ID = 's12-lunaria';
-const HISTORY_RETENTION_DAYS = 90;
-const HISTORY_COLLECTION_PATH = 'prices/history';
 const SNAPSHOT_COLLECTION_PATH = 'pricesSnapshots';
 const PRICE_CHECKS_ROOT = 'priceChecks';
 const PRICES_7D_ROOT = 'prices7d';
@@ -84,31 +82,6 @@ function computeChecksum(prices) {
     const payload = JSON.stringify(entries);
     return (0, crypto_1.createHash)('sha256').update(payload).digest('hex');
 }
-async function deleteOldHistory(db, leagueId) {
-    const cutoffMs = Date.now() - HISTORY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-    const cutoff = admin.firestore.Timestamp.fromMillis(cutoffMs);
-    const historyRef = db.collection(`${HISTORY_COLLECTION_PATH}/${leagueId}`);
-    const staleQuery = await historyRef.where('lastUpdated', '<', cutoff).get();
-    if (staleQuery.empty)
-        return 0;
-    let deleted = 0;
-    let batch = db.batch();
-    let batchCount = 0;
-    for (const doc of staleQuery.docs) {
-        batch.delete(doc.ref);
-        batchCount += 1;
-        deleted += 1;
-        if (batchCount >= 450) {
-            await batch.commit();
-            batch = db.batch();
-            batchCount = 0;
-        }
-    }
-    if (batchCount > 0) {
-        await batch.commit();
-    }
-    return deleted;
-}
 exports.aggregatePriceSnapshots = (0, scheduler_1.onSchedule)('every 20 minutes', async () => {
     var _a, _b, _c, _d;
     try {
@@ -145,7 +118,6 @@ exports.aggregatePriceSnapshots = (0, scheduler_1.onSchedule)('every 20 minutes'
             return;
         }
         const now = admin.firestore.FieldValue.serverTimestamp();
-        let historyWrites = 0;
         let batch = db.batch();
         let batchCount = 0;
         const queueSet = async (ref, data, options) => {
@@ -177,13 +149,6 @@ exports.aggregatePriceSnapshots = (0, scheduler_1.onSchedule)('every 20 minutes'
             if (hasSnapshotChange) {
                 const payload = { data: prices, lastUpdated: now, checksum };
                 await queueSet(snapshotRef, payload, { merge: true });
-                const historyRef = db.collection(`${HISTORY_COLLECTION_PATH}/${leagueId}`).doc(String(Date.now()));
-                await queueSet(historyRef, payload);
-                historyWrites += 1;
-                const deleted = await deleteOldHistory(db, leagueId);
-                if (deleted > 0) {
-                    firebase_functions_1.logger.info('Deleted stale history entries', { leagueId, deleted });
-                }
             }
             else {
                 firebase_functions_1.logger.info('Backfilling read models for unchanged snapshot', { leagueId });
@@ -249,8 +214,7 @@ exports.aggregatePriceSnapshots = (0, scheduler_1.onSchedule)('every 20 minutes'
         }
         firebase_functions_1.logger.info('Price snapshot aggregation complete', {
             leagueCount: Object.keys(leagueBuckets).length,
-            documentCount: snapshot.size,
-            historyWrites
+            documentCount: snapshot.size
         });
     }
     catch (error) {
