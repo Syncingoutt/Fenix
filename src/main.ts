@@ -50,7 +50,25 @@ let simplifiedOverlayMode: boolean = false;
 /** League/season ID for price snapshots. Change this in code when a new season starts. */
 const LEAGUE_ID = 's12-lunaria';
 let currentLeagueId: string = LEAGUE_ID;
+const VALID_LEAGUE_IDS = new Set(['s12-lunaria', 's11-vorax']);
+const LEGACY_LEAGUE_ID_MAP: Record<string, string> = {
+  lunaria: 's12-lunaria',
+  vorax: 's11-vorax'
+};
 const PRICE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+
+function normalizeLeagueId(rawLeagueId?: string): string {
+  const trimmed = typeof rawLeagueId === 'string' ? rawLeagueId.trim() : '';
+  if (!trimmed) return LEAGUE_ID;
+  const lower = trimmed.toLowerCase();
+  if (LEGACY_LEAGUE_ID_MAP[lower]) {
+    return LEGACY_LEAGUE_ID_MAP[lower];
+  }
+  if (VALID_LEAGUE_IDS.has(lower)) {
+    return lower;
+  }
+  return LEAGUE_ID;
+}
 
 // Overlay widget display values (sent directly from renderer)
 let overlayDisplayData: {
@@ -756,8 +774,11 @@ app.whenReady().then(async () => {
   if (typeof settings.simplifiedOverlay === 'boolean') {
     simplifiedOverlayMode = settings.simplifiedOverlay;
   }
-  if (settings.leagueId && settings.leagueId.trim() !== '') {
-    currentLeagueId = settings.leagueId.trim();
+  const normalizedSettingsLeagueId = normalizeLeagueId(settings.leagueId);
+  // Runtime writes should follow the current season by default.
+  currentLeagueId = normalizedSettingsLeagueId === 's11-vorax' ? LEAGUE_ID : normalizedSettingsLeagueId;
+  if (settings.leagueId !== currentLeagueId) {
+    saveSettings({ leagueId: currentLeagueId });
   }
   registerKeybind(currentKeybind);
   
@@ -835,7 +856,7 @@ ipcMain.handle('get-price-cache', () => {
 ipcMain.handle('get-price-history', async (_event, payload: { baseId: string; leagueId?: string; maxDays?: number; maxSnapshotDocs?: number }) => {
   if (!priceSyncService) return [];
   const baseId = payload?.baseId ?? '';
-  const leagueId = (payload?.leagueId || currentLeagueId).trim() || currentLeagueId;
+  const leagueId = normalizeLeagueId(payload?.leagueId || currentLeagueId);
   const maxDays = typeof payload?.maxDays === 'number' ? payload.maxDays : 120;
   const maxSnapshotDocs = typeof payload?.maxSnapshotDocs === 'number' ? payload.maxSnapshotDocs : undefined;
   return priceSyncService.getPriceHistory({ baseId, leagueId, maxDays, maxSnapshotDocs });
@@ -843,7 +864,7 @@ ipcMain.handle('get-price-history', async (_event, payload: { baseId: string; le
 
 ipcMain.handle('get-price-history-batch', async (_event, payload?: { leagueId?: string; maxDays?: number; maxSnapshotDocs?: number }) => {
   if (!priceSyncService) return {};
-  const leagueId = (payload?.leagueId || currentLeagueId).trim() || currentLeagueId;
+  const leagueId = normalizeLeagueId(payload?.leagueId || currentLeagueId);
   const maxDays = typeof payload?.maxDays === 'number' ? payload.maxDays : 7;
   const maxSnapshotDocs = typeof payload?.maxSnapshotDocs === 'number' ? payload.maxSnapshotDocs : undefined;
   return priceSyncService.getPriceHistoryBatch({ leagueId, maxDays, maxSnapshotDocs });
@@ -1170,7 +1191,14 @@ ipcMain.handle('set-username', async (event, username: string) => {
 
 ipcMain.handle('save-settings', async (event, settings: { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2; simplifiedOverlay?: boolean }) => {
   try {
-    saveSettings(settings);
+    const normalizedSettings = { ...settings };
+    if (typeof settings.leagueId === 'string') {
+      const normalizedLeagueId = normalizeLeagueId(settings.leagueId);
+      // Prevent old-season values from becoming the active write league.
+      normalizedSettings.leagueId = normalizedLeagueId === 's11-vorax' ? LEAGUE_ID : normalizedLeagueId;
+      currentLeagueId = normalizedSettings.leagueId;
+    }
+    saveSettings(normalizedSettings);
     if (typeof settings.simplifiedOverlay === 'boolean') {
       simplifiedOverlayMode = settings.simplifiedOverlay;
       updateOverlayWidget();

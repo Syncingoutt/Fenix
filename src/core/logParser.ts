@@ -144,8 +144,15 @@ export function isLogPathConfigured(): boolean {
 export function getSettings(): { keybind?: string; fullscreenMode?: boolean; includeTax?: boolean; leagueId?: string; layoutStyle?: 1 | 2; simplifiedOverlay?: boolean } {
   const config = loadConfig();
   const settings = config.settings || {};
-  if (!settings.leagueId || String(settings.leagueId).trim() === '') {
+  const rawLeagueId = typeof settings.leagueId === 'string' ? settings.leagueId.trim().toLowerCase() : '';
+  if (rawLeagueId === 'vorax') {
+    settings.leagueId = 's11-vorax';
+  } else if (rawLeagueId === 'lunaria' || rawLeagueId === '') {
     settings.leagueId = 's12-lunaria';
+  } else if (rawLeagueId !== 's12-lunaria' && rawLeagueId !== 's11-vorax') {
+    settings.leagueId = 's12-lunaria';
+  } else {
+    settings.leagueId = rawLeagueId;
   }
   return settings;
 }

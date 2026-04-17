@@ -42,6 +42,11 @@ let sortDirection: 'asc' | 'desc' = 'desc';
 let currentGroup: string = 'currency';
 let currentSearchTerm: string = '';
 let currentLeagueId = 's12-lunaria';
+const VALID_LEAGUE_IDS = new Set(['s12-lunaria', 's11-vorax']);
+const LEGACY_LEAGUE_ID_MAP: Record<string, string> = {
+  lunaria: 's12-lunaria',
+  vorax: 's11-vorax'
+};
 let selectedBaseId: string | null = null;
 let detailChart: any = null;
 const detailHistoryCache = new Map<string, PriceHistoryPoint[]>();
@@ -70,6 +75,19 @@ let rangeSelectionDragStartIndex = 0;
 let rangeSelectionDragEndIndex = 0;
 
 declare const Chart: any;
+
+function normalizeLeagueId(rawLeagueId?: string): string {
+  const trimmed = typeof rawLeagueId === 'string' ? rawLeagueId.trim() : '';
+  if (!trimmed) return 's12-lunaria';
+  const lower = trimmed.toLowerCase();
+  if (LEGACY_LEAGUE_ID_MAP[lower]) {
+    return LEGACY_LEAGUE_ID_MAP[lower];
+  }
+  if (VALID_LEAGUE_IDS.has(lower)) {
+    return lower;
+  }
+  return 's12-lunaria';
+}
 
 /**
  * Calculate trend based on real price history when available.
@@ -1343,9 +1361,11 @@ export function initPrices(): void {
   }
 
   if (seasonSelect) {
-    currentLeagueId = seasonSelect.value;
+    currentLeagueId = normalizeLeagueId(seasonSelect.value);
+    seasonSelect.value = currentLeagueId;
     seasonSelect.addEventListener('change', () => {
-      currentLeagueId = seasonSelect.value;
+      currentLeagueId = normalizeLeagueId(seasonSelect.value);
+      seasonSelect.value = currentLeagueId;
       detailHistoryCache.clear();
       detailHistoryLoadedKeys.clear();
       detailFullHistory = [];
