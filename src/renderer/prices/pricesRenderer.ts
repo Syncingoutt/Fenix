@@ -270,6 +270,9 @@ function formatTooltipPriceFe(price: number): string {
     const precision = value >= 10 ? 0 : 1;
     return `${value.toFixed(precision)}k`;
   }
+  if (price < 1) {
+    return price.toFixed(2);
+  }
   return price.toFixed(0);
 }
 
