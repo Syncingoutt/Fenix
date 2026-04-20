@@ -258,9 +258,9 @@
   "10290": { "name": "Vorax Compass", "tradable": true, "group": "compass" },
   "10291": { "name": "Scavenger Vorax Compass", "tradable": true, "group": "compass" },
   "10292": { "name": "Consultation Vorax Compass", "tradable": true, "group": "compass" },
-  "10300": { "name": "Creation Compass", "tradable": true, "group": "compass" },
-  "10301": { "name": "Derivative Creation Compass", "tradable": true, "group": "compass" },
-  "10302": { "name": "Record Creation Compass", "tradable": true, "group": "compass" },
+  "10310": { "name": "Creation Compass", "tradable": true, "group": "compass" },
+  "10311": { "name": "Derivative Creation Compass", "tradable": true, "group": "compass" },
+  "10312": { "name": "Record Creation Compass", "tradable": true, "group": "compass" },
 
   "12101": { "name": "Might Deep Space Probe", "tradable": true, "group": "probe" },
   "12111": { "name": "Machine Deep Space Probe", "tradable": true, "group": "probe" },
