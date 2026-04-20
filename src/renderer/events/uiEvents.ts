@@ -237,9 +237,13 @@ function onWheelRouteToInventory(e: WheelEvent): void {
     : Number.POSITIVE_INFINITY;
   const stopScrollY = Math.max(0, graphTopInDocument - STYLE1_SCROLL_STOP_FROM_GRAPH_TOP_OFFSET_PX);
   const beforeStopPoint = window.scrollY < stopScrollY;
+  // Avoid changing layout while approaching the stop line; it can make
+  // max page scroll grow gradually and feel like a slow crawl.
+  if (!beforeStopPoint || invSection.scrollTop > 0) {
+    fitInventorySectionToViewport(invSection);
+  }
   const maxPageScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
   const maxInventoryScroll = Math.max(0, invSection.scrollHeight - invSection.clientHeight);
-  const inventoryCanScrollDown = invSection.scrollTop < maxInventoryScroll - 1;
   const inventoryCanScrollUp = invSection.scrollTop > 1;
 
   // Scroll down:
@@ -250,18 +254,21 @@ function onWheelRouteToInventory(e: WheelEvent): void {
     e.stopPropagation();
 
     let remainingDelta = deltaY;
+    let nextPageScrollY = window.scrollY;
     if (beforeStopPoint) {
-      const remainingToStop = Math.max(0, stopScrollY - window.scrollY);
-      const remainingPageScroll = Math.max(0, maxPageScrollY - window.scrollY);
-      const pageDelta = Math.min(remainingDelta, remainingToStop, remainingPageScroll);
+      const remainingToStop = Math.max(0, stopScrollY - nextPageScrollY);
+      const remainingPageScroll = Math.max(0, maxPageScrollY - nextPageScrollY);
+      // Snap directly to handoff line so the page does not creep down slowly.
+      const pageDelta = Math.min(remainingToStop, remainingPageScroll);
       if (pageDelta > 0) {
-        window.scrollBy({ top: pageDelta, left: 0, behavior: 'auto' });
+        setPageScrollTopInstant(nextPageScrollY + pageDelta);
+        nextPageScrollY += pageDelta;
       }
-      remainingDelta -= pageDelta;
+      remainingDelta = Math.max(0, remainingDelta - pageDelta);
     }
 
-    const reachedStopPoint = window.scrollY >= stopScrollY - 1;
-    const pageCannotScrollFurther = window.scrollY >= maxPageScrollY - 1;
+    const reachedStopPoint = nextPageScrollY >= stopScrollY - 1;
+    const pageCannotScrollFurther = nextPageScrollY >= maxPageScrollY - 1;
     const atHandoffPoint = reachedStopPoint || pageCannotScrollFurther;
     if (remainingDelta > 0 && atHandoffPoint && maxInventoryScroll > 0) {
       const previousInventoryScrollTop = invSection.scrollTop;
@@ -270,13 +277,9 @@ function onWheelRouteToInventory(e: WheelEvent): void {
       remainingDelta -= Math.max(0, nextInventoryScrollTop - previousInventoryScrollTop);
     }
 
-    // If inventory has reached its bottom, continue normal page scrolling.
-    if (remainingDelta > 0) {
-      const remainingPageScroll = Math.max(0, maxPageScrollY - window.scrollY);
-      const pageDelta = Math.min(remainingDelta, remainingPageScroll);
-      if (pageDelta > 0) {
-        window.scrollBy({ top: pageDelta, left: 0, behavior: 'auto' });
-      }
+    // Keep the page pinned at the handoff stop line.
+    if (nextPageScrollY > stopScrollY) {
+      setPageScrollTopInstant(stopScrollY);
     }
     return;
   }
@@ -295,4 +298,28 @@ function normalizeWheelDelta(e: WheelEvent): number {
   if (e.deltaMode === WheelEvent.DOM_DELTA_LINE) return e.deltaY * 16;
   if (e.deltaMode === WheelEvent.DOM_DELTA_PAGE) return e.deltaY * window.innerHeight;
   return e.deltaY;
+}
+
+function setPageScrollTopInstant(top: number): void {
+  const clampedTop = Math.max(0, Math.floor(top));
+  document.documentElement.scrollTop = clampedTop;
+  if (document.body) {
+    document.body.scrollTop = clampedTop;
+  }
+}
+
+function fitInventorySectionToViewport(invSection: HTMLElement): void {
+  // Keep the entire inventory scroller inside the viewport so all rows remain
+  // reachable without moving the page below the stop line.
+  const VIEWPORT_BOTTOM_PADDING_PX = 8;
+  const MIN_INVENTORY_HEIGHT_PX = 220;
+  const invTopInViewport = invSection.getBoundingClientRect().top;
+  const availableHeight = Math.max(
+    MIN_INVENTORY_HEIGHT_PX,
+    Math.floor(window.innerHeight - Math.max(0, invTopInViewport) - VIEWPORT_BOTTOM_PADDING_PX)
+  );
+  const nextMaxHeight = `${availableHeight}px`;
+  if (invSection.style.maxHeight !== nextMaxHeight) {
+    invSection.style.maxHeight = nextMaxHeight;
+  }
 }
