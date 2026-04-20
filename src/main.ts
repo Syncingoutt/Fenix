@@ -1001,8 +1001,8 @@ function stopOverlayLockHoverCheck(): void {
 }
 
 ipcMain.on('overlay-lock-button-bounds', (_event, rect: { left: number; top: number; width: number; height: number }) => {
-  overlayLockButtonRect = rect;
   stopOverlayLockHoverCheck();
+  overlayLockButtonRect = rect;
   if (!overlayWidget || overlayWidget.isDestroyed()) return;
   overlayWidget.setIgnoreMouseEvents(true, { forward: true });
   const CHECK_MS = 50;
