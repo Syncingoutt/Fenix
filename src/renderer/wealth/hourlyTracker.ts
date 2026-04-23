@@ -7,6 +7,7 @@ import {
   setHourlyStartTime,
   getHourlyElapsedSeconds,
   setHourlyElapsedSeconds,
+  getIsHourlyActive,
   setIsHourlyActive,
   setHourlyPaused,
   getIncludedItems,
@@ -39,6 +40,8 @@ let updateOverlayWidgetData: () => void;
 let showBreakdownModal: () => void;
 let renderInventory: () => void;
 let renderBreakdown: () => void;
+let lastHourlyStartAtMs = 0;
+const MIN_STOP_DELAY_AFTER_START_MS = 1000;
 
 export function initHourlyTracker(
   wealthValueElement: HTMLElement,
@@ -130,6 +133,7 @@ export function actuallyStartHourlyTracking(): void {
   }
 
   const startTime = Date.now();
+  lastHourlyStartAtMs = startTime;
   const sessionId = `session_${startTime}_${Math.random().toString(36).substr(2, 9)}`;
   (window as any).currentSessionId = sessionId;
   setHourlyStartTime(startTime);
@@ -342,6 +346,15 @@ export function resumeHourlyTracking(): void {
  * Stop hourly tracking
  */
 export async function stopHourlyTracking(): Promise<void> {
+  if (!getIsHourlyActive()) {
+    return;
+  }
+
+  // Guard against accidental double-clicks or duplicate stop events right after start.
+  // Without this, a brand-new session can instantly end and show the completion modal.
+  if (Date.now() - lastHourlyStartAtMs < MIN_STOP_DELAY_AFTER_START_MS) {
+    return;
+  }
 
   // Tell main process to stop timer
   electronAPI.stopHourlyTimer();
