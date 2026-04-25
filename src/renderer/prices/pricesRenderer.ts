@@ -62,7 +62,7 @@ let detail90HistoryRequestVersion = 0;
 let last7HistoryLoadedAt = 0;
 let last7HistoryLeagueId = '';
 let isCloudSyncEnabledForPrices = true;
-const HISTORY_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const PRICE_REFRESH_COOLDOWN_MS = 20 * 60 * 1000;
 const SPARKLINES_PER_FRAME = 24;
 const TREND_MIN_PERCENT = 1;
 let sparklineRenderRequestVersion = 0;
@@ -73,6 +73,7 @@ let rangeSelectionDragSource: 'main' | 'nav' | null = null;
 let rangeSelectionDragStartClientX = 0;
 let rangeSelectionDragStartIndex = 0;
 let rangeSelectionDragEndIndex = 0;
+let refreshButtonTickInterval: ReturnType<typeof setInterval> | null = null;
 
 declare const Chart: any;
 
@@ -1102,6 +1103,10 @@ function scheduleSparklineRender(renderData: RenderRowData[]): void {
  * Load and process price data
  */
 export async function loadPrices(): Promise<void> {
+  return loadPricesInternal(false);
+}
+
+async function loadPricesInternal(forceCloudRefresh: boolean): Promise<void> {
   try {
     const [db, cloudSyncStatus] = await Promise.all([
       electronAPI.getItemDatabase(),
@@ -1113,12 +1118,20 @@ export async function loadPrices(): Promise<void> {
     let allItems: PriceItem[] = [];
 
     if (isCloudSyncEnabledForPrices) {
-      // Cloud-enabled mode: avoid showing stale local cache values while cloud history loads.
-      const historyByItem = await electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 7, maxSnapshotDocs: 160 });
-      last7DayHistoryByItem = historyByItem ?? {};
-      cloudSparklineHistoryCache.clear();
-      last7HistoryLoadedAt = Date.now();
-      last7HistoryLeagueId = currentLeagueId;
+      const now = Date.now();
+      const hasCloudHistory = Object.keys(last7DayHistoryByItem).length > 0;
+      const cooldownElapsed = now - last7HistoryLoadedAt >= PRICE_REFRESH_COOLDOWN_MS;
+      const leagueChanged = last7HistoryLeagueId !== currentLeagueId;
+      const shouldFetchCloudHistory = forceCloudRefresh || leagueChanged || !hasCloudHistory || cooldownElapsed;
+
+      if (shouldFetchCloudHistory) {
+        const historyByItem = await electronAPI.getPriceHistoryBatch({ leagueId: currentLeagueId, maxDays: 7, maxSnapshotDocs: 160 });
+        last7DayHistoryByItem = historyByItem ?? {};
+        cloudSparklineHistoryCache.clear();
+        last7HistoryLoadedAt = Date.now();
+        last7HistoryLeagueId = currentLeagueId;
+      }
+
       priceCache = {};
       const cloudItems: PriceItem[] = [];
       Object.entries(itemDatabase).forEach(([baseId, itemData]) => {
@@ -1221,9 +1234,45 @@ export async function loadPrices(): Promise<void> {
         updateDetailPriceStats(selectedBaseId, selectedItem.price, history);
       }
     }
+    updatePricesRefreshButtonState();
   } catch (error) {
     console.error('Failed to load prices:', error);
+    updatePricesRefreshButtonState();
   }
+}
+
+function getNextCloudRefreshAt(): number {
+  if (!isCloudSyncEnabledForPrices || last7HistoryLoadedAt <= 0) return 0;
+  return last7HistoryLoadedAt + PRICE_REFRESH_COOLDOWN_MS;
+}
+
+function formatCooldownRemaining(msRemaining: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(msRemaining / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function updatePricesRefreshButtonState(): void {
+  const refreshButton = document.getElementById('pricesRefreshBtn') as HTMLButtonElement | null;
+  if (!refreshButton) return;
+
+  if (!isCloudSyncEnabledForPrices) {
+    refreshButton.disabled = true;
+    refreshButton.textContent = 'Cloud sync off';
+    return;
+  }
+
+  const nextRefreshAt = getNextCloudRefreshAt();
+  const now = Date.now();
+  if (nextRefreshAt > now) {
+    refreshButton.disabled = true;
+    refreshButton.textContent = `Refresh (${formatCooldownRemaining(nextRefreshAt - now)})`;
+    return;
+  }
+
+  refreshButton.disabled = false;
+  refreshButton.textContent = 'Refresh prices';
 }
 
 /**
@@ -1311,6 +1360,7 @@ export function initPrices(): void {
   const sortHeaders = document.querySelectorAll('.prices-table th[data-sort]');
   const pricesBody = document.getElementById('pricesTableBody');
   const seasonSelect = document.getElementById('pricesSeasonSelect') as HTMLSelectElement | null;
+  const refreshBtn = document.getElementById('pricesRefreshBtn') as HTMLButtonElement | null;
   const detailBackBtn = document.getElementById('pricesDetailBackBtn');
   const detailNameBtn = document.getElementById('pricesDetailName') as HTMLButtonElement | null;
   const rangeSliderShell = document.getElementById('pricesRangeSliderShell') as HTMLElement | null;
@@ -1385,6 +1435,13 @@ export function initPrices(): void {
       if (isDetailViewOpen && selectedBaseId) {
         void showItemDetail(selectedBaseId);
       }
+    });
+  }
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      if (refreshBtn.disabled) return;
+      void loadPricesInternal(true);
     });
   }
 
@@ -1497,6 +1554,12 @@ export function initPrices(): void {
   setActiveRangeHandle('end');
   updateRangeControlsUi();
   setDetailViewMode(false);
+  updatePricesRefreshButtonState();
+  if (!refreshButtonTickInterval) {
+    refreshButtonTickInterval = setInterval(() => {
+      updatePricesRefreshButtonState();
+    }, 1000);
+  }
   
   // Listen for inventory updates to refresh prices
   electronAPI.onInventoryUpdate(() => {

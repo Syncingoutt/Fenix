@@ -4734,6 +4734,29 @@ body.overlay-widget {
   border-color: var(--primary);
 }
 
+.prices-refresh-btn {
+  background: var(--bg-shade);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: calc(var(--text-small) * var(--text-scale));
+  font-weight: 600;
+  padding: calc(16px * var(--scale));
+  min-width: calc(165px * var(--scale));
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.prices-refresh-btn:hover:not(:disabled),
+.prices-refresh-btn:focus-visible:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.prices-refresh-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
 .prices-search-input {
   flex: 1;
   background: transparent;
