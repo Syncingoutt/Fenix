@@ -69,7 +69,7 @@ const DEFAULT_FIREBASE_CONFIG = {
 };
 const DEFAULT_CONFIG: CloudSyncConfig = {
   enabled: false,
-  syncConsent: 'pending',
+  syncConsent: 'denied',
   firebase: {
     ...DEFAULT_FIREBASE_CONFIG
   },
@@ -238,20 +238,8 @@ function applyDefaultFirebaseConfig(config: CloudSyncConfig): CloudSyncConfig {
 }
 
 function normalizeSyncConsent(config: CloudSyncConfig): CloudSyncConfig {
-  let syncConsent = config.syncConsent;
-  let enabled = config.enabled;
-
-  if (!syncConsent) {
-    syncConsent = 'pending';
-  }
-
-  if (syncConsent === 'pending') {
-    enabled = false;
-  } else if (syncConsent === 'granted') {
-    enabled = true;
-  } else if (syncConsent === 'denied') {
-    enabled = false;
-  }
+  const syncConsent: SyncConsent = 'denied';
+  const enabled = false;
 
   if (config.syncConsent === syncConsent && config.enabled === enabled) {
     return config;
@@ -322,10 +310,14 @@ export class PriceSyncService {
   }
 
   async setSyncEnabled(enabled: boolean): Promise<void> {
+    if (enabled) {
+      throw new Error('Cloud Sync has been retired. Local-only mode is always enabled.');
+    }
+
     if (!this.config) {
       this.config = loadCloudSyncConfig();
     }
-    const consent: SyncConsent = enabled ? 'granted' : 'denied';
+    const consent: SyncConsent = 'denied';
     this.config.enabled = enabled;
     this.config.syncConsent = consent;
     saveCloudSyncConfig(this.config);

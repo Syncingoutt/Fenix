@@ -1,14 +1,13 @@
-// Cloud sync consent modal
+// Cloud sync retirement modal
 
 import { ElectronAPI } from '../types.js';
 
 declare const electronAPI: ElectronAPI;
 
 const syncConsentModal = document.getElementById('syncConsentModal')!;
-const syncConsentEnableBtn = document.getElementById('syncConsentEnableBtn') as HTMLButtonElement | null;
-const syncConsentDisableBtn = document.getElementById('syncConsentDisableBtn') as HTMLButtonElement | null;
+const syncConsentCloseBtn = document.getElementById('syncConsentDisableBtn') as HTMLButtonElement | null;
 
-function showSyncConsentModal(): void {
+export function showSyncConsentModal(): void {
   syncConsentModal.classList.add('active');
 }
 
@@ -17,16 +16,16 @@ function hideSyncConsentModal(): void {
 }
 
 export function initSyncConsentModal(): void {
-  if (syncConsentEnableBtn) {
-    syncConsentEnableBtn.addEventListener('click', async () => {
-      await electronAPI.setCloudSyncEnabled(true);
-      hideSyncConsentModal();
+  const externalLinks = syncConsentModal.querySelectorAll<HTMLAnchorElement>('a[href^="http"]');
+  externalLinks.forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      electronAPI.openExternal(link.href);
     });
-  }
+  });
 
-  if (syncConsentDisableBtn) {
-    syncConsentDisableBtn.addEventListener('click', async () => {
-      await electronAPI.setCloudSyncEnabled(false);
+  if (syncConsentCloseBtn) {
+    syncConsentCloseBtn.addEventListener('click', () => {
       hideSyncConsentModal();
     });
   }
@@ -34,4 +33,7 @@ export function initSyncConsentModal(): void {
   electronAPI.onShowSyncConsent(() => {
     showSyncConsentModal();
   });
+
+  // Show retirement notice on every app launch.
+  showSyncConsentModal();
 }

@@ -666,10 +666,7 @@ app.whenReady().then(async () => {
 
   if (mainWindow) {
     mainWindow.webContents.once('did-finish-load', () => {
-      const syncStatus = priceSyncService.getSyncStatus();
-      if (syncStatus.consent === 'pending') {
-        mainWindow?.webContents.send('show-sync-consent');
-      }
+      mainWindow?.webContents.send('show-sync-consent');
 
       // Initial update check - runs after window is ready
       if (app.isPackaged) {
@@ -1150,6 +1147,13 @@ ipcMain.handle('get-cloud-sync-status', () => {
 
 ipcMain.handle('set-cloud-sync-enabled', async (event, enabled: boolean) => {
   try {
+    if (enabled) {
+      return {
+        success: false,
+        error: 'Cloud Sync has been retired. The app now runs in local-only mode.'
+      };
+    }
+
     await priceSyncService.setSyncEnabled(enabled);
     if (enabled && inventoryManager) {
       const cloudCache = await priceSyncService.syncPrices({ forceFull: true, leagueId: currentLeagueId });

@@ -6,6 +6,7 @@ import { formatKeybind } from '../utils/formatting.js';
 import { getCurrentItems } from '../state/inventoryState.js';
 import { resizeGraph } from '../graph/graphManager.js';
 import { showSyncDisableConfirmModal } from './syncDisableConfirmModal.js';
+import { showSyncConsentModal } from './syncConsentModal.js';
 import { showSetupModal } from './setupModal.js';
 import { updateUsernameDisplay } from '../settings/settingsManager.js';
 
@@ -102,16 +103,12 @@ async function saveSettingsNow(): Promise<void> {
             }
           }
         } else {
-            const syncResult = await electronAPI.setCloudSyncEnabled(true);
-            if (!syncResult.success) {
-              settingsToast.textContent = syncResult.error || 'Failed to update Cloud Sync';
-              settingsToast.className = 'settings-toast error show';
-              settingsSaveBtn?.removeAttribute('disabled');
-              if (settingsSaveBtn) settingsSaveBtn.textContent = 'Save';
-              return;
-            } else {
-            currentCloudSyncEnabled = true;
+          if (cloudSyncCheckbox) {
+            cloudSyncCheckbox.checked = false;
           }
+          pendingCloudSyncEnabled = false;
+          currentCloudSyncEnabled = false;
+          showSyncConsentModal();
         }
       }
     }
